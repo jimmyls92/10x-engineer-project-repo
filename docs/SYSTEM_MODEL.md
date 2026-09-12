@@ -5,8 +5,9 @@ tied to the file and line it was read from, so it can be checked rather than tru
 
 Line references are to the repository state at the time of writing; paths are relative to `backend/`.
 
-> **Status.** Written stage by stage as the exploration proceeds. Sections still to come: Routes,
-> Data Flow, Prompt/Collection Relationship, Storage Layer & Limitations, External Dependencies.
+> **Status.** Written stage by stage as the exploration proceeds. Section headings follow the module
+> brief's own checklist. Still to come: Entry points, Data flow, Models and relationships, Storage
+> layer, External dependencies.
 
 ---
 

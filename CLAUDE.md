@@ -13,13 +13,15 @@ work.** It is how a new session resumes without reading everything.
 |---|---|
 | **Current task** | **Task 1.1 — explore the code and write it up.** In progress: stage 1 of 6 done. |
 | **Log shard to append to** | `docs/prompt-log/01-tasks-1.1-1.2.md` — entries 7–12 |
-| **Next entry number** | 13 |
-| **Context stage** | **Stage 2 — Routes. Context level not yet chosen; it is the user's call and must be argued from size or coupling.** Stage 1 used whole-repo (`backend/`, 587 lines) and is recorded in `SYSTEM_MODEL.md` § Context Strategy. |
+| **Next entry number** | 14 |
+| **Context stage** | **Stage 2 — Entry points. Context level not yet chosen; it is the user's call and must be argued from size or coupling.** Stage 1 used whole-repo (`backend/`, 587 lines) and is recorded in `SYSTEM_MODEL.md` § Context Strategy. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
-restructuring in entry 8, because one rationale cannot honestly cover six different questions:
-1. Architecture ✅ · 2. Routes ← *next* · 3. Data flow · 4. Prompt/collection relationship ·
-5. Storage layer + limitations · 6. External dependencies.
+restructuring in entry 8, because one rationale cannot honestly cover six different questions.
+**Use the brief's own section names** (see *Section naming* below):
+1. Architecture ✅ · 2. Entry points ← *next* · 3. Data flow · 4. Models and relationships ·
+5. Storage layer · 6. External dependencies · plus the Context strategy section, which grows a row
+per stage.
 
 **Done:** setup. Working protocol agreed, `CLAUDE.md` written, prompt log opened and sharded.
 Task 1.1 stage 1 — `docs/SYSTEM_MODEL.md` § Architecture (1.1 what it is, 1.2 components, 1.3 how
@@ -60,6 +62,36 @@ the graded deliverable does not.
 
 AIE 500 / PromptLab, Module 1, Competency C1 — *Codebase Comprehension & AI-Assisted Debugging*.
 Source of truth for requirements: `1785592803-Module_1_Project_Brownfield_Challenge.pdf` (repo root).
+
+The PDF has no text layer the `Read` tool can take directly, and `pdftoppm` is not installed. Extract
+it with PyMuPDF, which *is* installed — write to a file rather than stdout, because the Windows
+console encoding cannot print the `→` the brief uses:
+
+```
+python -c "import pymupdf,pathlib; d=pymupdf.open('1785592803-Module_1_Project_Brownfield_Challenge.pdf'); pathlib.Path('brief.txt').write_text('\n'.join(p.get_text() for p in d),encoding='utf-8')"
+```
+
+## Section naming
+
+**Use the brief's own words for every section and task heading.** The user asked for this explicitly;
+matching names is how an assessor confirms a checklist item is covered without having to interpret a
+synonym. The Task 1.1 checklist, verbatim from page 1:
+
+| Section in `SYSTEM_MODEL.md` | The brief's gloss |
+|---|---|
+| **Architecture** | what the service is and how it's put together |
+| **Entry points** | every route the application exposes |
+| **Data flow** | how a request travels from route to storage and back |
+| **Models and relationships** | how prompts and collections relate |
+| **Storage layer** | how it works and what its limitations are |
+| **External dependencies** | everything the service relies on |
+| **Context strategy** | per exploration stage: whole repository or single file, and why, based on the size or coupling of the code |
+
+Task names, also verbatim: **1.1** Understand the codebase · **1.2** Keep a prompt log · **1.3–1.7**
+Fix the bugs and add the missing endpoint · **1.8** Document one AI mistake · **1.9** Document what you
+rescued. Note that the context strategy section belongs to **Task 1.1**, not 1.2 — 1.2 is the prompt
+log. The *criterion* C1.2 is what grades the context strategy; the task and criterion numbers do not
+line up, and conflating them is what produced the earlier mislabelling.
 
 Two criteria (C1.3, C1.5) are graded on **process evidence that can only be captured while working**.
 The brief states explicitly that this evidence "cannot be convincingly reconstructed afterwards."
@@ -191,7 +223,8 @@ Meaningful, specific commit messages. One logical change per commit.
 Progress lives in CURRENT STATE at the top of this file, not here.
 
 1. Protocol setup — `CLAUDE.md` and the prompt log opened. ← *before any code is read*
-2. Task 1.1 / 1.2 — staged exploration → `docs/SYSTEM_MODEL.md` (incl. context strategy).
+2. Task 1.1 — staged exploration → `docs/SYSTEM_MODEL.md`, six sections plus context strategy.
+   (Task 1.2, the prompt log, runs continuously alongside every task — it is not a step of its own.)
 3. Tasks 1.3–1.7 — 4 bug fixes + `PATCH /prompts/{id}`, each with a test.
 4. Task 1.8 — `docs/ai-verification-note.md`.
 5. Task 1.9 — docstrings on touched functions + README run instructions.

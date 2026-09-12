@@ -250,3 +250,50 @@ that `api.py` is the sole coupling hub is what that decision now has to be argue
 repo is no longer the obvious level.
 
 ---
+
+## Entry 13 — Align every section name with the brief, and load the brief itself
+
+**Stage:** 2 — Entry points, before exploration. **Context level:** the brief PDF only; no source file
+re-read.
+
+**Prompt sent:**
+
+> lets go with stage 2, but please use the same naming as the assigment, which is "Entry points". Save
+> this in Claude.md so we use the same naming as the assigment (
+> @1785592803-Module_1_Project_Brownfield_Challenge.pdf )
+
+**What came back:**
+
+The brief had been sitting untracked in the repo root the whole time and had never actually been read
+— `CLAUDE.md` cited it as the source of truth while the section names in use were paraphrases invented
+in this session. Reading it needed two attempts: the `Read` tool failed for want of `pdftoppm`, and a
+direct text dump crashed on the Windows console encoding (`UnicodeEncodeError` on the `→` character).
+PyMuPDF writing to a UTF-8 file worked; the working command is now recorded in `CLAUDE.md` so the next
+session does not repeat the flailing.
+
+Checking my correction against the source turned up **more drift than I had flagged**: I asked for one
+rename, and two were needed. "Routes" → **Entry points**, and also "Prompt/collection relationship" →
+**Models and relationships**. The brief's checklist is: Architecture · Entry points · Data flow ·
+Models and relationships · Storage layer · External dependencies · Context strategy.
+
+A third error surfaced that neither of us had raised: **`CLAUDE.md` had Task 1.2 as "context
+strategy"**. In the brief, Task 1.2 is *Keep a prompt log*, and the context strategy section is part of
+Task 1.1. The confusion came from criterion **C1.2** being the criterion that grades the context
+strategy — task numbers and criterion numbers do not line up. Corrected in `CLAUDE.md`, in the work
+order, and in the shard table in `docs/prompt-log/README.md`.
+
+**Why this is a genuine iteration (C1.3): added a constraint, and grounded it in a source.**
+
+The constraint is "use the assignment's vocabulary, not your own paraphrase", and it is now a standing
+rule in `CLAUDE.md` rather than a one-off correction. What makes it more than cosmetic: the rubric is a
+checklist an assessor works through, and a section titled with a synonym forces them to interpret
+rather than tick. Applying the constraint properly also required loading the authoritative source
+instead of trusting the summary in `CLAUDE.md` — which is what exposed two further errors that a
+straight rename would have left in place.
+
+**Why my next prompt changed:**
+
+Naming is settled, so the next prompt can be about Entry points itself — and it has to carry the
+stage 2 context decision.
+
+---

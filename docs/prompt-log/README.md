@@ -16,15 +16,16 @@ history.
 | File | Covers | Status |
 |---|---|---|
 | `00-setup.md` | Protocol setup, and one discarded first attempt at Tasks 1.1–1.2 | Complete — entries 1–6 |
-| `01-tasks-1.1-1.2.md` | Task 1.1 exploration, Task 1.2 context strategy | Empty — not started; next entry is 7 |
+| `01-tasks-1.1-1.2.md` | Task 1.1 exploration (all six sections + context strategy) | In progress — entries 7–12; next entry is 13 |
 | `02-tasks-1.3-1.7.md` | Bugs #1–#4 and `PATCH /prompts/{id}` | Not started |
 | `03-task-1.8.md` | AI-verification note | Not started |
 | `04-task-1.9.md` | Docstrings and README | Not started |
 
 Entry numbering is continuous across shards, so the merge is a concatenation in filename order.
 
-Tasks 1.1 and 1.2 share a shard because Task 1.2 documents the context level used at each stage of the
-Task 1.1 exploration — the same events, and they were not separable in the work.
+The filename keeps both task numbers because the shard is simultaneously the record of the Task 1.1
+exploration and the Task 1.2 deliverable itself — every entry here *is* prompt-log content. The
+context strategy section belongs to Task 1.1, not to Task 1.2; the earlier wording had that wrong.
 
 A shard is split further if it grows large enough to be awkward to load (`02` is the likely
 candidate — five items). Splits keep the numeric prefix and add a suffix, e.g. `02a-`, `02b-`.
