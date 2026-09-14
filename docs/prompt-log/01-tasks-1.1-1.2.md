@@ -297,3 +297,178 @@ Naming is settled, so the next prompt can be about Entry points itself — and i
 stage 2 context decision.
 
 ---
+
+## Entry 14 — Stage 2 walkthrough: every route in `api.py`
+
+**Stage:** 2 — Entry points. **Context level:** file-level, `backend/app/api.py` only (161 lines). No
+other source file re-read; `storage.py` and `models.py` are referenced only from what stage 1 already
+established.
+
+**Prompt sent:**
+
+> I want to continue with the Entry points task (inside task 1.1), for that I just want to read the
+> api.py as context. Can you guide me throught route the application exposes and breifly explain what
+> they do and their state?
+
+**What came back:**
+
+A route-by-route walkthrough of `api.py`, nine routes in three blocks — health (`36`), prompts
+(`43`–`124`), collections (`129`–`160`) — each with its method, path, status code, response model and
+what it actually does line by line. No `SYSTEM_MODEL.md` text written yet; this step was the reading,
+the write-up is the next step.
+
+What the file itself shows beyond the route list:
+
+- The app object and its metadata come from `app/__version__` (`18-22`), and CORS is wide open —
+  `allow_origins=["*"]` together with `allow_credentials=True` (`25-31`).
+- `GET /prompts` (`43`) is the only route taking query parameters: `collection_id` and `search`, both
+  optional, applied as filter → search → sort (`48-62`).
+- Route handlers are thin: every one of them is storage calls plus `HTTPException`. There is no
+  service layer between route and storage, matching the stage 1 finding that `storage` is a concrete
+  global imported directly (`api.py:13`).
+- Four routes raise `404` explicitly by checking a falsy return from storage (`93`, `123`, `139`,
+  `156`); `GET /prompts/{prompt_id}` (`65-74`) is the one that does not.
+- `PATCH /prompts/{prompt_id}` does not exist — there is a comment where it would be (`116-117`).
+- The source carries the brief's own planted-bug comments at `59`, `67-69`, `101`, `110`, `116`,
+  `151-153` and `158`. Their *existence* is a fact about the entry points; deciding anything about
+  them belongs to Tasks 1.3–1.7 and was not raised here (Rule 0).
+
+**The context decision, and why file-level this time.**
+
+Stage 1 recorded `api.py` as the sole coupling hub of the repo, 160 lines, importing from `models`,
+`storage` and `utils` while nothing imports it back. That is precisely the file where whole-repo
+context dilutes attention: the routes are the one place where every module meets, so the reading has
+to be line-by-line rather than shape-level. The whole `backend/` tree is 587 lines and would still
+have fit in context — the reason for narrowing is coupling, not size.
+
+**Why this is an iteration (C1.3): narrowed context.**
+
+Stage 1 was deliberately whole-repo. This prompt names a single file and says so up front, and the
+level was chosen before the reading rather than justified after it.
+
+**Why my next prompt changed:**
+
+The routes are now read and understood. The next prompt is the write-up — turning the walkthrough into
+the § Entry points section of `SYSTEM_MODEL.md`, which means choosing a shape for it (table vs prose
+per route) and deciding how much per-route behaviour belongs in a section headed "every route the
+application exposes".
+
+## Entry 15 — What "test the storage result for falsiness" actually means
+
+**Stage:** 2 — Entry points. **Context level:** unchanged, `backend/app/api.py` already in context. No
+new file read.
+
+**Prompt sent:**
+
+> you say that it is the only route that doesnt test the storage result for falsiness before using
+> it... what do you exactly mean by that?
+
+**What came back:**
+
+The contrast between guarding *on the object* and guarding *on something reached through the object*.
+
+`if not collection:` (`api.py:138`) asks the question of the variable itself. Every Python object
+answers truthy/falsy, `None` included, so the test is safe no matter what storage returned — and only
+after the `None` case is thrown out does `:140` use the object.
+
+`if prompt.id:` (`api.py:73`) asks the question of an attribute. The attribute lookup has to be
+evaluated *before* `if` has anything to test, so it runs unconditionally on whatever `prompt` is. On a
+miss `prompt` is `None`, `None` has no `.id`, and the `AttributeError` escapes the handler as a 500 —
+a server fault rather than "not found". Noted as a second defect in the same guard: there is no
+`else`, so a falsy `.id` would fall off the end of the function and return `None`, which
+`response_model=Prompt` cannot serialise.
+
+Rule 0 held — the mechanism was explained, the fix was not proposed. That is Bug #1 / Task 1.3.
+
+**Why my next prompt changed:**
+
+The explanation was clear, but it invited checking the claim against the other routes — which is what
+the next prompt did.
+
+---
+
+## Entry 16 — Catching an over-broad claim: `list_prompts` doesn't have that pattern either
+
+**Stage:** 2 — Entry points. **Context level:** unchanged.
+
+**Prompt sent:**
+
+> ok, but list_prompts also does not have this pattern
+
+**What came back:**
+
+**A concession — the claim was wrong as stated.** I had said `GET /prompts/{prompt_id}` was "the only
+route that doesn't test the storage result for falsiness before using it". `list_prompts` takes
+`storage.get_all_prompts()` at `api.py:48` and uses it at `:52`, `:56` and `:60` with no test at all,
+so the word "only" was false.
+
+The corrected claim is scoped by **return type, not by route**:
+
+- `get_all_prompts()` / `get_all_collections()` return `List[...]`, never `None`. There is nothing to
+  guard, and an empty list is a valid answer meaning "nothing matched" — a falsiness check there would
+  actively be a bug, firing on the normal empty case.
+- `get_prompt()` / `get_collection()` return `Optional[...]`, where `None` *is* the miss and the caller
+  must separate the two cases before use.
+
+Defensible version: *among the routes that call an `Optional`-returning getter and then use the
+result, `GET /prompts/{prompt_id}` is the only one that reaches inside the result before guarding it.*
+
+Re-checking under the corrected framing turned up something the original framing would have missed:
+`PUT /prompts/{prompt_id}` returns `storage.update_prompt(...)` at `:113` unchecked, and that getter is
+also `Optional[Prompt]`. It is safe only because existence was established upstream at `:91-93` — safe
+by context, not by its own shape.
+
+**C1.5 candidate (Rule 4), organically occurring.** Wrong output: the "only route" claim. Why it was
+wrong: stated as a property of routes when it is a property of return types, with "only" asserted
+without checking the list endpoints. How it was caught: by the user reading `api.py` and naming the
+counter-example — nothing in the tooling flagged it. What was done instead: the claim was re-scoped to
+`Optional`-returning getters and re-verified across all nine routes, which also surfaced the `:113`
+case. Weaker than an outright behavioural falsehood, so whether it goes into
+`docs/ai-verification-note.md` is deferred to Task 1.8; the exact wording is preserved here either way.
+
+**Why this is a genuine iteration (C1.3): it added a constraint the model had skipped.** The prompt did
+not reword a question, it asserted a counter-example and forced the claim to be re-derived against the
+whole route list rather than the two routes it had been generalised from.
+
+**Why my next prompt changed:**
+
+Correction absorbed, so the outstanding question — the shape of the § Entry points write-up — could
+finally be answered.
+
+---
+
+## Entry 17 — Write § Entry points as a table plus a notes subsection
+
+**Stage:** 2 — Entry points, write-up. **Context level:** unchanged — `api.py` only, plus
+`docs/SYSTEM_MODEL.md` to match the existing house style.
+
+**Prompt sent:**
+
+> the third one
+
+**What came back:**
+
+Of the three shapes offered — a nine-row table, prose grouped by resource, or a table plus a short
+notes subsection — the third was chosen: the table carries coverage (the brief grades *every* route),
+the notes carry what the table's cells would flatten.
+
+`docs/SYSTEM_MODEL.md` § 2 written accordingly: a routes table with method, path, status, input,
+response model and behaviour, a note on the three routes FastAPI contributes that are not declared in
+the source, and four notes on the surface as a whole — the fixed filter→search→sort order, PUT as a
+full replace, the inconsistent 404 discipline, and the absent PATCH. The § Context Strategy table
+gained its stage 2 row.
+
+One judgement call, stated rather than asked, because it did not change the work: **the planted defects
+are described as observable behaviour and pointed forward by task number, never fixed or argued
+about.** C1.1 requires that nothing in the model contradict the code, so a route that currently returns
+500 on a miss has to be recorded as doing that; Rule 0 requires that no decision about it be taken
+here.
+
+**Also corrected in this turn:** entries 15 and 16 had been announced as written when no write had
+actually happened. Both were appended for real before this one.
+
+**Why my next prompt changed:**
+
+Stage 2 is closed. Stage 3 is Data flow, and it needs its own context decision — the first stage where
+`api.py` alone is demonstrably not enough, since the path from route to storage and back runs through
+`utils.py`, `storage.py` and `models.py`.

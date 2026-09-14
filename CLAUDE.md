@@ -11,21 +11,31 @@ work.** It is how a new session resumes without reading everything.
 
 | | |
 |---|---|
-| **Current task** | **Task 1.1 — explore the code and write it up.** In progress: stage 1 of 6 done. |
+| **Current task** | **Task 1.1 — explore the code and write it up.** In progress: stages 1–2 of 6 done. |
 | **Log shard to append to** | `docs/prompt-log/01-tasks-1.1-1.2.md` — entries 7–12 |
-| **Next entry number** | 14 |
-| **Context stage** | **Stage 2 — Entry points. Context level not yet chosen; it is the user's call and must be argued from size or coupling.** Stage 1 used whole-repo (`backend/`, 587 lines) and is recorded in `SYSTEM_MODEL.md` § Context Strategy. |
+| **Next entry number** | 18 |
+| **Context stage** | **Stage 3 — Data flow. Context level not yet chosen; it is the user's call and must be argued from size or coupling.** Stage 1 used whole-repo (587 lines, argued from size); stage 2 used file-level `api.py` (argued from coupling). Both rows are in `SYSTEM_MODEL.md` § Context Strategy. Note that stage 2 deliberately left `app/utils.py` unread, so the sorting claim in §2.3.5 is explicitly incomplete and stage 3 has to close it. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
 restructuring in entry 8, because one rationale cannot honestly cover six different questions.
 **Use the brief's own section names** (see *Section naming* below):
-1. Architecture ✅ · 2. Entry points ← *next* · 3. Data flow · 4. Models and relationships ·
+1. Architecture ✅ · 2. Entry points ✅ · 3. Data flow ← *next* · 4. Models and relationships ·
 5. Storage layer · 6. External dependencies · plus the Context strategy section, which grows a row
 per stage.
 
 **Done:** setup. Working protocol agreed, `CLAUDE.md` written, prompt log opened and sharded.
 Task 1.1 stage 1 — `docs/SYSTEM_MODEL.md` § Architecture (1.1 what it is, 1.2 components, 1.3 how
-they fit, 1.4 characteristics) and the § Context Strategy stage-1 row.
+they fit, 1.4 characteristics) and the § Context Strategy stage-1 row. Task 1.1 stage 2 —
+§ Entry points (2.1 route table, 2.2 the FastAPI-contributed routes, 2.3 notes on the surface) and the
+§ Context Strategy stage-2 row.
+
+**Established in stage 2** (do not re-derive; do cite): ten declared routes, all in `api.py` with no
+`APIRouter`, plus `/docs`, `/redoc`, `/openapi.json` from the app object · the listing pipeline is a
+fixed filter → search → sort and `total` is computed after it (`api.py:51-62`) · `PUT` is a full
+rebuild, not a merge (`api.py:103-111`) · 404 discipline splits on return type — `Optional` getters
+need a guard, `List` getters do not, and `api.py:73` is the one place the result is dereferenced before
+being guarded · unknown addressed resource is 404 but unknown referenced collection in a body is 400
+(`api.py:83,99`) · `api.py:113` returns an `Optional` unchecked, safe only via the upstream guard.
 
 **Established in stage 1** (do not re-derive; do cite): `models` is the dependency leaf, no cycles
 (`app/models.py:3-6`, `storage.py:8`, `utils.py:4`, `api.py:7-15`) · `api.py` is the sole coupling hub
