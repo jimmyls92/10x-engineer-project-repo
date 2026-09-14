@@ -6,8 +6,7 @@ tied to the file and line it was read from, so it can be checked rather than tru
 Line references are to the repository state at the time of writing; paths are relative to `backend/`.
 
 > **Status.** Written stage by stage as the exploration proceeds. Section headings follow the module
-> brief's own checklist. Still to come: Models and relationships, Storage layer, External
-> dependencies.
+> brief's own checklist. Still to come: Storage layer, External dependencies.
 
 ---
 
@@ -297,6 +296,130 @@ between the two listing routes is in the helpers, not in the handlers.
 
 ---
 
+## 4. Models and relationships
+
+How prompts and collections relate. §4.1 states the shape of the link, §4.2 audits every site that
+could uphold it, §4.3 draws out what that means for a client, and §4.4 records the schema detail the
+first three depend on.
+
+### 4.1 The shape of the relationship
+
+**Prompts and collections form a many-to-one relationship that only one side declares.**
+
+A prompt carries `collection_id: Optional[str] = None` (`models.py:23`). `Collection` declares `name`,
+`description`, `id` and `created_at`, and nothing else (`models.py:45-59`) — **there is no field
+pointing back to prompts.** The link therefore exists in exactly one place in the schema, on the child.
+
+`Optional` is load-bearing: `None` is a valid, expected state meaning *filed nowhere*, not a missing
+value. The default makes it the state a prompt is created in unless a client says otherwise
+(`models.py:23`), and `POST /prompts` skips its collection check entirely when the field is falsy
+(`api.py:80`).
+
+The declaration is a type and nothing more. Alone among the six fields a client can supply,
+`collection_id` carries no `Field(...)` constraint — compare `title` (1–200), `content` (non-empty),
+`description` (≤500), collection `name` (1–100) at `models.py:20-22,46-47`. It is not typed `UUID`
+either, though every id is generated as one (`models.py:9-10`), so `collection_id: "banana"` is a
+schema-valid prompt.
+
+**Consequence: the relationship is a convention, not a constraint.** Pydantic validates one object in
+isolation and has no access to stored collections, so nothing at the model layer can know whether the
+string names something real. Whatever integrity exists must be imposed elsewhere — §4.2.
+
+### 4.2 Where the link is upheld, and where it is not
+
+Listed below is every site that **writes `collection_id`, or holds the data needed to check it**. That
+is the inclusion rule: a module that merely never mentions the field (`main.py`, the health route) is
+not a missing safeguard and is not listed.
+
+| Site | Upholds the link? |
+|---|---|
+| `models.py:23` | **No** — declares the field and validates nothing beyond its type (§4.1). |
+| `POST /prompts` (`api.py:80-83`) | **Yes — once, as the prompt is written.** If `collection_id` is truthy the collection must exist, else **400**. Nothing re-checks afterwards. |
+| `PUT /prompts/{id}` (`api.py:96-99`) | **Yes — once, as the prompt is rewritten.** The same check, the same 400. |
+| `PUT` body assembly (`api.py:108`) | **No — it can break the link.** `collection_id` is taken from the request body, so an omitted field silently replaces an existing link with `None`. |
+| `storage.create_prompt` / `update_prompt` (`storage.py:19,31`) | **No.** The dict value is the whole `Prompt` object (`storage.py:13`), so `collection_id` is persisted without any line naming it — an invalid link passes through unexamined. This is the only layer holding both dicts (`storage.py:13-14`), and therefore the only place a continuous constraint could live. It even has the required query already written: `get_prompts_by_collection` (`storage.py:58-59`) returns exactly the prompts a collection deletion would strand, and nothing in the application calls it. |
+| `DELETE /collections/{id}` (`api.py:149-160`, `storage.py:52-56`) | **No — it breaks the link and leaves it broken.** Only the collections dict is mutated; the prompts dict is never read. |
+| `GET /prompts?collection_id=…` (`api.py:52`, `utils.py:18`) | **No.** Filtering is raw string equality with no existence check, so a deleted collection's id still returns its former prompts. |
+
+**Observed** (same method as §3.3 — `TestClient`, storage cleared): create a collection, file a prompt
+in it, delete the collection. The collection returns 404; the prompt remains, its `collection_id`
+unchanged; and `GET /prompts?collection_id=<deleted id>` still returns it. The link outlives its
+target, and remains queryable by an id that resolves to nothing.
+
+Integrity is therefore imposed in **exactly two places, both HTTP handlers, both only at the moment a
+prompt is written**. There is no check on the collection side, none in storage, and none on any read
+path. The guarantee the system actually offers is *this link was valid when it was written* — and the
+two operations that can falsify it afterwards, deleting the collection and a `PUT` that omits the
+field, are both in the table above, both marked No.
+
+### 4.3 What follows for a client
+
+**A non-null `collection_id` is not a promise.** Given a prompt, a client cannot tell from the response
+whether its collection still exists — the field is returned exactly as stored (`api.py:74`). Resolving
+it means a second request to `GET /collections/{id}`, which may legitimately return 404 for a prompt
+that was filed correctly at the time. Distinguishing *unfiled* (`None`) from *filed in something
+deleted* (a non-null id that no longer resolves) requires that extra call.
+
+**The relationship is never resolved in a response.** No envelope nests the other side: `PromptList`
+holds prompts, `CollectionList` holds collections (`models.py:64-71`), and `Collection` carries no
+member list or count (`models.py:54-59`). A client rendering "a collection and its prompts" makes two
+calls — `GET /collections/{id}` and `GET /prompts?collection_id={id}` — and the second is the only way
+to traverse the link at all.
+
+**Traversal is asymmetric in cost as well as in direction.** prompt → collection is a dict lookup
+(`storage.py:47`). collection → prompts is a full scan of every prompt, and as routed it is worse than
+that: `GET /prompts` copies the entire store into a list (`storage.py:26`) and *then* filters it in
+`utils.py:18`, rather than using `storage.get_prompts_by_collection` (`storage.py:58-59`), which scans
+once and is called by nothing.
+
+**`PUT` can unfile a prompt without the client intending it.** Because the handler rebuilds the prompt
+from the request body (`api.py:103-111`), a body that omits `collection_id` writes the default `None`
+and the prompt silently leaves its collection. This is not hypothetical: `test_api.py:92-101` updates a
+prompt with a body containing only `title`, `content` and `description`. It is correct `PUT`
+semantics — the client asked to replace the resource — and it is the concrete cost of there being no
+`PATCH` (§2.3.4).
+
+**Counts follow the filter, not the collection.** `PromptList.total` is computed after filtering
+(`api.py:62`), so `GET /prompts?collection_id={id}` yields the collection's size as a side effect.
+There is no other way to obtain it, and the figure counts prompts pointing at the id — including
+orphans, if the collection has since been deleted.
+
+### 4.4 Schema facts that bear on the above
+
+The three model families — entities, request DTOs, response envelopes — are set out in §1.2. What
+matters here is the detail behind them.
+
+**The DTOs add nothing to their bases.** `PromptCreate` and `PromptUpdate` are both `pass`
+(`models.py:26-31`), so they are field-for-field identical to `PromptBase` and to each other. Create
+and update therefore accept exactly the same shape, and **`PromptUpdate` has no way to express "leave
+this field alone"** — an absent field is indistinguishable from one set to its default. That is the
+schema-level reason `PUT` unfiles prompts (§4.3) and the reason a `PATCH` cannot simply reuse this
+model.
+
+**Identity and timestamps are server-assigned and cannot be supplied by a client.** `id`, `created_at`
+and `updated_at` are declared with `default_factory` on the entity classes only
+(`models.py:35-37,55-56`) and are absent from the `*Create` DTOs, so a request body carrying them is
+ignored rather than honoured. Ids come from `generate_id` — `str(uuid4())` (`models.py:9-10`) — but
+every id field is typed `str`, not `UUID`, so the format is a convention of the generator, not a
+constraint on the data (§4.1).
+
+**`Collection` has `created_at` and no `updated_at`** (`models.py:55-56`), which matches the route
+surface exactly: there is no `PUT` or `PATCH` for collections (§2.1), so a collection is immutable once
+created and has no second timestamp to maintain.
+
+**Timestamps are naive UTC.** `get_current_time` returns `datetime.utcnow()` (`models.py:13-14`), which
+carries no `tzinfo`. Values are therefore comparable with each other — which is all the sort in
+`utils.py:14` requires — but nothing in a serialised response marks them as UTC. `datetime.utcnow()` is
+also deprecated from Python 3.12 onward in favour of `datetime.now(timezone.utc)`.
+
+**`Config.from_attributes = True`** is set on both entity classes (`models.py:39-40,58-59`). It tells
+Pydantic to accept objects with matching attributes rather than only dicts — the setting used when
+populating models from ORM rows. There is no ORM and no database in the project
+(`requirements.txt:1-6`), and every model in the flow is built from keyword arguments
+(`api.py:85,103,145`), so the setting is inert: a trace of a shape the service does not have.
+
+---
+
 ## Context Strategy
 
 Required by C1.2. One row per exploration stage, recording the context level actually used and the
@@ -311,4 +434,25 @@ before the reading was done, not one composed afterwards.
 
 | 3 | Data flow (§3) | **File-level, three files** — `app/api.py`, `app/storage.py`, `app/utils.py`. `app/models.py` deliberately excluded | Coupling. A data flow claim spans every module a request touches, so the two files the request passes through after the route had to be added; `api.py` alone would have described the return leg of the listing route as "three helpers happen". The initial proposal was two files, excluding `utils.py` on the premise that it only transforms data — the premise was the thing under test, and reading the file is what showed `sort_prompts_by_date` ignores its own `descending` argument (§3.4.2), closing the gap stage 2 left open. `models.py` was argued out on the same principle that brought `utils.py` in: it is the shape of what travels rather than a hop on the path, and it is stage 4's subject, so reading it here would have pulled stage 4's content forward. Its field constraints are cited in §3.4.3 from the stage 1 reading and marked as such. |
 
-Stages 4–6 to follow.
+| 4 | Models and relationships (§4) | **Whole-repo** — every file under `backend/`, `tests/` included | Coupling, of the opposite kind to stage 2. There the coupling was *concentrated*: one hub file held every route, so attention belonged in it. Here it is *distributed*: the link is declared in `models.py:23`, enforced in `api.py:80-83` and `:96-99`, ignored in `storage.py:19,31`, and broken without repair in `storage.py:52-56`. Any single file shows the declaration and hides whether anything upholds it, and §4.2 is an audit that only exists if every site can be seen at once. `tests/` was included deliberately rather than as a side effect of breadth, and earned it: `test_api.py:154-179` asserts the current orphaning behaviour, and `test_api.py:92-101` is a live example of the `PUT` unfiling described in §4.3. |
+
+Stages 5–6 to follow.
+
+### A note on what the narrowing was for
+
+Recorded because it is the honest summary of the four rows above, and because it changes what they
+mean. **The whole backend is 587 lines. Breadth was affordable at every stage, so no narrowing in this
+table was forced by a limit** — stage 2 could have been run whole-repo and would have produced a
+correct §2.
+
+What narrowing bought was **attention, not feasibility**. Stage 2 excluded the leaf modules so that the
+account of the exposed surface would be an account of the surface, and not drift into what the helpers
+do. Stage 3 admitted exactly the two files a request passes through, and refused `models.py` so that
+stage 4's subject would not be consumed early.
+
+The clearest evidence that the levels were chosen rather than defaulted is that **the narrowing has a
+recorded cost**: stage 2's decision to leave `utils.py` out left the sorting claim in §2.3.5 explicitly
+incomplete, and stage 3 closed it — and the reason it could be closed is that `utils.py` was read there
+for its behaviour rather than skimmed as part of a repository-wide pass. Where the argument has run the
+other way, as at stage 4, breadth was taken for a reason that is stated in the row and not simply
+because the repository is small.

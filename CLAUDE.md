@@ -11,23 +11,35 @@ work.** It is how a new session resumes without reading everything.
 
 | | |
 |---|---|
-| **Current task** | **Task 1.1 — explore the code and write it up.** In progress: stages 1–3 of 6 done. |
+| **Current task** | **Task 1.1 — explore the code and write it up.** In progress: stages 1–4 of 6 done. |
 | **Log shard to append to** | `docs/prompt-log/01-tasks-1.1-1.2.md` — entries 7 onwards |
-| **Next entry number** | 24 |
-| **Context stage** | **Stage 4 — Models and relationships. Context level not yet chosen; it is the user's call and must be argued from size or coupling.** Stage 1 whole-repo (size), stage 2 file-level `api.py` (coupling), stage 3 three files — `api.py`, `storage.py`, `utils.py` (coupling; `models.py` held back on purpose because it is stage 4's subject). All three rows are in `SYSTEM_MODEL.md` § Context Strategy. |
+| **Next entry number** | 27 |
+| **Context stage** | **Stage 5 — Storage layer. Context level not yet chosen; it is the user's call and must be argued from size or coupling.** Stage 1 whole-repo (size), stage 2 file-level `api.py` (concentrated coupling), stage 3 three files (`api.py`, `storage.py`, `utils.py`), stage 4 whole-repo including `tests/` (distributed coupling). All four rows plus the closing note on what the narrowing bought are in `SYSTEM_MODEL.md` § Context Strategy. Note that §4.2 has already characterised part of the storage layer, so stage 5 must cite rather than re-derive. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
 restructuring in entry 8, because one rationale cannot honestly cover six different questions.
 **Use the brief's own section names** (see *Section naming* below):
-1. Architecture ✅ · 2. Entry points ✅ · 3. Data flow ✅ · 4. Models and relationships ← *next* ·
-5. Storage layer · 6. External dependencies · plus the Context strategy section, which grows a row
-per stage.
+1. Architecture ✅ · 2. Entry points ✅ · 3. Data flow ✅ · 4. Models and relationships ✅ ·
+5. Storage layer ← *next* · 6. External dependencies · plus the Context strategy section, which grows
+a row per stage.
 
 **Done:** setup. Working protocol agreed, `CLAUDE.md` written, prompt log opened and sharded.
 Task 1.1 stage 1 — `docs/SYSTEM_MODEL.md` § Architecture (1.1 what it is, 1.2 components, 1.3 how
 they fit, 1.4 characteristics) and the § Context Strategy stage-1 row. Task 1.1 stage 2 —
 § Entry points (2.1 route table, 2.2 the FastAPI-contributed routes, 2.3 notes on the surface) and the
 § Context Strategy stage-2 row.
+
+**Established in stage 4** (do not re-derive; do cite): the link is many-to-one, declared only on the
+child (`models.py:23`); `Collection` has no back-reference (`models.py:54-59`) · `collection_id` is the
+one client-supplied field with no `Field(...)` constraint, and is not typed `UUID` · integrity is
+imposed in exactly two handlers, at write time only (`api.py:80-83,96-99`); nothing checks on read ·
+`storage.get_prompts_by_collection` (`storage.py:58-59`) is the query a cascade would need and is
+called by nothing · **observed**: deleting a collection leaves the prompt with its `collection_id`
+intact, and the dead id still filters · `PUT` unfiles a prompt when the body omits `collection_id`
+(`api.py:108`), as `test_api.py:92-101` does · `PromptCreate` and `PromptUpdate` are identical to
+`PromptBase`, so update cannot express "leave unchanged" · ids/timestamps are server-assigned via
+`default_factory` and absent from the `*Create` DTOs · `utcnow()` is naive (`models.py:13-14`) ·
+`from_attributes = True` is vestigial, there is no ORM.
 
 **Established in stage 3** (do not re-derive; do cite): storage hands out and files away **uncopied**
 objects (`storage.py:19,23,26`), and `PUT` is the only route that could mutate the store but rebuilds
@@ -73,6 +85,15 @@ honest record of the discarded attempt, not as a shortcut.
 - **Bug #4 strategy** — cascade-delete the prompts / null their `collection_id` / block deletion of a
   non-empty collection. Belongs to Task 1.6; do not raise it before then. The reasoning must be
   recorded; it is defended in the Module 5 oral.
+
+**Known traps:**
+
+- **`tests/test_api.py:154-179` asserts the *current*, buggy orphaning behaviour** — line 178 asserts
+  the prompt keeps the deleted collection's id, guarded by `if prompts:`. C1.4 requires every provided
+  test green, so the Bug #4 strategy and this test have to be settled together in Task 1.6. Do not
+  raise it before then.
+- **`TestClient` defaults to `raise_server_exceptions=True`**, which re-raises rather than returning
+  500. Matters when writing the Task 1.3 test.
 
 **Pending at the end:** merge the log shards into `docs/prompt-log.md` (see
 `docs/prompt-log/README.md`). That file is currently empty on purpose — until the merge commit exists,

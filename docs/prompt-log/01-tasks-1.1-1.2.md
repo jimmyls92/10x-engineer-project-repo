@@ -735,3 +735,170 @@ proposal and the reason `models.py` was kept out.
 
 Stage 3 is closed. Stage 4 is Models and relationships, and `models.py` — held out of the last two
 stages precisely so it would land here — is its obvious context.
+
+## Entry 24 — Stage 4 context: back to whole-repo, and a reflection on what narrowing was for
+
+**Stage:** 4 — Models and relationships. **Context level:** whole-repo — every file under `backend/`,
+including `tests/`.
+
+**Prompt sent:**
+
+> Now I realize that since the size of the code its that small I could have given full context to every
+> section exploration. I want to underline this for the Context strategy section. Following this idea,
+> I would like to use the whole context of the repository (the backend) for knowing more about how
+> propmts and collections relate, due the high coupling of the code.
+
+**What came back:**
+
+Agreement, plus one refinement, because the table would otherwise read as contradicting itself —
+coupling was the stated reason for **narrowing** at stage 2 and is now the stated reason for
+**widening** at stage 4. The distinction that makes both honest:
+
+- **stage 2** — the coupling was *concentrated*: one hub file held every route, so attention belonged
+  there;
+- **stage 4** — the relationship is *distributed*: `collection_id` is declared in `models.py`, enforced
+  in `api.py:80-83` and `:96-99`, and not enforced at all in `storage.py`. Any single file would show
+  the declaration and miss whether anything upholds it.
+
+The reflection itself was sharpened before being recorded: **breadth was always affordable, so the
+narrowing bought attention rather than feasibility.** That is a stronger claim under C1.2 than "the
+repository is small" — it says the level was chosen deliberately at each stage instead of being forced
+by a limit, which is what the criterion actually asks for.
+
+**What the reading found** (the write-up is the next step):
+
+- **The relationship is declared on one side only.** `Prompt.collection_id: Optional[str] = None`
+  (`models.py:23`); `Collection` has no field pointing back (`models.py:54-59`). A collection cannot
+  name its own members.
+- **`collection_id` is the only field in the entire schema with no `Field(...)` constraint** — a bare
+  `Optional[str]`. It is not a foreign key, and the model layer knows nothing about collections.
+- **Enforcement exists in exactly two places, both HTTP handlers** (`api.py:80-83`, `:96-99`), and in
+  both only when the value is truthy — `None` means unfiled and correctly skips the check.
+- **Nothing maintains it afterwards.** `storage.create_prompt` and `update_prompt` file whatever they
+  are handed (`storage.py:19,31`), and `delete_collection` touches the collections dict alone
+  (`storage.py:52-56`).
+- **`PUT` silently unfiles a prompt.** `collection_id` is taken from the request body (`api.py:108`),
+  so omitting it replaces it with the default `None` — and `tests/test_api.py:92-101` sends exactly
+  such a body.
+- **Navigation is asymmetric.** prompt → collection is a dict lookup; collection → prompts requires a
+  full scan (`storage.py:58-59`, or `utils.py:17-18`).
+- **The API never resolves the relation in either direction** — no nesting in any response envelope
+  (`models.py:64-71`), so a client wanting a collection and its prompts makes two calls.
+- **Collections carry `created_at` but no `updated_at`** (`models.py:55-56`), consistent with there
+  being no update route for them at all.
+- **Ids and timestamps are server-assigned** through `default_factory` (`models.py:35-37,55-56`) and
+  are absent from the `*Create` DTOs, so a client cannot set or spoof them.
+- `get_current_time` is `datetime.utcnow()` (`models.py:13-14`) — naive, no timezone.
+- `Config.from_attributes = True` (`models.py:39-40,58-59`) is ORM mode; there is no ORM, so it is
+  vestigial.
+
+**Trap recorded, not acted on (Rule 0):** `tests/test_api.py:154-179` asserts the *current* orphaning
+behaviour at line 178, guarded by `if prompts:`. That constrains Task 1.6 and is now noted in
+`CLAUDE.md` under Known traps. No strategy was chosen here.
+
+**Why my next prompt changed:**
+
+The relationship is understood. What remains is the shape of §4 and how much of the schema detail
+belongs in a section titled "how prompts and collections relate".
+
+## Entry 25 — A second unverified "only", caught the same way as entry 16
+
+**Stage:** 4 — Models and relationships. **Context level:** unchanged, whole-repo.
+
+**Prompt sent:**
+
+> It is the only field in the whole schema with no Field(...) constraint — a bare Optional[str]. Not a
+> foreign key; the model layer knows nothing about collections. what do you mean by this?
+
+**What came back:**
+
+**A concession before the explanation: the sentence was false.** `PromptList`, `CollectionList` and
+`HealthResponse` declare their fields with no `Field(...)` either (`models.py:64-76`). The defensible
+claim is narrower — of the **six fields a client can supply**, `collection_id` is the only one carrying
+no constraint.
+
+**This is the second time the same failure mode has produced a wrong sentence in this session**, the
+first being entry 16, and both were caught by the user rather than by me: an "only ..." quantifier
+asserted over a set I had not actually enumerated. Entry 16 was about routes, this one about fields.
+Two instances of one mechanism is a stronger candidate for `docs/ai-verification-note.md` than either
+alone, and it is now on the record as such for Task 1.8.
+
+The explanation itself, once corrected:
+
+- **No `Field(...)`** — every other client-supplied field declares limits (`models.py:20-22,46-47`);
+  `collection_id: Optional[str] = None` declares only a type, so any string passes. It is not typed
+  `UUID` either, although every id is generated as one (`models.py:9-10`).
+- **Not a foreign key** — a database engine enforces a foreign key *continuously* and also constrains
+  the parent's deletion. Pydantic validates one object in isolation and has no access to stored
+  collections, so it cannot know whether the string names anything. The check therefore has to live in
+  a handler, which makes validity a property of a moment rather than of the data.
+
+**Why my next prompt changed:**
+
+The mechanism was clear, so the next prompt could settle the shape of section 4 and start reviewing it.
+
+---
+
+## Entry 26 — Section 4 built unit by unit under review
+
+**Stage:** 4 — Models and relationships, write-up. **Context level:** unchanged.
+
+**Prompts sent, in order:**
+
+> The difference betwwen 1 and 3 is that 3 is more complete, right? In that case lets go for 3. But
+> show me row by row, si I can accept it before moving to the next one.
+
+> accept
+
+> number 2 sais at write time, but shouldnt it be at read time? or you are refering that is on write
+> time where we can make an impact on the relationship?
+
+> strage.create_prompt and updat_prompt dont even have mention the collecton attribute, why do we even
+> mention them?
+
+> several questions here: 1 - self.prompts[prompt.id+] = prompt is just assigning a value to a key of
+> the dict, in that dict it is true that we have the collection_id, that is what you mean?
+
+> nevermind, lets go for DELETE / collections, you say it does not upholds this, but if we delete a
+> collection, we delete all the prompts inside I guess... you say No becasue this will not break the
+> link as both elements (collections and prompts) will be delted at the same time? Because otherwise
+> the prompts will no longuer know how to refer to tha collection
+
+> show me first exactly what you plan to add
+
+> accept (three times, for 4.2, 4.3 and 4.4)
+
+**What came back, and what each challenge changed:**
+
+- **"at write time" was ambiguous and the wording changed.** The phrase meant *when the check runs*,
+  not *when it matters*; no read path checks anything (`api.py:74`, `utils.py:18`). The cells now read
+  "Yes — once, as the prompt is written", which also makes the closing sentence land: the two
+  operations that can falsify the link later are in the same table, both marked No.
+- **The storage row was challenged as padding, and survived with a stated rule.** The objection was
+  fair — `main.py` does not mention `collection_id` either and nobody would list it. The table now
+  declares its inclusion rule (sites that *write* the field or *hold the data to check it*), and the
+  row earns its place on a point that only emerged under the challenge: **storage already contains
+  `get_prompts_by_collection` (`storage.py:58-59`), which returns exactly the prompts a collection
+  deletion would strand, and nothing in the application calls it.** The absence is not ignorance of
+  collections; it is an unused capability.
+- **The cascade premise was wrong, and was checked rather than argued.** The assumption was that
+  deleting a collection deletes its prompts. Run through `TestClient`: collection gives 404, the prompt
+  is still present with `collection_id` unchanged, and `GET /prompts?collection_id=<deleted id>` still
+  returns it. **The link outlives its target and stays queryable by an id that resolves to nothing.**
+  Recorded in 4.2 as an observation, with the method named.
+- **Bug #4 was not decided** (Rule 0). What *should* happen stays in Open decisions for Task 1.6, and
+  the constraint that `test_api.py:154-179` asserts the current behaviour is in Known traps.
+
+`SYSTEM_MODEL.md` section 4 written in four parts, each accepted before the next was drafted: 4.1 the
+shape of the link, 4.2 the audit table, 4.3 the consequences for a client, 4.4 the schema facts.
+
+**Why this is a genuine iteration (C1.3): the review protocol changed the content, not just the pace.**
+Three of the four challenges altered the deliverable — a reworded claim, a table that had to justify
+its own membership rule, and a premise replaced by an executed observation. Reviewing unit by unit is
+what made the challenges possible; a single finished section would have been accepted or rejected
+whole.
+
+**Why my next prompt changed:**
+
+Section 4 is closed. Stage 5 is the Storage layer, which 4.2 has already partly characterised — the
+next context decision has to take account of how much of it is now established.
