@@ -224,6 +224,20 @@ then check it against the code).
 Explicitly called out in the rubric: catching an exception and discarding it counts as a bug still
 present. Fixes must address the cause.
 
+### 5b. Keep replies short and scannable
+
+The user asked for this explicitly. Long prose replies are harder to follow than the work deserves.
+
+- **Bullets over paragraphs.** Bold the thing that matters in each bullet.
+- **Cut anything that is not a finding, a decision, or a question.** No recaps of what was just done
+  when the diff already says it, no restating the rule being followed, no narrating the plan.
+- **Cite `file.py:line` instead of quoting code** unless the exact text is the point.
+- This constrains **chat replies only**. Deliverables (`SYSTEM_MODEL.md`, the prompt log,
+  `ai-verification-note.md`, docstrings) stay as thorough as the rubric needs — they are graded on
+  completeness, not brevity.
+
+Rule 0b still holds: short does not mean skipping the step, the angles, or the stop.
+
 ### 6. Commit messages are graded
 
 Meaningful, specific commit messages. One logical change per commit.

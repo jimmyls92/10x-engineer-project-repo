@@ -472,3 +472,35 @@ actually happened. Both were appended for real before this one.
 Stage 2 is closed. Stage 3 is Data flow, and it needs its own context decision — the first stage where
 `api.py` alone is demonstrably not enough, since the path from route to storage and back runs through
 `utils.py`, `storage.py` and `models.py`.
+
+## Entry 18 — Constrain the reply format: bullets, bold, brevity
+
+**Stage:** 3 — Data flow, before exploration. **Context level:** none; no source file read.
+
+**Prompt sent:**
+
+> I need you to be less verbose and focus more into comments and answers that give value. Please use
+> bullets, bold letters and shorten messages in order to make our conversations easier to follow and
+> understand. Write this on CLAUDE.md
+
+**What came back:**
+
+Rule 5b added to `CLAUDE.md`: bullets over paragraphs, bold the operative words, cut anything that is
+not a finding, a decision or a question, cite `file.py:line` rather than quoting code.
+
+Two boundaries drawn while writing it, because the instruction as given could have been over-applied:
+
+- **It binds chat replies only.** The deliverables are graded on completeness — shortening
+  `SYSTEM_MODEL.md` or the log entries to match a chat preference would trade marks for readability.
+- **It does not override Rule 0b.** A step still has to name its purpose, offer the angles and stop;
+  brevity is about how that is written, not about collapsing steps.
+
+**Why this is a genuine iteration (C1.3): added a standing constraint, not a reworded question.**
+
+The prompt does not ask anything about the codebase. It changes how every future answer is produced
+and persists the change in `CLAUDE.md` so it survives a session restart — the same move as entry 13's
+naming constraint, applied to form rather than vocabulary.
+
+**Why my next prompt changed:**
+
+Format is settled. The next prompt is the stage 3 context decision, which is still outstanding.
