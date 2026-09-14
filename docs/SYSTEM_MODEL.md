@@ -6,7 +6,7 @@ tied to the file and line it was read from, so it can be checked rather than tru
 Line references are to the repository state at the time of writing; paths are relative to `backend/`.
 
 > **Status.** Written stage by stage as the exploration proceeds. Section headings follow the module
-> brief's own checklist. Still to come: Data flow, Models and relationships, Storage layer, External
+> brief's own checklist. Still to come: Models and relationships, Storage layer, External
 > dependencies.
 
 ---
@@ -212,6 +212,91 @@ code; the fixes belong to later tasks and no decision about them is taken in thi
 
 ---
 
+## 3. Data flow
+
+How a request travels from route to storage and back. The section is organised as a matrix rather
+than as a narrative of pipeline stages: the stages themselves — JSON → validation → handler → storage
+→ serialisation — are FastAPI's and are the same in any FastAPI application, so describing them would
+say little about PromptLab. What differs per route is what the cells hold.
+
+Cells cite `app/api.py` unless another file is named. Read left to right, each row is one request's
+journey out and back.
+
+### 3.1 Prompt routes and health
+
+| Route | Bind & validate | Handler guards | Storage | Transform | Response |
+|---|---|---|---|---|---|
+| `GET /health` | — | — | **none** | — | `HealthResponse` 200 (`:38`) |
+| `GET /prompts` | Two optional query params, `collection_id` and `search` (`:44-47`) | — | `get_all_prompts` → a new list holding the **stored objects themselves** (`storage.py:26`) | filter, if `collection_id` (`utils.py:18`) → search, if `search` (`utils.py:23-27`) → sort, **unconditionally** (`utils.py:14`) | `PromptList` with `total` = count **after** filtering (`:62`) 200 |
+| `GET /prompts/{prompt_id}` | Path `str`, no constraint | **None before use** — `prompt.id` is evaluated first (`:73`) | `get_prompt` → `Optional[Prompt]`, the stored object (`storage.py:23`) | — | `Prompt` 200 on a hit; **500 on a miss** (observed, §3.3) |
+| `POST /prompts` | Body `PromptCreate`; a field violation is a **422 from the framework** (observed, §3.3) | If `collection_id` given, collection must exist, else **400** (`:80-83`) | `create_prompt` stores the object the handler built, uncopied (`storage.py:19`) | — | `Prompt` 201, with `id` and both timestamps from the model defaults (`:85`) |
+| `PUT /prompts/{prompt_id}` | Path `str` + body `PromptUpdate`; **422** on a field violation | Prompt must exist, else **404** (`:91-93`); collection, if given, must exist, else **400** (`:96-99`) | `update_prompt` replaces the dict entry (`storage.py:28-32`); its `Optional` return is passed on **unchecked** (`:113`) | — | `Prompt` 200, rebuilt field by field rather than mutated (`:103-111`) |
+| `DELETE /prompts/{prompt_id}` | Path `str` | Branches on the returned `bool`; **404** if false (`:122`) | `delete_prompt` (`storage.py:34-38`) | — | 204, empty body (`:124`) |
+
+### 3.2 Collection routes
+
+| Route | Bind & validate | Handler guards | Storage | Transform | Response |
+|---|---|---|---|---|---|
+| `GET /collections` | — | — | `get_all_collections` (`storage.py:49-50`) | **none** — no filter, search or sort exists for collections | `CollectionList` 200 (`:132`) |
+| `GET /collections/{collection_id}` | Path `str` | `if not collection` → **404** (`:138-139`) | `get_collection` → `Optional[Collection]` (`storage.py:46-47`) | — | `Collection` 200 |
+| `POST /collections` | Body `CollectionCreate`; **422** on a field violation (observed, §3.3) | **None** — there is no second entity to cross-check | `create_collection` (`storage.py:42-44`) | — | `Collection` 201 (`:145-146`) |
+| `DELETE /collections/{collection_id}` | Path `str` | Branches on the returned `bool`; **404** if false (`:155-156`) | `delete_collection` touches the collections dict **only** (`storage.py:52-56`) | — | 204, empty body |
+
+### 3.3 Claims verified by execution, not by reading
+
+Two cells above assert framework behaviour rather than behaviour visible in a line of this repository.
+Both were run rather than assumed, against `app.api:app` through `fastapi.testclient.TestClient` with
+storage cleared first:
+
+| What was checked | Result |
+|---|---|
+| `GET /prompts/does-not-exist` | **500**, body `Internal Server Error`. With `raise_server_exceptions=True` (the `TestClient` default) the request instead propagates `AttributeError: 'NoneType' object has no attribute 'id'`. |
+| `POST /prompts` with `title=""` | **422** |
+| `POST /prompts` with an empty body | **422** |
+| `POST /prompts` with an unknown `collection_id` | **400** — the handler's own check (`:80-83`), not the framework's |
+| `POST /prompts` with a valid body | **201** |
+| `POST /collections` with a 101-character `name` | **422** |
+
+The `raise_server_exceptions` detail is recorded because it changes how the miss case can be asserted
+in a test: under the default client the exception escapes instead of becoming a response.
+
+### 3.4 What the matrix cannot hold
+
+**3.4.1 Nothing is copied in either direction.** `get_prompt` returns the stored object
+(`storage.py:23`), and `get_all_prompts` returns `list(self._prompts.values())` (`storage.py:26`) — a
+new list containing the same objects, not clones. Writes are symmetrical: `create_prompt` files the
+very object the handler constructed (`storage.py:19`). A handler that mutated a fetched prompt would
+therefore mutate the store directly. No handler does: `PUT` is the only route that could, and it
+builds a new `Prompt` instead (`:103-111`). The absence of copying is a property of the storage layer
+that the routes currently happen not to exercise, not a guarantee the design enforces.
+
+**3.4.2 The transform column is non-mutating but not correct.** All three helpers return new lists —
+two comprehensions and a `sorted()` call (`utils.py:18,23-27,14`) — so the outbound leg never writes
+back. But `sort_prompts_by_date` declares `descending: bool = True` and never reads it; the body is
+`sorted(prompts, key=lambda p: p.created_at)` with no `reverse` argument, which is ascending, oldest
+first (`utils.py:7-14`). `GET /prompts` passes `descending=True` (`:60`). **The call site is correct
+and the helper ignores its own parameter** — the defect is one file further down the flow than the
+route reads as suggesting.
+
+**3.4.3 Validation is entirely pre-handler.** Every field rule is declarative on the models (cited
+from the stage 1 reading; `models.py` was deliberately not in this stage's context), and a violation
+becomes a 422 without any handler line executing — confirmed in §3.3. The consequence for reading the
+matrix: every check in the *Handler guards* column is an existence or cross-entity check, never a
+field check, because field checks can no longer fail by the time the handler starts.
+
+**3.4.4 The collection filter exists twice, and the flow uses the outer one.**
+`storage.get_prompts_by_collection` (`storage.py:58-59`) and `utils.filter_prompts_by_collection`
+(`utils.py:17-18`) are the same predicate over the same data. `GET /prompts` calls the utils version
+(`:52`), so the filtering happens *after* the whole store has been copied into a list rather than
+during the scan. The storage version is called by nothing in the application.
+
+**3.4.5 Two routes have an empty Transform column by omission rather than by design.**
+`GET /collections` (`:129-132`) offers no filtering, searching or sorting, and no helper exists to
+provide any — `utils.py` is typed `List[Prompt]` throughout (`utils.py:7,17,21`). The asymmetry
+between the two listing routes is in the helpers, not in the handlers.
+
+---
+
 ## Context Strategy
 
 Required by C1.2. One row per exploration stage, recording the context level actually used and the
@@ -224,4 +309,6 @@ before the reading was done, not one composed afterwards.
 
 | 2 | Entry points (§2) | **File-level** — `app/api.py` only, full contents; no other source file re-read | Coupling, not size. The whole backend would still have fitted in context, so breadth was available and was declined: §1.3 established `api.py` as the single hub that imports `models`, `storage` and `utils` while nothing imports it back, which makes it the one file where every module meets and therefore the one that has to be read line by line rather than skimmed for shape. Loading the leaf modules alongside it would have invited describing what the helpers *do* instead of what the routes *expose*, and the boundary of this section is the exposed surface. The cost is recorded rather than hidden: the sorting claim in §2.3.5 stops at the call site because `app/utils.py` was deliberately not in context, and it is completed at stage 3. |
 
-Stages 3–6 to follow.
+| 3 | Data flow (§3) | **File-level, three files** — `app/api.py`, `app/storage.py`, `app/utils.py`. `app/models.py` deliberately excluded | Coupling. A data flow claim spans every module a request touches, so the two files the request passes through after the route had to be added; `api.py` alone would have described the return leg of the listing route as "three helpers happen". The initial proposal was two files, excluding `utils.py` on the premise that it only transforms data — the premise was the thing under test, and reading the file is what showed `sort_prompts_by_date` ignores its own `descending` argument (§3.4.2), closing the gap stage 2 left open. `models.py` was argued out on the same principle that brought `utils.py` in: it is the shape of what travels rather than a hop on the path, and it is stage 4's subject, so reading it here would have pulled stage 4's content forward. Its field constraints are cited in §3.4.3 from the stage 1 reading and marked as such. |
+
+Stages 4–6 to follow.

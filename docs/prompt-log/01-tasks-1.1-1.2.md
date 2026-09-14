@@ -504,3 +504,234 @@ naming constraint, applied to form rather than vocabulary.
 **Why my next prompt changed:**
 
 Format is settled. The next prompt is the stage 3 context decision, which is still outstanding.
+
+## Entry 19 — Stage 3 context decision, and the walkthrough of the request path
+
+**Stage:** 3 — Data flow. **Context level:** file-level, three files — `app/api.py` (already in
+context), `app/storage.py` (69 lines), `app/utils.py` (50 lines). `app/models.py` deliberately excluded.
+
+**Prompt sent:**
+
+> The way I see we just need api.py and storage.py... utils should not be needed as long as utils just
+> transfrom the data... what do you think?
+
+**What came back:**
+
+Partial disagreement, with reasons, and a recommendation to add `utils.py` back:
+
+- `utils.py` is **on** the path, not beside it — for `GET /prompts` the return leg *is* filter →
+  search → sort (`api.py:48-62`), so excluding it would describe the only non-trivial route's return
+  journey as "three helpers happen".
+- "as long as utils just transforms the data" was the assumption under test, not an established fact.
+  Only the signatures were known, from stage 1.
+- Stage 2 had left an explicit IOU: the sorting claim in §2.3.5 stops at the call site and the Context
+  Strategy row promises stage 3 closes it. Dropping `utils.py` would leave no stage owning it.
+- `models.py` was argued **out** on the same principle: it is the shape of what travels, which is
+  stage 4's section, and reading it now would pull stage 4's content into stage 3.
+
+**Follow-up prompt sent:**
+
+> ok lets go with the three files then
+
+**What the reading found** (recorded here; the write-up is the next step):
+
+- **Storage hands out live references, never copies.** `get_prompt` returns the stored object
+  (`storage.py:23`); `get_all_prompts` returns `list(self._prompts.values())` (`:26`) — a new list
+  containing the same objects. Writes are symmetrical: `create_prompt` stores the very object the
+  handler constructed (`:19`). Nothing is cloned in either direction.
+- **The utils helpers are non-mutating** — two list comprehensions and a `sorted()` call, each
+  returning a new list (`utils.py:18,23,14`). So the premise behind the original two-file proposal was
+  correct about *mutation*; it was the *behaviour* inside one of those transforms that made the file
+  worth reading.
+- **The stage 2 IOU is closed, and the bug is not where the route suggested.** `sort_prompts_by_date`
+  accepts `descending: bool = True` and never reads it — `sorted(prompts, key=lambda p: p.created_at)`
+  is ascending, oldest first (`utils.py:7-14`). `api.py:60` passes `descending=True` in good faith. The
+  call site is correct; the helper ignores its own parameter.
+- **The same filter is implemented twice.** `storage.get_prompts_by_collection` (`storage.py:58`) and
+  `utils.filter_prompts_by_collection` (`utils.py:17`) are the same predicate. `api.py` uses the utils
+  one; the storage one is called by nothing in the application.
+- **`search_prompts` guards `description` for `None` but not `title`** (`utils.py:25-26`), which is
+  consistent with the schema — `title` is required, `description` optional.
+- **`storage.clear()`** (`storage.py:63`) exists only for the tests, which is the seam noted in
+  stage 1 at `tests/conftest.py`.
+
+**Why this is a genuine iteration (C1.3): the user narrowed the context, and the narrowing was pushed
+back on with evidence rather than accepted.** The two-file proposal came with an explicit premise
+("as long as utils just transforms the data"); the reply tested the premise instead of the file list,
+and the agreed scope of three files is narrower than stage 1's whole-repo and wider than the proposal.
+
+**Why my next prompt changed:**
+
+The path is traced. What remains is choosing how to present it — by route, by leg, or as one worked
+example — which is a shape decision, not a reading one.
+
+## Entry 20 — Why "by leg" risks abstraction, and the shape that was settled
+
+**Stage:** 3 — Data flow, write-up shape. **Context level:** unchanged — the same three files.
+
+**Prompt sent:**
+
+> On the leg one, why you think risk will be too abstrack and why is that difference with the other
+> options?
+
+**What came back:**
+
+The risk named concretely rather than as a general warning: a leg description — JSON → Pydantic
+validation → handler → storage → `response_model` → JSON — is **true of every FastAPI application**,
+so it can be entirely accurate and still say nothing specific about PromptLab. That is expensive under
+C1.1, which grades claims that can be checked against the source: leg prose tends to produce sentences
+with no line to cite.
+
+Demonstrated with the stage 3 findings, which resist the leg shape because they are conditional:
+
+- "storage hands out live references" (`storage.py:23,26`) only matters **because** `PUT` rebuilds
+  rather than mutates (`api.py:103-111`) — one claim spanning two legs;
+- the sort defect (`utils.py:14`) belongs to the outbound leg of **one route out of ten**.
+
+Written purely by leg, both degrade into "…except for" footnotes.
+
+How the alternatives differ: **by route class**, the unit of organisation is the thing that actually
+varies, so claims attach to lines structurally; **worked trace plus deltas** is concrete by
+construction but pays in length and has to argue its chosen route is representative.
+
+**Follow-up prompt sent:**
+
+> ok, lets go with that, but show me the data flow one by one so I can review and accept
+
+**Settled shape:** legs as the spine, with a per-route deltas table beneath them, so the narrative stays
+clean and the exceptions have somewhere honest to live. Presented one leg at a time for review before
+anything is written to `SYSTEM_MODEL.md`.
+
+**Why this is a genuine iteration (C1.3): the user interrogated the trade-off instead of accepting the
+recommendation, and then restructured the delivery.** The prompt did not pick an option — it asked the
+reasoning to be justified, and the result was a hybrid neither of us had proposed, plus a review
+protocol (leg by leg, accepted one at a time) that did not exist in any of the three original angles.
+
+**Why my next prompt changed:**
+
+Nothing further to decide about shape. The next prompts are acceptances or corrections of one leg at
+a time.
+
+## Entry 21 — Shape corrected again: § Data flow becomes a per-route matrix
+
+**Stage:** 3 — Data flow, write-up shape. **Context level:** unchanged — the same three files.
+
+**Prompts sent:**
+
+> I want to correct and go for the delta table, as I see it more fit for this purpose
+
+then, after the ambiguity was put back as two options:
+
+> Lets go for A and if then we see we need to change it we go for it. Regarding "correct" it was aimed
+> at the shape
+
+**What came back:**
+
+The instruction had two readings that produced different documents, so it was not guessed at: **A** —
+the section *is* a matrix, one row per route, columns for bind/validate → handler guards → storage call
+→ transform → response, no leg prose at all; **B** — matrix first, with legs demoted to a short
+exceptions section. A was chosen, with the cost stated up front: the cross-cutting facts (storage
+handing out live references, `PUT` rebuilding rather than mutating) have no natural cell and will need
+somewhere to go.
+
+Leg 1 had already been drafted and reviewed in chat when the shape changed. Nothing was lost — by the
+protocol agreed in entry 20, no leg is written to `SYSTEM_MODEL.md` until it is accepted, so the
+correction cost a draft in conversation and nothing in the deliverable.
+
+**Why this is a genuine iteration (C1.3): the user restructured the output after seeing a sample of
+it.** Entry 20 settled "legs as the spine, table beneath". Reviewing the first leg is what showed that
+the prose spine was not earning its place for this section, and the structure was inverted then
+discarded. This is the restructuring C1.3 asks for, and it was driven by the review protocol the user
+himself introduced — the sample existed to be judged, and it was judged.
+
+**Why my next prompt changed:**
+
+Shape is settled for real. The next prompts review the matrix rows themselves.
+
+## Entry 22 — "How do you know?" — an inferred claim challenged and then executed
+
+**Stage:** 3 — Data flow, matrix review. **Context level:** unchanged, plus one execution against the
+running app.
+
+**Prompt sent:**
+
+> Number 3 (get_prompt) says it returns a 200 on hit, but 500 on miss, how you knwo this?
+
+**What came back:**
+
+**A concession that the claim was inference, not observation.** The chain was split into what had been
+read and what had not:
+
+- read from source — `get_prompt` returns `self._prompts.get(id)`, so `None` on a miss
+  (`storage.py:23`); `:73` evaluates `prompt.id` before the `if` can test anything;
+- **asserted from general FastAPI knowledge, not from this repository** — that an unhandled exception
+  in a handler becomes a 500.
+
+The third step was then executed rather than argued, through `fastapi.testclient.TestClient` against
+`app.api:app` with storage cleared:
+
+```
+status: 500
+body: Internal Server Error
+raised: AttributeError - 'NoneType' object has no attribute 'id'
+```
+
+The cell survived unchanged, but **the kind of evidence behind it changed**, and that is what is
+recorded in §3.3 of `SYSTEM_MODEL.md` — an observed result with the command behind it, not a claim
+assembled from three line citations.
+
+Two further things the question forced out:
+
+- The same weakness had been **flagged on leg 1 and then allowed to ride into the matrix**: the "422
+  from the framework" cells were unverified too. They were run in the next turn — empty `title` 422,
+  empty body 422, over-long collection `name` 422, unknown `collection_id` **400** from the handler's
+  own check, valid body 201.
+- `TestClient`'s default `raise_server_exceptions=True` **re-raises** the `AttributeError` instead of
+  returning a response. Recorded now because it dictates how the miss case can be asserted when
+  Task 1.3 gets a test.
+
+**C1.5-adjacent, and worth noting alongside entry 16.** No false statement was produced — the claim was
+correct — but it was presented with the same confidence as the cited claims around it while resting on
+an unverified step. The failure mode is *unmarked inference*, and it was caught by the user asking for
+provenance rather than for a fact.
+
+**Why this is a genuine iteration (C1.3): it added a standing evidential constraint.** The prompt did
+not challenge the conclusion, it challenged the warrant. The result is a rule the section now follows —
+claims that rest on framework behaviour are executed and recorded in §3.3 — and it retroactively
+repaired three other cells that would have shipped unverified.
+
+**Why my next prompt changed:**
+
+Nothing left to challenge in the matrix; the remaining step was to write it.
+
+---
+
+## Entry 23 — Write § Data flow
+
+**Stage:** 3 — Data flow, write-up. **Context level:** unchanged.
+
+**Prompt sent:**
+
+> ok, lets write this
+
+**What came back:**
+
+The 422 cells were verified first, unprompted, since they were the one loose end left by entry 22 and
+leaving them would have put an unmarked inference into the deliverable immediately after agreeing not
+to.
+
+`docs/SYSTEM_MODEL.md` § 3 written: an opening paragraph saying why the section is a matrix rather than
+a stage narrative (the stages are FastAPI's and identical in any FastAPI app; only the cells are
+PromptLab's), §3.1 the prompt and health routes, §3.2 the collection routes, §3.3 the claims verified
+by execution, and §3.4 the five facts that span routes and therefore have no cell — no copying in
+either direction, the non-mutating but incorrect sort, validation being entirely pre-handler, the
+collection filter existing twice with the flow using the outer one, and the two empty Transform columns
+being an omission in `utils.py` rather than a decision in the handlers.
+
+The § Context Strategy stage 3 row records the three-file decision including the rejected two-file
+proposal and the reason `models.py` was kept out.
+
+**Why my next prompt changed:**
+
+Stage 3 is closed. Stage 4 is Models and relationships, and `models.py` — held out of the last two
+stages precisely so it would land here — is its obvious context.

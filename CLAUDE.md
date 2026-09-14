@@ -11,15 +11,15 @@ work.** It is how a new session resumes without reading everything.
 
 | | |
 |---|---|
-| **Current task** | **Task 1.1 — explore the code and write it up.** In progress: stages 1–2 of 6 done. |
-| **Log shard to append to** | `docs/prompt-log/01-tasks-1.1-1.2.md` — entries 7–12 |
-| **Next entry number** | 18 |
-| **Context stage** | **Stage 3 — Data flow. Context level not yet chosen; it is the user's call and must be argued from size or coupling.** Stage 1 used whole-repo (587 lines, argued from size); stage 2 used file-level `api.py` (argued from coupling). Both rows are in `SYSTEM_MODEL.md` § Context Strategy. Note that stage 2 deliberately left `app/utils.py` unread, so the sorting claim in §2.3.5 is explicitly incomplete and stage 3 has to close it. |
+| **Current task** | **Task 1.1 — explore the code and write it up.** In progress: stages 1–3 of 6 done. |
+| **Log shard to append to** | `docs/prompt-log/01-tasks-1.1-1.2.md` — entries 7 onwards |
+| **Next entry number** | 24 |
+| **Context stage** | **Stage 4 — Models and relationships. Context level not yet chosen; it is the user's call and must be argued from size or coupling.** Stage 1 whole-repo (size), stage 2 file-level `api.py` (coupling), stage 3 three files — `api.py`, `storage.py`, `utils.py` (coupling; `models.py` held back on purpose because it is stage 4's subject). All three rows are in `SYSTEM_MODEL.md` § Context Strategy. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
 restructuring in entry 8, because one rationale cannot honestly cover six different questions.
 **Use the brief's own section names** (see *Section naming* below):
-1. Architecture ✅ · 2. Entry points ✅ · 3. Data flow ← *next* · 4. Models and relationships ·
+1. Architecture ✅ · 2. Entry points ✅ · 3. Data flow ✅ · 4. Models and relationships ← *next* ·
 5. Storage layer · 6. External dependencies · plus the Context strategy section, which grows a row
 per stage.
 
@@ -28,6 +28,18 @@ Task 1.1 stage 1 — `docs/SYSTEM_MODEL.md` § Architecture (1.1 what it is, 1.2
 they fit, 1.4 characteristics) and the § Context Strategy stage-1 row. Task 1.1 stage 2 —
 § Entry points (2.1 route table, 2.2 the FastAPI-contributed routes, 2.3 notes on the surface) and the
 § Context Strategy stage-2 row.
+
+**Established in stage 3** (do not re-derive; do cite): storage hands out and files away **uncopied**
+objects (`storage.py:19,23,26`), and `PUT` is the only route that could mutate the store but rebuilds
+instead (`api.py:103-111`) · the sort defect is in the helper, not the call site — `descending` is
+declared and never read (`utils.py:7-14`), `api.py:60` passes it correctly · validation is entirely
+pre-handler, so every handler guard is existence or cross-entity, never field-level · the collection
+filter exists twice (`storage.py:58`, `utils.py:17`) and the flow uses the utils one (`api.py:52`) ·
+`utils.py` is typed `List[Prompt]` throughout, which is why collections have no listing transform.
+**Verified by execution, not reading** (§3.3): miss on `GET /prompts/{id}` is an observed 500 over
+`AttributeError: 'NoneType' object has no attribute 'id'`; body violations are 422; unknown
+`collection_id` is 400. `TestClient`'s default `raise_server_exceptions=True` re-raises instead of
+returning 500 — this matters for the Task 1.3 test.
 
 **Established in stage 2** (do not re-derive; do cite): ten declared routes, all in `api.py` with no
 `APIRouter`, plus `/docs`, `/redoc`, `/openapi.json` from the app object · the listing pipeline is a
@@ -229,6 +241,7 @@ present. Fixes must address the cause.
 The user asked for this explicitly. Long prose replies are harder to follow than the work deserves.
 
 - **Bullets over paragraphs.** Bold the thing that matters in each bullet.
+- **Use tables instead of bullets** when a comparison or the message itself can be enhance.
 - **Cut anything that is not a finding, a decision, or a question.** No recaps of what was just done
   when the diff already says it, no restating the rule being followed, no narrating the plan.
 - **Cite `file.py:line` instead of quoting code** unless the exact text is the point.
