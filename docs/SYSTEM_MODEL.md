@@ -515,6 +515,44 @@ place in the API where storage answers "does it exist?" and "remove it" in a sin
 **Group 5 — returns nothing.** `clear()` (`storage.py:63-65`), the only method with no return
 annotation; see §5.1.
 
+### 5.3 Limitations
+
+Each row below is a gap between what `storage.py` offers and what `api.py` needs — the comparison that
+this stage's context level was chosen to make possible (see § Context Strategy). "Masked by" names what
+currently prevents a limitation from biting; it is not a fix, and in every case it lives outside the
+storage layer.
+
+| # | Limitation | In the store | What it costs the caller |
+|---|---|---|---|
+| 1 | **No persistence.** State is two dictionaries on one object; no file, no serialisation, no load on startup and no flush on shutdown | `storage.py:13-14,69` | Every prompt and collection is lost on process restart. The module names the intended replacement itself (`storage.py:3-4`) |
+| 2 | **One instance, no seam.** Constructed at import; the routes bind it by direct import | `storage.py:69`, `api.py:13` | No caller can supply an alternative store — for a test, a fixture, or a different backend (§1.4) |
+| 3 | **State is per-process.** The instance is a module-level global | `storage.py:69` | Run under more than one worker process, each worker holds its own pair of dictionaries and nothing reconciles them; two identical requests can see different data |
+| 4 | **No primitive for concurrent writes.** No atomic update, no compare-and-set, no version field; the module imports only `typing` and `models` | `storage.py:7-8,28-32` | A read-then-write spanning two calls cannot be made safe *by the store*. `api.py:91→113` can interleave; last write wins, undetected. A caller can serialise it externally, but must do so at every call site — the layer offers no help |
+| 5 | **No uniqueness guarantee.** Assignment overwrites any existing entry, silently | `storage.py:19,43` | *Masked by* `models.py:35,55` and the absence of `id` from the create DTOs — see note A. Any future write path that supplies an id inherits a silent replace with no error |
+| 6 | **No key/field agreement check.** `update_prompt` writes under `prompt_id` without checking `prompt.id` | `storage.py:28-32` | The key and the stored object's own id can disagree. *Masked by* one line, `api.py:104` — see note A |
+| 7 | **No content-level deduplication.** Nothing compares field values on write | `storage.py:18-20` | Identical title and content under two ids are two distinct prompts. No route can detect it, because the store offers no query that would |
+| 8 | **Collections cannot be modified.** The collection half offers create, get, get-all and delete only | `storage.py:42-56` | No route can rename or re-describe a collection. §2.1's route table has no `PUT` or `PATCH` for collections — the gap originates here, not in `api.py` |
+| 9 | **Prompts can only be replaced, never modified.** `update_prompt` takes a complete `Prompt` | `storage.py:28` | A caller changing one field must read, rebuild and write the whole entity, which is what `api.py:103-111` does |
+| 10 | **No index but the id.** The only key is the entity's own id (§5.1); the collection query is a comparison pass | `storage.py:58-59` | Every collection-scoped lookup is a full pass over all prompts. The flow's own filter (`utils.py:17`) repeats the same scan |
+| 11 | **No pagination or projection.** `get_all_prompts` returns every stored prompt | `storage.py:26` | `api.py:48` materialises the entire set before filtering, searching or sorting, and no route exposes a limit or offset (`api.py:43-47`) |
+| 12 | **No isolation between store and caller.** Objects are stored and returned uncopied (§3) | `storage.py:19,23,26` | A caller holding a returned object holds the stored object. The store is not a boundary |
+| 13 | **No multi-operation atomicity.** Every method is a single dictionary operation; there is no transaction and no rollback | whole module | Two related mutations cannot succeed or fail together. §4.2 records the observed consequence for collection deletion |
+
+**Rows 2 and 3 share one cause.** Both descend from a single line — the instance is created at module
+scope (`storage.py:69`) rather than constructed by whatever runs the application. They are listed
+separately because either can be resolved without the other: introducing a factory or an injected
+dependency removes row 2 while leaving row 3, and moving the data to a shared external store removes
+row 3 while leaving row 2.
+
+**Note A — on rows 5 and 6.** Neither is reachable through the routes that exist today. `id` is absent
+from `PromptCreate` and `CollectionCreate` (`models.py:26-27,50-51`), Pydantic discards unknown keys so
+a body containing `"id"` never reaches a handler, and `api.py:85,145` therefore always trigger
+`default_factory=generate_id` (`models.py:9-10`); a duplicate id would require a `uuid4` collision. They
+are recorded because the guarantee is absent from the **storage layer**: the store is safe only by
+virtue of how its one caller happens to construct its arguments, and row 6's protection is a single line
+in a single handler. Rows 4, 5 and 6 share this shape — the guarantee is missing from the layer, and
+whatever stands in for it today is somewhere else.
+
 ---
 
 ## Context Strategy

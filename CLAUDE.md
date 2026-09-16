@@ -13,14 +13,14 @@ work.** It is how a new session resumes without reading everything.
 |---|---|
 | **Current task** | **Task 1.1 — explore the code and write it up.** In progress: stages 1–4 of 6 done. |
 | **Log shard to append to** | `docs/prompt-log/01-tasks-1.1-1.2.md` — entries 7 onwards |
-| **Next entry number** | 32 |
-| **Context stage** | **Stage 5 — Storage layer, in progress. Context level chosen: two files, `storage.py` + `api.py`**, argued from coupling — `storage.py` calls nothing and is called from exactly one file, so it defines the whole supply and `api.py` the whole demand; a limitation is a gap between them that neither file shows alone. Cost stated: `tests/` out of scope this stage. Sub-parts: **5.1 ✅** what the store is · **5.2 ✅** the operation surface (cut by return type) · **5.3 limitations ← next**. The planned "how objects enter and leave" was **dropped by the user in entry 32** as already established in §3; limitations moved up from 5.4 to 5.3, and anything resting on object identity cites §3 rather than restating it. **Parked for 5.3 — four items deliberately cut from 5.2 so that 5.3 reaches them:** (1) no duplicate-**id** check, assignment silently replaces (`storage.py:19,43`) — state the caveat that ids are server-generated (§4.4) so no route reaches it today; (2) no duplicate-**content** check, two prompts with identical title/content under different ids both stored — the user's own addition; (3) the collection half has no update method; (4) `update_prompt` takes a complete `Prompt`, so the store offers replacement and never modification. **Standing constraint the user imposed: a sub-part may only make claims of its own kind — 5.1–5.2 describe, 5.3 judges.** Stage 1 whole-repo (size), stage 2 file-level `api.py` (concentrated coupling), stage 3 three files (`api.py`, `storage.py`, `utils.py`), stage 4 whole-repo including `tests/` (distributed coupling). Rows 1–4 plus the closing note on what the narrowing bought are in `SYSTEM_MODEL.md` § Context Strategy; **the stage-5 row is written last, after 5.3.** §4.2 has already characterised part of the storage layer, so stage 5 cites rather than re-derives. |
+| **Next entry number** | 35 |
+| **Context stage** | **Stage 5 — Storage layer. 5.1, 5.2 and 5.3 all written; only the § Context Strategy stage-5 row remains.** Context level used: two files, `storage.py` + `api.py`, argued from coupling — `storage.py` calls nothing and is called from exactly one file, so it defines the whole supply and `api.py` the whole demand; a limitation is a gap between them that neither file shows alone. Cost stated: `tests/` out of scope this stage. Final carve: **5.1 ✅** what the store is · **5.2 ✅** the operation surface (cut by return type) · **5.3 ✅** limitations (one 13-row table). The planned object-identity sub-part was dropped by the user in entry 32 as already established in §3, and limitations moved up from 5.4 to 5.3. Stage 1 whole-repo (size), stage 2 file-level `api.py` (concentrated coupling), stage 3 three files (`api.py`, `storage.py`, `utils.py`), stage 4 whole-repo including `tests/` (distributed coupling). Rows 1–4 plus the closing note on what the narrowing bought are in `SYSTEM_MODEL.md` § Context Strategy. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
 restructuring in entry 8, because one rationale cannot honestly cover six different questions.
 **Use the brief's own section names** (see *Section naming* below):
 1. Architecture ✅ · 2. Entry points ✅ · 3. Data flow ✅ · 4. Models and relationships ✅ ·
-5. Storage layer ← *next* · 6. External dependencies · plus the Context strategy section, which grows
+5. Storage layer (5.1–5.3 done, Context Strategy row pending) · 6. External dependencies ← *next* · plus the Context strategy section, which grows
 a row per stage.
 
 **Done:** setup. Working protocol agreed, `CLAUDE.md` written, prompt log opened and sharded.
@@ -28,6 +28,16 @@ Task 1.1 stage 1 — `docs/SYSTEM_MODEL.md` § Architecture (1.1 what it is, 1.2
 they fit, 1.4 characteristics) and the § Context Strategy stage-1 row. Task 1.1 stage 2 —
 § Entry points (2.1 route table, 2.2 the FastAPI-contributed routes, 2.3 notes on the surface) and the
 § Context Strategy stage-2 row.
+
+**Established in stage 5** (do not re-derive; do cite): two structurally independent dicts keyed by the
+entity's own `str` id (`storage.py:13-14`); the prompt→collection link is never stored, only recomputed
+by iterating every prompt (`storage.py:58-59`) · one module-level instance bound by direct import
+(`storage.py:69`, `api.py:13`); `clear()` is called by nothing in `app/` · eleven methods grouped by
+return type in §5.2, each with its `api.py` call site · **§5.3 holds thirteen limitations**, of which
+rows 4, 5 and 6 share one shape — the guarantee is absent from the layer and whatever stands in for it
+lives elsewhere (`api.py:104`, `models.py:35,55`) · row 4 is "no primitive for concurrent writes", *not*
+"no concurrency control" — the user corrected that, since `api.py` could serialise externally · rows 2
+and 3 share the cause `storage.py:69` but are separately fixable.
 
 **Established in stage 4** (do not re-derive; do cite): the link is many-to-one, declared only on the
 child (`models.py:23`); `Collection` has no back-reference (`models.py:54-59`) · `collection_id` is the

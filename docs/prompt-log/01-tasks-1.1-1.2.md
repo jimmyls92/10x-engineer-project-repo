@@ -1103,3 +1103,94 @@ finished `SYSTEM_MODEL.md` would otherwise explain.
 
 Description is finished. Everything remaining in the section is judgement, including the four items
 parked out of 5.2.
+
+---
+
+## Entry 33 — "Unreachable" was challenged and turned out to be the wrong word
+
+**Prompt:**
+
+> why the duplication-id is unreachable? it cant effectivly happen?
+
+**What came back:**
+
+I had flagged, while offering shapes for the limitations section, that the duplicate-id overwrite is
+"unreachable today". Challenged, the chain was actually traced instead of asserted: `id` is absent from
+`PromptCreate`/`CollectionCreate` (`models.py:26-27,50-51`) and declared only on the entity models
+(`models.py:35,55`); Pydantic drops unknown keys by default so a body containing `"id"` never reaches
+the handler; `api.py:85,145` build from the DTO so `default_factory=generate_id` always fires
+(`models.py:9-10`); and `PUT` reuses `existing.id` (`api.py:104`). A collision would therefore require
+two `uuid4` values to collide.
+
+**The correction I forced:** "unreachable" overstated it, and — more importantly — deflating the item
+was the wrong move. The accurate framing is that **the store promises nothing and the safety lives
+entirely in `models.py`**, a different module under a different concern. `storage.py:19,43` overwrite
+whatever is present, silently. A store that is safe only because of how its callers happen to build
+their arguments is exactly the supply/demand gap that context level B was chosen to expose, so the
+limitation stands — with the masking named rather than omitted.
+
+**A sibling surfaced from tracing it:** `update_prompt` writes `self._prompts[prompt_id] = prompt`
+(`storage.py:31`) and never checks that `prompt.id == prompt_id`. Nothing in the store prevents the key
+and the stored object's own id from disagreeing; today only `api.py:104` does. Unlike the duplicate-id
+overwrite, this one is reachable by any new write path.
+
+**Why the next prompt changed:**
+
+The item had to be written as "no guarantee, currently masked" rather than as "cannot happen", which
+means the shape chosen for the section has to leave room for a caveat per row.
+
+---
+
+## Entry 34 — 5.3 written: shape chosen, two rows defended, one row corrected
+
+**Prompt:**
+
+> lets go with C, and add that sibling to the list
+
+then, on the draft:
+
+> one could argue that 2 and 3 are coupled right, as the storage object is created in teh storage
+> script both thins are consecuence of this decission. what do you think? 4- concurrency could also be
+> managed from the api side, right?
+
+then:
+
+> ok, keep both rows and rewrite 4, go ahead.
+
+**What came back, and what changed:**
+
+- **Shape C chosen: a single thirteen-row table**, each row carrying the limitation, its evidence in
+  `storage.py`, and what it costs the caller with the `api.py` line. Chosen over grouping by cause or by
+  consequence because the two evidence columns make the supply/demand gap literal — which is the whole
+  reason this stage read both files.
+- **My first challenge was tested rather than accepted.** I observed that rows 2 (one instance, no seam)
+  and 3 (state is per-process) both descend from `storage.py:69`. The test applied was whether each can
+  be fixed without the other: a factory or injected dependency removes row 2 and leaves row 3; moving to
+  a shared external store removes row 3 and leaves row 2. **Separately fixable, so two limitations with
+  one origin** — kept as two rows, with the shared cause now stated explicitly in the document instead
+  of left for a reader to notice.
+- **My second challenge produced an outright correction.** "No concurrency control" was wrong as
+  written: a lock in `api.py` around `91→113` would serialise that sequence, so the absence is not
+  unfixable from outside. Row 4 was rewritten to the narrower and truer claim — **the store offers no
+  primitive to build it with**: no atomic update, no compare-and-set, no version field, and no method
+  combining a read with a conditional write. Any solution must live outside the layer and be applied at
+  every call site by convention.
+- **That rewrite revealed a shape shared by three rows.** Rows 4, 5 and 6 are all "the guarantee is
+  absent from the storage layer, and whatever stands in for it today is somewhere else" — `api.py` for
+  4 and 6, `models.py` for 5. Note A now says so, which turns three separate observations into one
+  characterisation of the layer.
+- **Row 13 deliberately stops short** of saying what *should* happen on collection deletion. It cites
+  §4.2 and leaves the decision to Task 1.6 (Rule 0).
+
+**Why this is a genuine iteration (C1.3): a claim was narrowed under challenge.** The prompt did not
+ask for a rewording — it asked whether a limitation attributed to the storage layer could be answered
+from the API layer. It could, so the claim was too broad, and the replacement is a different and
+smaller assertion about what the store *provides* rather than about what the system *lacks*.
+
+§5.3 written to `docs/SYSTEM_MODEL.md`. Rows 10, 11 and 13 stood as drafted; I was asked about them and
+raised no objection.
+
+**Why the next prompt changed:**
+
+All three sub-parts are written. What remains for stage 5 is the § Context Strategy row, which by
+standing convention is written last so it records what the stage actually did.
