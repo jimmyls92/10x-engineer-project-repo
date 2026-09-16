@@ -902,3 +902,122 @@ whole.
 
 Section 4 is closed. Stage 5 is the Storage layer, which 4.2 has already partly characterised — the
 next context decision has to take account of how much of it is now established.
+
+---
+
+## Entry 27 — Stage 5 opened: Storage layer, with the context level stated up front
+
+**Prompt:**
+
+> lets go for the stora layer explanation. Guide me through how it works and what are the limitations.
+> I will load the whole context as the repo is small, but I guess I would only need the storage.py
+> file. After investigation, tell me what is the pna on what you want to write, and lets confirm each
+> part bit by bit to avoid cognitive overhead.
+
+**What came back:**
+
+`storage.py` read in full (69 lines). No section drafted yet — the reply was a **plan of four sub-parts**
+(5.1 what the store is · 5.2 the operation surface · 5.3 how objects enter and leave · 5.4 the
+limitations) to be confirmed one at a time, plus a challenge to the context rationale I gave.
+
+**The challenge:** "the repo is small" is the **stage-1** rationale and I have already spent it
+(§ Context Strategy row 1). C1.2 asks for a reason grounded in the size or coupling *of this stage's
+code*, and reusing a size argument five stages in says nothing about the storage layer. Three angles
+were offered — `storage.py` alone (it imports only `models`, so "how it works" is fully contained),
+`storage.py` + the `api.py` call sites (a *limitation* is only a limitation relative to what a caller
+needs, so the second half of the brief's question may not be answerable from the file alone), or
+whole-repo again.
+
+**Why this matters for the next prompt:**
+
+The plan is deliberately split so that "how it works" and "what its limitations are" — the brief's two
+halves — can take *different* context levels if that is the honest answer. Noted also that §4.2 already
+established part of the storage picture (`get_prompts_by_collection` exists and is called by nothing),
+so stage 5 must cite it rather than re-derive it.
+
+---
+
+## Entry 28 — Context level chosen for stage 5: two files, on a coupling argument
+
+**Prompt:**
+
+> I will go for B in tearms on context as I think is needed to understand the limitations
+
+**What came back:**
+
+`api.py` read alongside `storage.py`; the twelve call sites are `api.py:48,70,81,86,91,97,113,122,131,
+137,146,155`. My reason was accepted but **sharpened so it names the coupling**, which is what C1.2
+grades: `storage.py` calls nothing and is called from exactly one file, so the coupling is **total but
+one-directional** — `storage.py` defines the whole supply, `api.py` the whole demand, and a limitation
+is a gap between the two that neither file shows alone. The cost of B was stated: `tests/` is out of
+scope this stage, so any constraint visible only from test usage will not surface. Nothing else was
+pulled in — the duplicated collection filter in `utils.py` is already established in stage 3 and is
+cited rather than re-read.
+
+**Why the next prompt changed:**
+
+Context settled; the four-part carve was left standing. Before drafting 5.1 I wanted the *purpose* of
+each part rather than its content, so the structure could be judged before any prose existed.
+
+---
+
+## Entry 29 — The purpose of each sub-part, before any of it is written
+
+**Prompt:**
+
+> Explain the point of each process (5.1, 5.2, 5.3 and 5.4) and what do we intend to get from every of
+> them.
+
+**What came back:**
+
+A table giving, for each part, the single question it answers, what it produces, and **what breaks in
+the section if it is skipped** — deliberately no findings, so the structure is judged on its own. The
+load-bearing point: the brief's two halves ("how it works" / "what its limitations are") map to
+**5.1–5.3 and 5.4**, and 5.4 is only defensible because 5.2 has already tabulated the supply side —
+without it, limitations degrade into generic "in-memory is not a database" observations that would not
+be grounded in this code.
+
+**Why the next prompt changed:**
+
+Structure confirmed as purposeful rather than arbitrary, so drafting can start at 5.1.
+
+---
+
+## Entry 30 — 5.1 drafted, and one phrase challenged out of it
+
+**Prompt:**
+
+> go ahead with 5.1
+
+then, on the draft:
+
+> and the only join that exists is a scan (§5.2)... what do you mean by this? Regarding your 3 points:
+> 1-Ok for this, but maybe specifiy it on "The container" paragraph, as it belongs there. 2- It is a
+> property for sure, if its a limitation or not we will decide it in 5.4, but my guess is that is not a
+> limitation, although a lot of times it would be unconvenient
+
+**What came back, and what changed:**
+
+- **A phrase was challenged as jargon and had to be replaced by the fact underneath it.** The draft
+  said "the only join that exists is a scan (§5.2)", deferring the explanation to a later part. Asked
+  what it meant, the answer is a property of the data structure, not of the method surface: there is no
+  dictionary keyed by `collection_id` and no list of prompt ids on the collection, so
+  `get_prompts_by_collection` (`storage.py:58-59`) **consults no index — it iterates every prompt and
+  compares the field**. The relationship is recomputed per call and never stored.
+- **The forward reference was therefore deleted.** The explanation moved *into* "The container", where
+  the structural claim already lived — my instruction, and the right call: the fact is about the shape
+  of the store, so it belongs in the paragraph about the shape of the store, not parked in a later
+  sub-part.
+- **The `str`-not-`UUID` key stays in 5.1 as a property, with the judgement explicitly deferred** to
+  §5.4 ("Whether that counts as a limitation is left to §5.4"). My reasoning: a property and a
+  limitation are different claims, and 5.1 is not the place to decide which it is.
+- **`clear()` scoping settled.** The draft said "called by no route in `api.py`", the most context level
+  B could honestly support. My ruling: the test suite is not part of the application code, so the
+  stronger statement is legitimate. Verified by grep across `app/` — no caller — and written as "called
+  by nothing in `app/` — it is a test-support affordance, not part of any request path."
+
+§5.1 written to `docs/SYSTEM_MODEL.md`.
+
+**Why the next prompt changed:**
+
+5.1 fixed the shape of the store. 5.2 can now tabulate what that shape is asked to do.

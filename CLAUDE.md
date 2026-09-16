@@ -13,8 +13,8 @@ work.** It is how a new session resumes without reading everything.
 |---|---|
 | **Current task** | **Task 1.1 — explore the code and write it up.** In progress: stages 1–4 of 6 done. |
 | **Log shard to append to** | `docs/prompt-log/01-tasks-1.1-1.2.md` — entries 7 onwards |
-| **Next entry number** | 27 |
-| **Context stage** | **Stage 5 — Storage layer. Context level not yet chosen; it is the user's call and must be argued from size or coupling.** Stage 1 whole-repo (size), stage 2 file-level `api.py` (concentrated coupling), stage 3 three files (`api.py`, `storage.py`, `utils.py`), stage 4 whole-repo including `tests/` (distributed coupling). All four rows plus the closing note on what the narrowing bought are in `SYSTEM_MODEL.md` § Context Strategy. Note that §4.2 has already characterised part of the storage layer, so stage 5 must cite rather than re-derive. |
+| **Next entry number** | 31 |
+| **Context stage** | **Stage 5 — Storage layer, in progress. Context level chosen: two files, `storage.py` + `api.py`**, argued from coupling — `storage.py` calls nothing and is called from exactly one file, so it defines the whole supply and `api.py` the whole demand; a limitation is a gap between them that neither file shows alone. Cost stated: `tests/` out of scope this stage. Sub-parts: **5.1 ✅** what the store is · 5.2 the operation surface · 5.3 how objects enter and leave · 5.4 limitations. Stage 1 whole-repo (size), stage 2 file-level `api.py` (concentrated coupling), stage 3 three files (`api.py`, `storage.py`, `utils.py`), stage 4 whole-repo including `tests/` (distributed coupling). Rows 1–4 plus the closing note on what the narrowing bought are in `SYSTEM_MODEL.md` § Context Strategy; **the stage-5 row is written last, after 5.4.** §4.2 has already characterised part of the storage layer, so stage 5 cites rather than re-derives. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
 restructuring in entry 8, because one rationale cannot honestly cover six different questions.

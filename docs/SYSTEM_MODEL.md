@@ -420,6 +420,44 @@ populating models from ORM rows. There is no ORM and no database in the project
 
 ---
 
+## 5. Storage layer
+
+### 5.1 What the store is
+
+The module states its own intent: in-memory storage for prompts and collections, "in a production
+environment, this would be replaced with a database" (`storage.py:1-5`). The rest of this section takes
+that at face value and asks what the implementation actually commits to.
+
+**The container.** A single class, `Storage` (`storage.py:11`), holding **two plain Python
+dictionaries** — `self._prompts` and `self._collections` (`storage.py:13-14`) — each typed
+`Dict[str, ...]` and keyed by the entity's own `id`. The underscore prefix marks both as private by
+convention; no method returns either dictionary itself.
+
+The two dictionaries are **structurally independent**. Neither holds a reference to the other's
+entries, and neither is indexed by anything but its own key, so the prompt→collection link described in
+§4 exists only as a field value inside each prompt — never as part of the store's shape. The one method
+that relates the two, `get_prompts_by_collection` (`storage.py:58-59`), is not an exception: it consults
+no index, it **iterates every prompt and compares `collection_id`**. The relationship is recomputed on
+each call and is never stored. A lookup by id is a direct dictionary hit; a lookup by collection is a
+full pass over the prompts.
+
+**The key type is `str`, not `UUID`.** Ids are server-assigned strings (established in §4.4), so a
+lookup key is any string a caller supplies — the dictionary cannot reject a malformed one, only miss on
+it. Whether that counts as a limitation is left to §5.4.
+
+**The instance.** Exactly one, constructed at import time as a module-level global — `storage =
+Storage()` (`storage.py:69`) — and bound into the routes by direct import, `from app.storage import
+storage` (`api.py:13`). There is no factory, no constructor argument and no injection seam (established
+in §1.4). Every route in the application therefore reads and writes **the same object**, and no route
+can be handed a different one.
+
+**Lifetime.** The dictionaries live for the lifetime of the Python process and no longer. There is no
+file, no serialisation, no load on startup and no flush on shutdown; a restart begins with two empty
+dictionaries. The single reset path is `clear()` (`storage.py:63-65`), filed under "Utility" and called
+by nothing in `app/` — it is a test-support affordance, not part of any request path.
+
+---
+
 ## Context Strategy
 
 Required by C1.2. One row per exploration stage, recording the context level actually used and the
