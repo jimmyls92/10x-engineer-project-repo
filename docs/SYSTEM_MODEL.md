@@ -456,6 +456,65 @@ file, no serialisation, no load on startup and no flush on shutdown; a restart b
 dictionaries. The single reset path is `clear()` (`storage.py:63-65`), filed under "Utility" and called
 by nothing in `app/` — it is a test-support affordance, not part of any request path.
 
+### 5.2 The operation surface
+
+Eleven methods, no inheritance, no decorators, and no exception raised anywhere in the module. They are
+grouped below by **what they return**, because the return type is what the calling route has to react to
+— and it is what produced the 404 discipline recorded in §2.3.
+
+**Group 1 — returns the entity. Cannot fail.**
+
+| Method | Signature | Called from |
+|---|---|---|
+| `create_prompt` | `(prompt: Prompt) -> Prompt` | `api.py:86` |
+| `create_collection` | `(collection: Collection) -> Collection` | `api.py:146` |
+
+Both assign into the dictionary under the entity's own `id` (`storage.py:19,43`) and return it. The
+routes call these last, after their own validation has passed, and use the return value as the response
+body.
+
+**Group 2 — returns `Optional[...]`. Absence is `None`.**
+
+| Method | Signature | Called from |
+|---|---|---|
+| `get_prompt` | `(prompt_id: str) -> Optional[Prompt]` | `api.py:70, 91` |
+| `get_collection` | `(collection_id: str) -> Optional[Collection]` | `api.py:81, 97, 137` |
+| `update_prompt` | `(prompt_id: str, prompt: Prompt) -> Optional[Prompt]` | `api.py:113` |
+
+`get_prompt` and `get_collection` are plain `dict.get` (`storage.py:23,47`). `update_prompt` is the only
+method in the module with a **guard of its own**: it tests membership first and returns `None` rather
+than inserting when the id is absent (`storage.py:29-31`), which is what distinguishes it from
+`create_prompt`. Every caller in this group must decide what `None` means — and §2.3 records that
+`api.py:73` dereferences without deciding, while `api.py:113` returns the `Optional` unchecked and is
+safe only because of the guard upstream at `api.py:92`.
+
+**Group 3 — returns `List[...]`. Absence is an empty list.**
+
+| Method | Signature | Called from |
+|---|---|---|
+| `get_all_prompts` | `() -> List[Prompt]` | `api.py:48` |
+| `get_all_collections` | `() -> List[Collection]` | `api.py:131` |
+| `get_prompts_by_collection` | `(collection_id: str) -> List[Prompt]` | **nothing** (§4.2) |
+
+No member of this group can signal "not found", which is why none of their call sites carries a 404
+guard. The first two are `list(dict.values())` (`storage.py:26,50`); the third is the comparison pass
+described in §5.1 (`storage.py:58-59`), and is the only method in the module that no route calls.
+
+**Group 4 — returns `bool`. The return value *is* the existence check.**
+
+| Method | Signature | Called from |
+|---|---|---|
+| `delete_prompt` | `(prompt_id: str) -> bool` | `api.py:122` |
+| `delete_collection` | `(collection_id: str) -> bool` | `api.py:155` |
+
+Both test membership, delete, and report whether anything was there
+(`storage.py:35-38,53-56`). The routes raise their 404 directly off the boolean
+(`api.py:122-123,155-156`), so neither delete path needs a separate lookup first — this is the only
+place in the API where storage answers "does it exist?" and "remove it" in a single call.
+
+**Group 5 — returns nothing.** `clear()` (`storage.py:63-65`), the only method with no return
+annotation; see §5.1.
+
 ---
 
 ## Context Strategy

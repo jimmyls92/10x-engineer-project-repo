@@ -1021,3 +1021,56 @@ then, on the draft:
 **Why the next prompt changed:**
 
 5.1 fixed the shape of the store. 5.2 can now tabulate what that shape is asked to do.
+
+---
+
+## Entry 31 — 5.2 cut by return type, and stripped of everything that was really a limitation
+
+**Prompt:**
+
+> lets go for B
+
+(from three offered cuts for the operation surface: A one flat ten-row table, B grouped by return type,
+C a table with a symmetry column). Then, on the draft:
+
+> I dont really understand the first pushing back point. The second one, both 2 facts are limitations
+> but lets save them for 5.4. The third one I would say it is a limitation of the storage system as
+> there is no duplicate id check or even prompt duplicate check with different id
+
+then:
+
+> go ahead
+
+**What came back, and what changed:**
+
+- **Cut B was chosen for a reason that connects to work already on the page.** Grouping the eleven
+  methods by return type makes the contract visible: `Optional` getters force the caller to decide what
+  absence means, `List` getters cannot signal absence at all, and the two `bool` deletes *are* their own
+  existence check. That is precisely the split that produced the 404 discipline recorded in §2.3, so the
+  storage section joins up with the entry-points section instead of restating it.
+- **A pushback of mine was rejected as unclear and had to be re-explained without hedging.** I had
+  asked whether "there is no duplicate-key check" belonged in a description of the surface at all, since
+  ids are server-generated (§4.4) and no route can reach the overwrite. Restated plainly:
+  `self._prompts[prompt.id] = prompt` (`storage.py:19`) silently replaces any existing entry. My ruling
+  is that it is a property of the store whether or not a caller can reach it today — so it is a
+  limitation, and it moves to §5.4 with the reachability caveat stated honestly.
+- **My addition:** there is no duplicate-**content** check either — two prompts with identical title and
+  content under different ids are both stored, and nothing looks for it.
+- **Two passages were deleted from 5.2 on my instruction so that 5.4 discovers them.** The closing
+  paragraph naming the missing collection-update method and `update_prompt`'s whole-object signature was
+  removed entirely, not merely deferred by a cross-reference. Same for the duplicate-key sentence. §5.2
+  is now purely descriptive — what the store offers and who calls it, nothing judged.
+
+**Why this is a genuine iteration (C1.3): a constraint was added, and it removed content.** The
+constraint is that a sub-part may only make claims of its own kind — 5.2 describes, 5.4 judges — and
+applying it took three items *out* of a finished draft and onto a parked list carried in `CLAUDE.md`.
+The usual direction of an iteration is to add; this one shrank the deliverable on purpose, so that the
+limitations section is reached rather than pre-announced.
+
+§5.2 written to `docs/SYSTEM_MODEL.md`.
+
+**Why the next prompt changed:**
+
+Supply side is on the page. 5.3 is the last descriptive part — whether the objects handed across that
+surface are the stored ones — and it is the fact 5.4 needs before it can judge any of the four parked
+items.
