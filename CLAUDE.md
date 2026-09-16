@@ -13,14 +13,14 @@ work.** It is how a new session resumes without reading everything.
 |---|---|
 | **Current task** | **Task 1.1 — explore the code and write it up.** In progress: stages 1–4 of 6 done. |
 | **Log shard to append to** | `docs/prompt-log/01-tasks-1.1-1.2.md` — entries 7 onwards |
-| **Next entry number** | 35 |
-| **Context stage** | **Stage 5 — Storage layer. 5.1, 5.2 and 5.3 all written; only the § Context Strategy stage-5 row remains.** Context level used: two files, `storage.py` + `api.py`, argued from coupling — `storage.py` calls nothing and is called from exactly one file, so it defines the whole supply and `api.py` the whole demand; a limitation is a gap between them that neither file shows alone. Cost stated: `tests/` out of scope this stage. Final carve: **5.1 ✅** what the store is · **5.2 ✅** the operation surface (cut by return type) · **5.3 ✅** limitations (one 13-row table). The planned object-identity sub-part was dropped by the user in entry 32 as already established in §3, and limitations moved up from 5.4 to 5.3. Stage 1 whole-repo (size), stage 2 file-level `api.py` (concentrated coupling), stage 3 three files (`api.py`, `storage.py`, `utils.py`), stage 4 whole-repo including `tests/` (distributed coupling). Rows 1–4 plus the closing note on what the narrowing bought are in `SYSTEM_MODEL.md` § Context Strategy. |
+| **Next entry number** | 36 |
+| **Context stage** | **Stage 5 complete — §5.1, §5.2, §5.3 and the § Context Strategy row are all written.** Stage 5 used two files, `storage.py` + `api.py`, argued from coupling (supply vs. demand), with `tests/` excluded and that cost recorded in the row. **Stage 6 — External dependencies — is next, and its context level is the user's call, argued from size or coupling.** Earlier: stage 1 whole-repo (size), stage 2 file-level `api.py` (concentrated coupling), stage 3 three files (`api.py`, `storage.py`, `utils.py`), stage 4 whole-repo including `tests/` (distributed coupling). All five rows plus the closing note on what the narrowing bought are in `SYSTEM_MODEL.md` § Context Strategy. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
 restructuring in entry 8, because one rationale cannot honestly cover six different questions.
 **Use the brief's own section names** (see *Section naming* below):
 1. Architecture ✅ · 2. Entry points ✅ · 3. Data flow ✅ · 4. Models and relationships ✅ ·
-5. Storage layer (5.1–5.3 done, Context Strategy row pending) · 6. External dependencies ← *next* · plus the Context strategy section, which grows
+5. Storage layer ✅ · 6. External dependencies ← *next* · plus the Context strategy section, which grows
 a row per stage.
 
 **Done:** setup. Working protocol agreed, `CLAUDE.md` written, prompt log opened and sharded.

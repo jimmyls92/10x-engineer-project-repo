@@ -571,7 +571,9 @@ before the reading was done, not one composed afterwards.
 
 | 4 | Models and relationships (§4) | **Whole-repo** — every file under `backend/`, `tests/` included | Coupling, of the opposite kind to stage 2. There the coupling was *concentrated*: one hub file held every route, so attention belonged in it. Here it is *distributed*: the link is declared in `models.py:23`, enforced in `api.py:80-83` and `:96-99`, ignored in `storage.py:19,31`, and broken without repair in `storage.py:52-56`. Any single file shows the declaration and hides whether anything upholds it, and §4.2 is an audit that only exists if every site can be seen at once. `tests/` was included deliberately rather than as a side effect of breadth, and earned it: `test_api.py:154-179` asserts the current orphaning behaviour, and `test_api.py:92-101` is a live example of the `PUT` unfiling described in §4.3. |
 
-Stages 5–6 to follow.
+| 5 | Storage layer (§5) | **File-level, two files** — `app/storage.py` and `app/api.py`. `tests/` deliberately excluded | Coupling. `storage.py` calls nothing and is called from exactly one file, so it defines the whole supply and `api.py` the whole demand; a limitation is a gap between the two, and neither file shows a gap alone. Reading `storage.py` by itself would have answered "how it works" and left "what its limitations are" — the other half of what this section owes — unevidenced. The cost is recorded rather than hidden: with `tests/` out of context, any constraint visible only from how the suite uses the store could not surface here. |
+
+Stage 6 to follow.
 
 ### A note on what the narrowing was for
 

@@ -1194,3 +1194,37 @@ raised no objection.
 
 All three sub-parts are written. What remains for stage 5 is the § Context Strategy row, which by
 standing convention is written last so it records what the stage actually did.
+
+---
+
+## Entry 35 — What C1.2 actually requires, and the stage-5 row
+
+**Prompt:**
+
+> sorry Im getting lost, those questions, how are related to C1.2?
+
+then:
+
+> write the minimal row with the tests/ clause
+
+**What came back:**
+
+A fair challenge, and the answer was to concede the framing rather than defend it. I had offered two
+questions — whether the row should report the cost of the level chosen, and whether it should report
+that a sub-part was dropped — as if they were part of the requirement. **They were not.** C1.2 asks for
+three things per stage: which context level was used, a reason grounded in size or coupling, and
+agreement with the prompt log. All three were already settled for stage 5 by entry 28, so the row
+passed before either question was raised. Presenting optional additions as open requirements is what
+caused the confusion.
+
+With the requirement restated, the recommendation narrowed to one addition and a rejection of the
+other: keep the `tests/` exclusion, because it is a direct consequence of the level chosen and so
+belongs in a column about that choice; drop the §3 point, because entry 32 already records it and the
+row is not the place to repeat the log.
+
+Row 5 written to `SYSTEM_MODEL.md` § Context Strategy. Rows 1–4 untouched.
+
+**Why the next prompt changed:**
+
+Stage 5 is complete — §5.1, §5.2, §5.3 and the Context Strategy row. Next is stage 6, External
+dependencies, the last section of Task 1.1.
