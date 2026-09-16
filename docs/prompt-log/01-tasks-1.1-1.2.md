@@ -1074,3 +1074,32 @@ limitations section is reached rather than pre-announced.
 Supply side is on the page. 5.3 is the last descriptive part — whether the objects handed across that
 surface are the stored ones — and it is the fact 5.4 needs before it can judge any of the four parked
 items.
+
+---
+
+## Entry 32 — The section was restructured: a whole sub-part dropped as redundant
+
+**Prompt:**
+
+> the data flow was already stablished before, in that case 5.4 is now 5.3 and avoid repeating again
+
+**What came back:**
+
+Agreed and applied. The planned **5.3 "how objects enter and leave" was deleted, not merged** — §3 (Data
+flow) already established that storage hands out and files away uncopied objects (`storage.py:19,23,26`)
+and that `PUT` rebuilds rather than mutates (`api.py:103-111`), all verified at the time. The three
+angles I had been offered for 5.3 (cite and move on / cite and trace the consequence / re-verify by
+execution) were all answers to a question that had already been answered. Limitations moves up to
+**§5.3**, and any limitation that rests on object identity cites §3 instead of restating it. The carve
+is now 5.1 · 5.2 · 5.3.
+
+**Why this is a genuine iteration (C1.3): the deliverable was restructured, not reworded.** A planned
+sub-part was removed from a document in progress because its content already existed elsewhere in the
+same document. The proposal to write it came from me; the recognition that §3 had covered it came from
+me as the user. Recorded here because the visible result is an *absent* section, which nothing in the
+finished `SYSTEM_MODEL.md` would otherwise explain.
+
+**Why the next prompt changed:**
+
+Description is finished. Everything remaining in the section is judgement, including the four items
+parked out of 5.2.
