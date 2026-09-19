@@ -6,7 +6,7 @@ tied to the file and line it was read from, so it can be checked rather than tru
 Line references are to the repository state at the time of writing; paths are relative to `backend/`.
 
 > **Status.** Written stage by stage as the exploration proceeds. Section headings follow the module
-> brief's own checklist. Still to come: Storage layer, External dependencies.
+> brief's own checklist. All six checklist sections are now written.
 
 ---
 
@@ -555,6 +555,121 @@ whatever stands in for it today is somewhere else.
 
 ---
 
+## 6. External dependencies
+
+Everything outside the application's own source that it needs in order to run. The section is
+organised by **kind of reliance** rather than by package, because two of the things this service
+depends on are not lines in `requirements.txt` — one is a package that is used but never declared, the
+other is the interpreter itself. A list of the declared packages alone would have nowhere to put them.
+
+### 6.1 The declared list
+
+All six pins, verbatim from `requirements.txt:1-6`, read against every `import` statement in
+`backend/app/` and `backend/main.py`:
+
+| Package | Pin | Imported at | What it is relied on for |
+|---|---|---|---|
+| `fastapi` | `==0.109.0` | `api.py:3-4` | The application object, `HTTPException`, and the CORS middleware re-export. The entire HTTP surface of §2. |
+| `uvicorn` | `==0.27.0` | `main.py:6` | ASGI server. Called once, at `main.py:10`. |
+| `pydantic` | `==2.5.3` | `models.py:5` | `BaseModel` and `Field` — every schema and every declarative constraint in §4.4. |
+| `pytest` | `==7.4.4` | nowhere in `app/` or `main.py` | Test runner. See §6.2. |
+| `pytest-cov` | `==4.1.0` | nowhere at all | Coverage plugin. See §6.2. |
+| `httpx` | `==0.26.0` | nowhere at all | Transport under the test client. See §6.2. |
+
+**`uvicorn` is a dependency of one entry path only.** It is imported at `main.py:6` and used at
+`main.py:10`, inside the `if __name__ == "__main__"` guard. Served by any external ASGI runner pointed
+at `app.api:app`, the service never touches uvicorn at all.
+
+**Pinning discipline.** All six are exact `==` pins. There are no version ranges, no extras, no
+environment markers, and **no lock file of any kind** — no `poetry.lock`, no `requirements.lock`, no
+`pip-tools` output. The six direct pins are therefore exact and everything they pull in transitively is
+not, which is the gap §6.3 turns on.
+
+**The pins are a declaration, not a guarantee.** In the environment this document was written in, the
+installed `fastapi` reports `0.141.1` against a pinned `0.109.0`. Nothing in the repository detects the
+divergence: there is no version assertion at import, no CI configuration, and no lock file to install
+from. The file records an intent that the running process is free to contradict.
+
+### 6.2 Declared, but imported by nothing the application runs
+
+**Three of the six** — `pytest`, `pytest-cov` and `httpx` — appear in `requirements.txt:4-6` and in no
+`import` under `app/` or `main.py`. They are development dependencies held in the same file as the
+runtime ones, so `pip install -r requirements.txt` on a deployment target installs a test runner and a
+coverage plugin the served application never touches. There is no `requirements-dev.txt` and no extras
+group separating the two sets.
+
+Their actual consumers, from the stage-4 whole-repo reading:
+
+- `pytest` is imported at `tests/conftest.py:3` and `tests/test_api.py:7`.
+- `httpx` is imported **by name nowhere in the repository**. It is needed because
+  `fastapi.testclient.TestClient` (`tests/conftest.py:4`, `tests/test_api.py:8`) is built on it — the
+  dependency is real and the declaration is correct, but nothing in the source shows why.
+- `pytest-cov` is imported nowhere and invoked by nothing checked in: there is no `pytest.ini`, no
+  `setup.cfg`, no `pyproject.toml` and no `--cov` flag anywhere in the repository. Its presence in the
+  file is the only evidence that coverage was ever intended.
+
+### 6.3 Relied on, but declared nowhere
+
+**Starlette.** `api.py:4` imports `CORSMiddleware` from `fastapi.middleware.cors`. That module is a
+re-export: the class's `__module__` resolves to `starlette.middleware.cors`, confirmed by execution
+rather than assumed. FastAPI is a layer over Starlette — the application object, the routing, the
+request and response types and all middleware are Starlette's — so this service depends on Starlette
+directly, through a FastAPI-shaped name, while `requirements.txt` never mentions it.
+
+The consequence is a version the repository does not control. Starlette arrives as a transitive
+dependency of whichever FastAPI is actually installed, and with no lock file nothing pins it. The same
+holds for the other transitive dependencies of FastAPI and Pydantic (`pydantic-core`,
+`annotated-types`, `typing-extensions`, and Starlette's own `anyio`); Starlette is called out
+separately from those because it is the only one the source code imports from by hand.
+
+### 6.4 The standard library surface
+
+Not third-party, but still outside the application's own source, and part of "everything the service
+relies on":
+
+| Module | Imported at | Used for |
+|---|---|---|
+| `typing` | `api.py:5`, `models.py:4`, `storage.py:7`, `utils.py:3` | `Optional`, `List`, `Dict` annotations throughout |
+| `datetime` | `models.py:3` | timestamps — and the naive `utcnow()` of §4.4 |
+| `uuid` | `models.py:6` | `uuid4` under the id `default_factory` |
+| `re` | `utils.py:48` | the variable pattern in `extract_variables` |
+
+`re` is the odd one: it is imported **inside a function body**, not at module scope, and the function
+that imports it is one of the two unreferenced helpers established in §1. The import runs only if
+something calls `extract_variables`, and within the application nothing does.
+
+### 6.5 The unstated interpreter
+
+There is **no `pyproject.toml`, no `setup.py`, no `python_requires`, no `.python-version` and no
+`Dockerfile`** anywhere in the repository. Nothing states which Python the service supports. The
+service is not a packaged distribution at all — it is a directory run in place by `python main.py`
+(`main.py:3`), which makes the interpreter an undeclared dependency in exactly the way Starlette is,
+one level further down.
+
+A version is bounded only in practice, not in writing: `pydantic==2.5.3` will not build on an
+interpreter far from the one it was released for. That is an inference from the pin, not a statement
+the repository makes.
+
+### 6.6 What the service does not depend on
+
+Recorded because C1.1 asks for every dependency, and the absences are as characteristic of this service
+as the presences. Confirmed from the demand side — from the imports actually made, not from the
+requirements file:
+
+- **No database, and no driver.** No `sqlalchemy`, no `psycopg`, no `sqlite3` — consistent with the two
+  dictionaries of §5.
+- **No LLM SDK.** Despite the domain, nothing imports `anthropic`, `openai`, or any HTTP client for the
+  application's own use. PromptLab stores prompts; it never sends one anywhere.
+- **No configuration input of any kind.** No `os.environ`, no `getenv`, no `open()`, no config parser.
+  The CORS policy is a literal (`api.py:27`), the port is a literal (`main.py:10`), and the
+  `config.yaml` at the repository root is read by nothing under `backend/`.
+- **No filesystem and no network egress.** Nothing is written to disk and no outbound call is made.
+- **No authentication, caching, logging or task-queue library.**
+
+The only external system this service relies on at runtime is **the memory of its own process**.
+
+---
+
 ## Context Strategy
 
 Required by C1.2. One row per exploration stage, recording the context level actually used and the
@@ -573,11 +688,13 @@ before the reading was done, not one composed afterwards.
 
 | 5 | Storage layer (§5) | **File-level, two files** — `app/storage.py` and `app/api.py`. `tests/` deliberately excluded | Coupling. `storage.py` calls nothing and is called from exactly one file, so it defines the whole supply and `api.py` the whole demand; a limitation is a gap between the two, and neither file shows a gap alone. Reading `storage.py` by itself would have answered "how it works" and left "what its limitations are" — the other half of what this section owes — unevidenced. The cost is recorded rather than hidden: with `tests/` out of context, any constraint visible only from how the suite uses the store could not surface here. |
 
-Stage 6 to follow.
+| 6 | External dependencies (§6) | **File-level, two surfaces** — `backend/requirements.txt` read against every `import` statement in `backend/app/*.py` and `backend/main.py`. `tests/` deliberately excluded | Coupling, of the same supply-and-demand kind as stage 5. A requirements file is a *declaration* and an import is a *use*, and nothing in this repository checks one against the other. Neither surface holds the finding on its own: `requirements.txt` alone cannot show a package relied on but never declared, and the imports alone cannot show a package declared but never used. Both defects turned out to be present — Starlette in §6.3, three unimported packages in §6.2 — so both surfaces were needed and neither could be dropped. The cost is recorded rather than hidden: with `tests/` out of context this level could see that `pytest`, `pytest-cov` and `httpx` have no importer, but could not say what does use them; §6.2 attributes them from the stage-4 whole-repo reading and says so. Two claims were settled by **execution rather than reading**, because neither is legible in the source: that `CORSMiddleware.__module__` is `starlette.middleware.cors`, and that the installed FastAPI diverges from its pin. |
+
+**Stage 6 closes the checklist.** All six sections the brief names are written.
 
 ### A note on what the narrowing was for
 
-Recorded because it is the honest summary of the four rows above, and because it changes what they
+Recorded because it is the honest summary of the six rows above, and because it changes what they
 mean. **The whole backend is 587 lines. Breadth was affordable at every stage, so no narrowing in this
 table was forced by a limit** — stage 2 could have been run whole-repo and would have produced a
 correct §2.

@@ -16,8 +16,8 @@ history.
 | File | Covers | Status |
 |---|---|---|
 | `00-setup.md` | Protocol setup, and one discarded first attempt at Tasks 1.1–1.2 | Complete — entries 1–6 |
-| `01-tasks-1.1-1.2.md` | Task 1.1 exploration (all six sections + context strategy) | In progress — entries 7–12; next entry is 13 |
-| `02-tasks-1.3-1.7.md` | Bugs #1–#4 and `PATCH /prompts/{id}` | Not started |
+| `01-tasks-1.1-1.2.md` | Task 1.1 exploration (all six sections + context strategy) | Complete — entries 7–40 |
+| `02-tasks-1.3-1.7.md` | Bugs #1–#4 and `PATCH /prompts/{id}` | Next — starts at entry 41 |
 | `03-task-1.8.md` | AI-verification note | Not started |
 | `04-task-1.9.md` | Docstrings and README | Not started |
 

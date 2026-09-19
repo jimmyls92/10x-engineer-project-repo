@@ -11,23 +11,33 @@ work.** It is how a new session resumes without reading everything.
 
 | | |
 |---|---|
-| **Current task** | **Task 1.1 — explore the code and write it up.** In progress: stages 1–4 of 6 done. |
-| **Log shard to append to** | `docs/prompt-log/01-tasks-1.1-1.2.md` — entries 7 onwards |
-| **Next entry number** | 36 |
-| **Context stage** | **Stage 5 complete — §5.1, §5.2, §5.3 and the § Context Strategy row are all written.** Stage 5 used two files, `storage.py` + `api.py`, argued from coupling (supply vs. demand), with `tests/` excluded and that cost recorded in the row. **Stage 6 — External dependencies — is next, and its context level is the user's call, argued from size or coupling.** Earlier: stage 1 whole-repo (size), stage 2 file-level `api.py` (concentrated coupling), stage 3 three files (`api.py`, `storage.py`, `utils.py`), stage 4 whole-repo including `tests/` (distributed coupling). All five rows plus the closing note on what the narrowing bought are in `SYSTEM_MODEL.md` § Context Strategy. |
+| **Current task** | **Task 1.1 is COMPLETE.** All six checklist sections plus § Context Strategy are written, committed, and logged. **Next: Task 1.3 — Bug #1, the 404 on a missing prompt.** Not started. |
+| **Log shard to append to** | `docs/prompt-log/02-tasks-1.3-1.7.md` — **does not exist yet**; create it, starting at entry 41 |
+| **Next entry number** | 41 |
+| **Context stage** | Task 1.1's staged exploration is finished. Six stages, six recorded context decisions: 1 whole-repo (size) · 2 file-level `api.py` (concentrated coupling) · 3 three files (`api.py`, `storage.py`, `utils.py`) · 4 whole-repo including `tests/` (distributed coupling) · 5 `storage.py` + `api.py` (supply vs. demand) · 6 `requirements.txt` against every import in `app/` + `main.py` (declaration vs. use). Task 1.3 opens a fresh context decision of its own. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
 restructuring in entry 8, because one rationale cannot honestly cover six different questions.
 **Use the brief's own section names** (see *Section naming* below):
 1. Architecture ✅ · 2. Entry points ✅ · 3. Data flow ✅ · 4. Models and relationships ✅ ·
-5. Storage layer ✅ · 6. External dependencies ← *next* · plus the Context strategy section, which grows
-a row per stage.
+5. Storage layer ✅ · 6. External dependencies ✅ · plus the Context strategy section ✅, one row per stage.
 
 **Done:** setup. Working protocol agreed, `CLAUDE.md` written, prompt log opened and sharded.
 Task 1.1 stage 1 — `docs/SYSTEM_MODEL.md` § Architecture (1.1 what it is, 1.2 components, 1.3 how
 they fit, 1.4 characteristics) and the § Context Strategy stage-1 row. Task 1.1 stage 2 —
 § Entry points (2.1 route table, 2.2 the FastAPI-contributed routes, 2.3 notes on the surface) and the
-§ Context Strategy stage-2 row.
+§ Context Strategy stage-2 row. Stages 3, 4, 5 and 6 likewise — **`docs/SYSTEM_MODEL.md` is finished**
+and nothing in it is outstanding.
+
+**Established in stage 6** (do not re-derive; do cite): three of the six pins — `pytest`, `pytest-cov`,
+`httpx` — have no importer under `app/` or `main.py` (`requirements.txt:4-6`); `httpx` is imported by
+name nowhere in the repository and is needed only because `TestClient` is built on it · **Starlette is
+relied on directly and declared nowhere**: `api.py:4` imports `CORSMiddleware`, whose `__module__` is
+`starlette.middleware.cors` · no lock file, no `pyproject.toml`, no `python_requires`, no `Dockerfile`
+— the interpreter is undeclared too · **the installed FastAPI is `0.141.1` against a pinned `0.109.0`,
+and nothing detects it** · `uvicorn` is touched only under the `__main__` guard (`main.py:6,10`) · `re`
+is imported inside a function body (`utils.py:48`) in an unreferenced helper · no env vars, no `open()`,
+no config parser — the root `config.yaml` is read by nothing under `backend/`.
 
 **Established in stage 5** (do not re-derive; do cite): two structurally independent dicts keyed by the
 entity's own `str` id (`storage.py:13-14`); the prompt→collection link is never stored, only recomputed
@@ -78,7 +88,7 @@ with no injection seam (`storage.py:69`, `api.py:13`) · all validation is decla
 (`20-22`, `46-47`) · `extract_variables` and `validate_prompt_content` are unreferenced
 (`utils.py:30,43`) · the service never calls an LLM (`requirements.txt:1-6`).
 
-**Not started:** Task 1.3 (Bug #1, 404) ·
+**Not started:** Task 1.3 (Bug #1, 404) ← *next* ·
 Task 1.4 (Bug #2, `updated_at` on PUT) · Task 1.5 (Bug #3, newest-first sorting) · Task 1.6 (Bug #4,
 orphaned prompts) · Task 1.7 (`PATCH /prompts/{id}`) · Task 1.8 (AI-verification note) · Task 1.9
 (docstrings + README).

@@ -1228,3 +1228,163 @@ Row 5 written to `SYSTEM_MODEL.md` § Context Strategy. Rows 1–4 untouched.
 
 Stage 5 is complete — §5.1, §5.2, §5.3 and the Context Strategy row. Next is stage 6, External
 dependencies, the last section of Task 1.1.
+
+---
+
+## Entry 36 — Stage 6 opened: External dependencies
+
+**Stage:** 6 — External dependencies, before exploration. **Context level:** not yet chosen — that is
+this step's decision.
+
+**Prompt sent:**
+
+> lets continue with stage 6, external dependencies
+
+**What came back:**
+
+No exploration yet. The step was set up rather than answered: stage 6 is the last section of Task 1.1,
+and under Rule 2 its context level has to be argued from the **size or coupling** of the code before
+any file is opened. Three levels were offered — `requirements.txt` alone, a supply-vs-demand pair
+(declared list against the imports actually made), and whole-repo including `tests/`, `main.py` and
+`config.yaml` — with the trade-off stated as what each level can and cannot see: a declared-only read
+cannot detect a package that is imported but never declared, and a runtime-only read cannot detect a
+package that is declared but never used.
+
+Also flagged: the brief's gloss is "everything the service relies on", which is wider than the pip
+list, so the level chosen partly decides how wide the section can honestly be.
+
+**Why my next prompt changed:**
+
+The trade-off table made the cost of each level explicit, so the next prompt could name one.
+
+---
+
+## Entry 37 — Stage 6 read at level B: the declared list against the imports actually made
+
+**Stage:** 6 — External dependencies. **Context level:** **B — two surfaces**: `backend/requirements.txt`
+(supply) read against every `import` statement in `backend/app/*.py` and `backend/main.py` (demand).
+`tests/` deliberately excluded.
+
+**Prompt sent:**
+
+> lets go with B
+
+**Why this level, in the terms C1.2 asks for (coupling, not size):** a dependency list is a *declaration*
+and an import is a *use*, and the two are not checked against each other by anything in the repo. That
+is the same supply-and-demand coupling that justified reading `storage.py` with `api.py` in stage 5:
+neither file alone contains the finding, because the finding is the gap between them. Reading only
+`requirements.txt` could not detect a package relied on but never declared; reading only the imports
+could not detect a package declared but never used. Both defects are present, so both surfaces were
+needed.
+
+**What came back — the gap, in both directions:**
+
+- **Declared with no importer anywhere in the runtime surface: three of six.** `pytest`, `pytest-cov`
+  and `httpx` appear in `requirements.txt:4-6` and in no `import` under `app/` or `main.py`. Level B can
+  see the absence but cannot explain it — the explanation is in the excluded `tests/`. Recorded as the
+  cost of the level, not resolved by it.
+- **Relied on but never declared: `starlette`.** `api.py:4` imports `CORSMiddleware` from
+  `fastapi.middleware.cors`, which is a re-export —
+  `CORSMiddleware.__module__` is `starlette.middleware.cors`, checked by execution rather than assumed.
+  The service depends on Starlette directly through the FastAPI namespace, and the version it gets is
+  whatever `fastapi==0.109.0` resolves to.
+- **Relied on and not declarable as a package at all: the Python runtime.** There is no
+  `pyproject.toml`, no `setup.py`, no `python_requires`, no `.python-version`. Nothing in the repository
+  states a supported interpreter version, although the pinned `pydantic==2.5.3` bounds one in practice.
+- **`uvicorn` is a dependency of one entry path only.** It is imported at `main.py:6` and used at
+  `main.py:10`, inside the `if __name__ == "__main__"` guard. Served by any external ASGI runner against
+  `app.api:app`, uvicorn is never touched.
+- **Standard library demand:** `typing`, `datetime`, `uuid`, and `re`. `re` is the odd one — imported
+  *inside a function body* at `utils.py:48`, in `extract_variables`, which nothing in the application
+  calls.
+- **Pinning discipline:** all six are exact `==` pins; no ranges, and no lock file of any kind.
+- **Confirming stage 1 from the demand side:** no database driver, no HTTP client used by the
+  application itself, no LLM SDK. The only external system the service relies on is the memory of its
+  own process.
+
+**Why my next prompt changed:**
+
+Pending — the findings exist; the next prompt settles the shape of § External dependencies.
+
+---
+
+## Entry 38 — Asked to continue; offered three shapes for § 6
+
+**Stage:** 6 — External dependencies, write-up step. No new reading; the level-B findings from entry 37
+are the material.
+
+**Prompt sent:**
+
+> lets continue with the next task
+
+**What came back:** not the section. Three candidate shapes for § 6, with the trade-off between them:
+
+| Shape | Organising principle | What it makes visible | What it buries |
+|---|---|---|---|
+| **A — one table per declared package** | the six lines of `requirements.txt` | version pin, purpose, where imported | the undeclared `starlette` and the unstated interpreter, which have no row to live in |
+| **B — by kind of reliance** (declared runtime · declared but unimported · undeclared but relied on · standard library · unstated runtime) | *how* the service depends, not *what* on | exactly the two-directional gap level B was chosen to find | the at-a-glance version table an assessor scans for |
+| **C — B's sections, with A's table as the first of them** | both | the pins *and* the gap | nothing; costs length |
+
+Flagged that C1.1 requires **every** external dependency, and that "every" is the whole reason the
+undeclared and the unstated ones have to appear somewhere — shape A has no place to put them.
+
+**Why my next prompt changed:**
+
+It did not change shape yet — I stopped on a word. `starlette` appeared in the level-B findings as the
+undeclared dependency, and I could not weigh shape A against shape C without knowing whether it was a
+real dependency or a detail of how FastAPI is packaged. Asking was cheaper than choosing blind.
+
+
+---
+
+## Entry 39 — Asked what Starlette is before choosing the shape
+
+**Stage:** 6, still at the shape decision. No writing done.
+
+**Prompt sent:**
+
+> what is starlette?
+
+**What came back:** Starlette is the ASGI toolkit FastAPI is built on — `FastAPI` subclasses
+Starlette's application class and adds the Pydantic/OpenAPI layer over it, so routing, the
+request/response objects, middleware and the test client are all Starlette's. Three touch points in
+this repository were named: the `CORSMiddleware` re-export at `api.py:4`, the `TestClient` used in
+`tests/` (Starlette's, wrapping `httpx` — the same object behind the `raise_server_exceptions` trap),
+and the ASGI app object uvicorn serves.
+
+The point that mattered for the decision: Starlette is never named in `requirements.txt`, arrives
+transitively through `fastapi==0.109.0`, and is nonetheless imported from **by hand** in the source.
+That is the "relied on but undeclared" case — and the one shape A has no row for.
+
+**Why my next prompt changed:** the answer settled the shape question rather than reopening it. Once
+Starlette was confirmed as a genuine direct reliance, a package-by-package table could not be complete
+on its own, so the choice collapsed to C.
+
+---
+
+## Entry 40 — Shape C chosen; § 6 and the stage-6 context row written
+
+**Stage:** 6 — write-up. This is the step that closes Task 1.1's checklist.
+
+**Prompt sent:**
+
+> Lets go for C
+
+**What came back:** § 6 External dependencies, in six parts — 6.1 the declared list (all six pins, with
+the import site of each), 6.2 declared but imported by nothing the application runs, 6.3 relied on but
+declared nowhere, 6.4 the standard library surface, 6.5 the unstated interpreter, 6.6 what the service
+does not depend on. Plus the stage-6 row in § Context Strategy, and the status note at the head of the
+document updated now that all six checklist sections exist.
+
+**One finding that was not in entry 37**, surfaced while verifying the pins before writing them down:
+the installed FastAPI reports **`0.141.1` against a pinned `0.109.0`**. Nothing in the repository
+detects the divergence — no version assertion, no CI check, no lock file. Recorded in §6.1 as the
+difference between a declaration and a guarantee.
+
+**Honesty note carried into the row:** §6.2 attributes `pytest`/`httpx` to `tests/conftest.py:3-4` and
+`test_api.py:7-8`, which stage 6's level-B context excluded. The attribution comes from the stage-4
+whole-repo reading and the § Context Strategy row says so, rather than letting the row claim a
+narrower context than the section actually rests on.
+
+**Why my next prompt changed:** § Architecture through § External dependencies are all written, so
+Task 1.1 is done and the next prompt starts Task 1.3.
