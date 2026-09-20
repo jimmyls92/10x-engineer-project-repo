@@ -305,9 +305,37 @@ The user asked for this explicitly. Long prose replies are harder to follow than
 
 Rule 0b still holds: short does not mean skipping the step, the angles, or the stop.
 
-### 6. Commit messages are graded
+### 6. Commit messages are graded, and the user approves every one before it is written
 
-Meaningful, specific commit messages. One logical change per commit.
+"Meaningful commit messages" is a checklist item in the brief (page 3). Meaningful, specific messages;
+**one logical change per commit**.
+
+**Never run `git commit` without showing the message first and getting an explicit yes.** Propose the
+full message — subject and body as they will actually be committed — in the chat reply, say which files
+are staged, and stop. The user may accept it, edit it, or ask for a different split into commits. This
+is the same stop Rule 0b imposes on every other step: a commit is a step, and the message is the part
+of it that gets graded.
+
+If the user has already said "commit it" in the prompt being acted on, that is approval for the commit
+but **not** for the message — still show the message and wait, unless they say to stop asking.
+
+**Length, set by the user and not negotiable:**
+
+- **Subject**: imperative, **≤ 50 characters**, naming the change — `Fix Bug #1: 404 on missing prompt`.
+  The task or criterion goes in the body if it will not fit.
+- **Body**: **at most two sentences, about twenty words each.** Why, not what — the diff already shows
+  what changed. Cite `file.py:line` inside a sentence rather than adding a line for it.
+- Nothing else. No bullet lists, no "Also …" paragraph, no test-count tables.
+
+*The messages written before this rule are much longer. They stand as committed — rewriting history to
+match a later convention would be worse than the inconsistency.*
+
+**Do not bundle.** One logical change per commit is what keeps two sentences sufficient: if the message
+needs an "Also …", it is two commits. Propose the split and let the user decide.
+
+**What the body is for.** The one thing a short message must still carry is the reasoning that leaves
+no trace in the diff — a claim corrected, a section deliberately not written, an option rejected. If
+only one sentence can be spent, spend it there.
 
 ## Work order
 

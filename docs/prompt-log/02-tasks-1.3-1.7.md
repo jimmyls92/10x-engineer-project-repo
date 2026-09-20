@@ -193,3 +193,63 @@ not re-litigated at Task 1.5, and CURRENT STATE moves to Task 1.4.
 
 Task 1.3 is closed. The next prompt opens Task 1.4 — Bug #2, `updated_at` unchanged on PUT — which is
 the first task that does owe a test of its own.
+
+---
+
+## Entry 45 — Commit messages audited against the brief; Rule 6 rewritten to require approval
+
+**Task:** protocol, running alongside 1.4. No code touched.
+
+**Prompt sent:**
+
+> I saw that the document @1785592803-Module_1_Project_Brownfield_Challenge.pdf says meaningfull commit
+> messages, do you think we are delivering so far? Please add to CLAUDE.md to ask me for my approval on
+> the commit message before comitting
+
+**Why this prompt matters (C1.3 — added a constraint).** It adds a standing constraint to the working
+protocol rather than to a single output: every future commit message must be approved before it is
+written. It also asks for an honest audit of work already committed, which is a different question from
+"is the next one good".
+
+**What came back — the audit of the fourteen commits written in this repository.** Verdict: above the
+bar, with two real weaknesses.
+
+Holding up: imperative subjects that name the task and criterion; bodies that give the *why* rather than
+restating the diff; `file.py:line` citations; and decisions recorded that leave no trace in the diff at
+all — `1a0e98d` exists to explain a sub-section that was deliberately *not* written.
+
+Two weaknesses, both mine:
+
+1. **Bundling.** `acf6440` carries the Bug #1 fix *and* a correction to `CLAUDE.md`'s work order, and
+   `45afbbc` carries §6, the Context Strategy row and two bookkeeping files. `CLAUDE.md`'s own Rule 6
+   says one logical change per commit. The first was asked for explicitly and is the user's call; the
+   habit is still worth naming.
+2. **Length.** Several bodies run past twenty lines. Meaningful is not the same as maximal, and a
+   grader reading fourteen essays is being asked for patience the rubric does not require.
+
+**What was done:** Rule 6 rewritten. It now requires the full message to be shown in chat and approved
+before `git commit` runs — with the explicit note that "commit it" in a prompt approves the *commit*,
+not the *message* — and it records the subject/body conventions and the no-bundling rule that the audit
+found were being followed by habit rather than by rule.
+
+**The rule was then tightened twice, by the user, over three more prompts.** The first draft of the
+message for this very change ran twelve lines — the habit the audit had just named, reappearing in the
+message about it. Trimmed to six, it was still too long:
+
+> I think a commit should not be more than 2 sentences long. Wouldnt you agree? Around 20 characters
+> tops
+
+I agreed on two sentences and pushed back on twenty characters, showing what that budget actually buys
+(`Require commit appr` is already over) and offering fifty characters — the git convention — for the
+subject instead. The reply was "yeah, I meant words".
+
+**The standing rule, now written into Rule 6:** subject imperative and **≤ 50 characters**; body **at
+most two sentences of about twenty words**; nothing else — no bullets, no "Also …" paragraph, no test
+tables. Bundling is what makes two sentences insufficient, so the no-bundling rule carries the weight.
+Earlier commits stay as they were written; rewriting history to match a later convention would be worse
+than the inconsistency.
+
+**Why my next prompt changed:**
+
+The protocol question is settled. The next prompt returns to Task 1.4 — Bug #2, `updated_at` unchanged
+on PUT.
