@@ -4,6 +4,8 @@ These tests verify the API endpoints work correctly.
 Students should expand these tests significantly in Week 3.
 """
 
+from datetime import datetime
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -107,6 +109,40 @@ class TestPrompts:
         # The updated_at should be different from original
         # assert data["updated_at"] != original_updated_at  # Uncomment after fix
     
+    def test_update_prompt_refreshes_updated_at(self, client: TestClient, sample_prompt_data):
+        """Verify that PUT /prompts/{id} refreshes updated_at and preserves created_at.
+
+        Covers Bug #2. The comparison is deliberately made between updated_at
+        *before* the PUT and updated_at *after* it: created_at and updated_at
+        already differ at creation time, because models.Prompt fills them with
+        two separate default_factory calls, so asserting updated_at > created_at
+        would pass even with the bug present. No sleep is needed -- utcnow() was
+        measured to resolve to a few microseconds on this platform.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        created = client.post("/prompts", json=sample_prompt_data).json()
+        original_created_at = datetime.fromisoformat(created["created_at"])
+        original_updated_at = datetime.fromisoformat(created["updated_at"])
+
+        response = client.put(
+            f"/prompts/{created['id']}",
+            json={
+                "title": "Updated Title",
+                "content": "Updated content for the prompt",
+                "description": "Updated description",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["content"] == "Updated content for the prompt"
+
+        assert datetime.fromisoformat(data["updated_at"]) > original_updated_at
+        assert datetime.fromisoformat(data["created_at"]) == original_created_at
+
     def test_sorting_order(self, client: TestClient):
         """Test that prompts are sorted newest first.
         

@@ -11,9 +11,9 @@ work.** It is how a new session resumes without reading everything.
 
 | | |
 |---|---|
-| **Current task** | **Task 1.3 is COMPLETE** — Bug #1 fixed at `api.py:66-71`, suite at **12 passed / 1 failed** (the one failure is Bug #3, Task 1.5). **Next: Task 1.4 — Bug #2, `updated_at` unchanged on PUT.** Not started. |
-| **Log shard to append to** | `docs/prompt-log/02-tasks-1.3-1.7.md` — open, entries 41–44 written |
-| **Next entry number** | 45 |
+| **Current task** | **Task 1.4 is COMPLETE** — Bug #2 fixed at `api.py:106`, verified by `test_update_prompt_refreshes_updated_at` (`tests/test_api.py`), suite at **13 passed / 1 failed** (the one failure is Bug #3, Task 1.5). **Next: Task 1.5 — Bug #3, `GET /prompts` returns oldest first.** Not started. |
+| **Log shard to append to** | `docs/prompt-log/02-tasks-1.3-1.7.md` — open, entries 41–51 written |
+| **Next entry number** | 52 |
 | **Context stage** | Task 1.1's staged exploration is finished. Six stages, six recorded context decisions: 1 whole-repo (size) · 2 file-level `api.py` (concentrated coupling) · 3 three files (`api.py`, `storage.py`, `utils.py`) · 4 whole-repo including `tests/` (distributed coupling) · 5 `storage.py` + `api.py` (supply vs. demand) · 6 `requirements.txt` against every import in `app/` + `main.py` (declaration vs. use). The bug-fix tasks are not staged exploration and open no new C1.2 rows; the table is closed at six. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
@@ -28,6 +28,17 @@ they fit, 1.4 characteristics) and the § Context Strategy stage-1 row. Task 1.1
 § Entry points (2.1 route table, 2.2 the FastAPI-contributed routes, 2.3 notes on the surface) and the
 § Context Strategy stage-2 row. Stages 3, 4, 5 and 6 likewise — **`docs/SYSTEM_MODEL.md` is finished**
 and nothing in it is outstanding.
+
+**Established in Task 1.4** (do not re-derive; do cite): the bug was one field, `api.py:106`, and
+`get_current_time` was already imported (`api.py:11`) · **`created_at` and `updated_at` already differ at
+creation** — `models.py:34-35` runs two separate `default_factory` calls — so `updated_at > created_at`
+passes with the bug present and proves nothing; the test compares `updated_at` before the PUT against
+`updated_at` after it · timestamps serialise as **naive ISO-8601 strings**, parsed with
+`datetime.fromisoformat` · `utcnow()` was measured at **microsecond resolution**, so no `sleep` is
+needed in a timestamp test · the provided `test_update_prompt` is a half-written version of this test:
+it captures `original_updated_at` (`test_api.py:89`), sleeps 0.1 s, and leaves the assertion commented
+out at `:108` — left commented, by the user's constraint that no provided test be modified · the
+docstring on `update_prompt` is owed to Task 1.9, not written here.
 
 **Established in Task 1.3** (do not re-derive; do cite): **baseline before any fix was 3 failed /
 10 passed** — `test_get_prompt_not_found`, `test_delete_prompt` (both `AttributeError` at the old
@@ -97,7 +108,7 @@ with no injection seam (`storage.py:69`, `api.py:13`) · all validation is decla
 (`20-22`, `46-47`) · `extract_variables` and `validate_prompt_content` are unreferenced
 (`utils.py:30,43`) · the service never calls an LLM (`requirements.txt:1-6`).
 
-**Not started:** Task 1.4 (Bug #2, `updated_at` on PUT) ← *next* · Task 1.5 (Bug #3, newest-first sorting) · Task 1.6 (Bug #4,
+**Not started:** Task 1.5 (Bug #3, newest-first sorting) ← *next* · Task 1.6 (Bug #4,
 orphaned prompts) · Task 1.7 (`PATCH /prompts/{id}`) · Task 1.8 (AI-verification note) · Task 1.9
 (docstrings + README).
 

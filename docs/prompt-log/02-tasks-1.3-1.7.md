@@ -253,3 +253,208 @@ than the inconsistency.
 
 The protocol question is settled. The next prompt returns to Task 1.4 — Bug #2, `updated_at` unchanged
 on PUT.
+
+---
+
+## Entry 46 — Task 1.4 opened: Bug #2, `updated_at` unchanged on PUT
+
+**Task:** 1.4, step 1 of the step-by-step run.
+
+**Prompt sent:**
+
+> Lets go with task 1.4
+
+**What came back.** No analysis and no fix — the reply set up step 1 only, as Rule 0b requires. The
+brief's wording for Bug #2 is *"Find where updates are handled, set `updated_at` to the current time,
+and verify with a test"*, and Task 1.3 already established that **no provided test fails for this bug**:
+`test_update_prompt` passes with the bug present. So the task owes a test that does not exist yet, and
+step 1 is about deciding how the bug is going to be *observed* before anything is changed.
+
+Three angles were offered for the step-1 prompt: observe it by execution first (drive a PUT through
+`TestClient` and look at the two timestamps); read the handler and the model statically and reason out
+the cause; or go straight to writing the failing test the brief owes and let it be the observation.
+
+**Why my next prompt changed:** to be written when I send it.
+
+---
+
+## Entry 47 — All three angles, in order: read, execute, then write the test
+
+**Task:** 1.4, steps 1–3. This entry covers the read.
+
+**Prompts sent (two, the first a question about the previous reply):**
+
+> I think since its asking for a test on our own, the correct choice will be C, but I dont get 100% the
+> trade-off you are talking about
+
+> I think we can do the three of them. Read, then execute and then create the test
+
+**What came back to the first.** The trade-off spelled out: a red test says only *"this assertion did
+not hold"*, never *why*. Test-first collapses observation and verification into one artifact, so the
+first red run cannot distinguish the genuine bug from a wrong field name (`KeyError`), a string-versus-
+`datetime` comparison, or a strict `>` on two calls landing in the same clock tick — and `utcnow()` is
+naive (`models.py:13-14`), so there is no timezone to disambiguate. The mitigation offered was to make
+the first failure informative rather than to abandon the angle.
+
+**Why my second prompt matters (C1.3 — restructured).** Rather than picking one of the three angles, I
+restructured the step into a sequence of all three: read for the mechanism, execute to see the real
+payload, then write the test against what was actually observed. That removes the ambiguity the
+trade-off described instead of mitigating it — the test is now written with the response shape and the
+timestamp values already in hand.
+
+**What came back — the read.** Reported in the chat reply, not reproduced here; the findings are carried
+into `CLAUDE.md`'s *Established in Task 1.4* block once the step closes.
+
+**Why my next prompt changed:** the read is done; next is the execution that confirms it.
+
+---
+
+## Entry 48 — Step 2: the bug observed by execution, in a throwaway probe
+
+**Task:** 1.4, step 2.
+
+**Prompt sent:**
+
+> I think the first one should be enough as we will create later a test with that information. any
+> objections?
+
+**Why this prompt matters (C1.3 — narrowed).** It rejects the two heavier angles (temporarily applying
+the fix; forcing clock separation with a sleep) and narrows step 2 to a single throwaway script with no
+repository footprint, on the stated ground that the test written in step 3 is what will carry the
+evidence forward.
+
+**The one objection raised, and taken.** With the bug present, `updated_at` is a *copy* of the old
+value, so the probe was guaranteed to show equality whatever the clock does — the script therefore could
+not settle the granularity question as a by-product. It was extended to sample `get_current_time()` five
+times directly and measure resolution on its own.
+
+**What came back.** The bug reproduced on the first run: a `POST` then a `PUT` that genuinely changed
+`content` returned **byte-identical `created_at` and `updated_at`**.
+
+```
+POST  created_at 2026-09-20T10:29:19.445615   updated_at 2026-09-20T10:29:19.445630
+PUT   created_at 2026-09-20T10:29:19.445615   updated_at 2026-09-20T10:29:19.445630
+content actually changed : True
+```
+
+Three facts for the test design, none of them guessable from the read alone:
+
+1. **Timestamps serialise as ISO-8601 strings**, not `datetime` objects — `"2026-09-20T10:29:19.445615"`,
+   naive, no offset, as `models.py:13-14` implies.
+2. **Clock resolution is about two microseconds** — five back-to-back `utcnow()` calls were all
+   distinct. So no `sleep` is needed and a strict comparison will not be flaky on this machine.
+3. **The obvious assertion is a trap.** `created_at` and `updated_at` are *already different at
+   creation* (`...445615` vs `...445630`) because `models.py:34-35` runs two separate `default_factory`
+   calls. An assertion of the form `updated_at > created_at` therefore **passes with the bug present**
+   and proves nothing. The test has to compare `updated_at` before the `PUT` against `updated_at`
+   after it.
+
+**Why my next prompt changed:** the observation is complete and the failure mode of the naive assertion
+is known. The next prompt writes the test.
+
+---
+
+## Entry 49 — Step 3: the owed test written, and failing for the right reason
+
+**Task:** 1.4, step 3.
+
+**Prompt sent:**
+
+> Lets go for the second row as I dont want to modify any of the provided tests
+
+**Why this prompt matters (C1.3 — added a constraint).** It rules out editing the provided suite at all,
+which is the stricter reading of C1.4's "all provided tests green": a green provided test that was
+edited to become green proves less than one left alone. The new test therefore stands entirely on its
+own.
+
+**Context for the choice, found while reading the file.** The provided `test_update_prompt` is a
+half-written version of this test — it captures `original_updated_at` (`test_api.py:89`), sleeps 0.1 s
+"to ensure timestamp would change" (`:98-99`), and then leaves the assertion **commented out** at
+`:108` with the note *"Uncomment after fix"*. The constraint means that line stays commented and the
+assertion is made in a test of my own instead.
+
+**What was written.** `tests/test_api.py` — `TestPrompts::test_update_prompt_refreshes_updated_at`,
+inserted before `test_sorting_order`, plus a `from datetime import datetime` import at the top. It
+creates a prompt, parses both timestamps out of the JSON with `fromisoformat`, issues the `PUT`, and
+asserts:
+
+- `updated_at` after the `PUT` is **strictly greater** than `updated_at` before it;
+- `created_at` is **unchanged** — the fix must touch one field, not both.
+
+Two decisions recorded in its docstring: the comparison is before-versus-after rather than
+`updated_at > created_at`, for the reason established in entry 48; and **no `sleep`** is used, because
+the clock was measured at microsecond resolution. The provided test's 0.1 s delay is left where it is.
+
+**The result — red, for exactly the right reason.** Both earlier assertions (`200`, content changed)
+passed, so the failure is isolated to the timestamp:
+
+```
+>       assert datetime.fromisoformat(data["updated_at"]) > original_updated_at
+E       AssertionError: assert datetime.datetime(2026, 9, 20, 10, 35, 14, 781003)
+E                            > datetime.datetime(2026, 9, 20, 10, 35, 14, 781003)
+```
+
+This is the ambiguity described in entry 47 closed by construction: the red run reports two identical
+datetimes, not a `KeyError`, not a type mismatch, not a tick collision.
+
+**Why my next prompt changed:** the bug is now pinned by a failing test of my own. The next prompt makes
+it green — one field at `api.py:106`.
+
+---
+
+## Entry 50 — Step 4: Bug #2 fixed, and the stale BUG comments removed with it
+
+**Task:** 1.4, step 4.
+
+**Prompt sent:**
+
+> lets go for 2, as I do not think more test is needed (and it is not required)
+
+**Why this prompt matters.** Two decisions in one line. It takes the angle that also tidies the source
+comments, and it declines the third angle on the explicit ground that the brief does not ask for it —
+the same discipline applied in Task 1.3, where an invented test obligation had to be corrected out of
+`CLAUDE.md`.
+
+**What changed — `backend/app/api.py`, two edits, one logical change:**
+
+1. `api.py:106` — `updated_at=existing.updated_at` became `updated_at=get_current_time()`. No new import
+   was needed; `get_current_time` is already in the model import block at `api.py:11`.
+2. `api.py:96-97` — the `# BUG #2: We're not updating the updated_at timestamp!` header and the inline
+   `# BUG: Should be get_current_time()` were replaced by a comment describing what the block now
+   actually does: a full replacement, `created_at` carried over, `updated_at` refreshed. A comment
+   announcing a bug that is no longer there is a false statement about the code.
+
+`created_at=existing.created_at` at `api.py:104` was deliberately left alone — the fix is one field.
+
+**Result: `13 passed / 1 failed`.** `test_update_prompt_refreshes_updated_at` is green. The single
+remaining failure is `test_sorting_order` — Bug #3, Task 1.5 — exactly as it stood before this task
+began. The ten tests that were passing at the Task 1.3 baseline are still passing, plus the Bug #1
+recoveries, plus the new one.
+
+**Why my next prompt changed:** Bug #2 is closed. The next prompt is the commit.
+
+---
+
+## Entry 51 — Task 1.4 committed
+
+**Task:** 1.4, step 5 — the commit.
+
+**Prompt sent:**
+
+> yes
+
+**What it approved.** The message proposed under Rule 6, unedited, and the single-commit split: the fix
+and the test that verifies it are one logical change, travelling with the log shard and the `CLAUDE.md`
+bookkeeping.
+
+```
+Fix Bug #2: refresh updated_at on PUT
+
+Asserting updated_at > created_at would pass with the bug, since models.py:34-35
+fills both from separate calls; the test compares before and after instead.
+```
+
+The body spends its two sentences on the reasoning that leaves no trace in the diff — why the obvious
+assertion was rejected — rather than restating the one-line change, which the diff already shows.
+
+**Why my next prompt changed:** Task 1.4 is closed. The next prompt opens Task 1.5, Bug #3.
