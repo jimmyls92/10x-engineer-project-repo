@@ -18,8 +18,8 @@ history.
 | `00-setup.md` | Protocol setup, and one discarded first attempt at Tasks 1.1–1.2 | Complete — entries 1–6 |
 | `01-tasks-1.1-1.2.md` | Task 1.1 exploration (all six sections + context strategy) | Complete — entries 7–40 |
 | `02-tasks-1.3-1.7.md` | Bugs #1–#4 and `PATCH /prompts/{id}` | Complete — entries 41–73 |
-| `03-task-1.8.md` | AI-verification note | Next — starts at entry 74 |
-| `04-task-1.9.md` | Docstrings and README | Not started |
+| `03-task-1.8.md` | AI-verification note | Complete — entries 74–75 |
+| `04-task-1.9.md` | Docstrings and README | Next — starts at entry 76 |
 
 Entry numbering is continuous across shards, so the merge is a concatenation in filename order.
 

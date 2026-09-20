@@ -11,9 +11,9 @@ work.** It is how a new session resumes without reading everything.
 
 | | |
 |---|---|
-| **Current task** | **Task 1.7 is COMPLETE** — `PATCH /prompts/{id}` implemented at `api.py:112-145` with a new `PromptPatch` model (`models.py:34-49`) and two tests; suite **17 passed**. **That closes C1.4: all four bugs fixed, PATCH implemented, nothing previously working broken.** **Next: Task 1.8 — `docs/ai-verification-note.md`.** Not started. |
-| **Log shard to append to** | `docs/prompt-log/03-task-1.8.md` — **not yet created**; shard `02` is closed at entry 73 |
-| **Next entry number** | 74 |
+| **Current task** | **Task 1.8 is COMPLETE** — `docs/ai-verification-note.md` written: three wrong AI outputs (log entries **16**, **25**, **43**) in chronological order, each with where-to-find-it plus the brief's four fields, and a closing section naming the shared failure mode and the two further cases (entries 33, 54) in one line each. **Next: Task 1.9 — docstrings on every touched function + README run steps.** Not started. |
+| **Log shard to append to** | `docs/prompt-log/04-task-1.9.md` — **not yet created**; shard `03` is closed at entry 75 |
+| **Next entry number** | 76 |
 | **Context stage** | Task 1.1's staged exploration is finished. Six stages, six recorded context decisions: 1 whole-repo (size) · 2 file-level `api.py` (concentrated coupling) · 3 three files (`api.py`, `storage.py`, `utils.py`) · 4 whole-repo including `tests/` (distributed coupling) · 5 `storage.py` + `api.py` (supply vs. demand) · 6 `requirements.txt` against every import in `app/` + `main.py` (declaration vs. use). The bug-fix tasks are not staged exploration and open no new C1.2 rows; the table is closed at six. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
@@ -148,7 +148,7 @@ with no injection seam (`storage.py:69`, `api.py:13`) · all validation is decla
 (`20-22`, `46-47`) · `extract_variables` and `validate_prompt_content` are unreferenced
 (`utils.py:30,43`) · the service never calls an LLM (`requirements.txt:1-6`).
 
-**Not started:** Task 1.8 (AI-verification note) ← *next* · Task 1.9 (docstrings + README).
+**Not started:** Task 1.9 (docstrings on the five touched functions + README run steps) ← *next*.
 
 **Why this restart exists.** An earlier attempt completed Tasks 1.1 and 1.2 in a single reply. The
 output was accurate and it was **deliberately deleted**, because the user learned nothing from
@@ -163,9 +163,9 @@ honest record of the discarded attempt, not as a shortcut.
   docstring on `delete_collection` (`api.py:145-158`); that is the artefact to take into the Module 5
   oral. No longer open.
 
-- **Task 1.8 probe is pre-chosen by the brief.** `brief.txt:84` suggests asking the AI to explain the
-  collection-deletion behaviour or justify a fix, then checking it against the code, as the deliberate
-  C1.5 probe. Surfaced during Task 1.6; do not act on it before Task 1.8.
+- ~~**Task 1.8 probe**~~ — **not run, and deliberately so.** `brief.txt:84` offers the probe as a
+  fallback for when no wrong answer was ever hit; five had been caught and logged live, so the note
+  rests on organic material (entries 16, 25, 43 written up; 33 and 54 named). No longer open.
 
 **Known traps:**
 
