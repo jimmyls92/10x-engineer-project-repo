@@ -189,10 +189,11 @@ class TestCollections:
     
     def test_delete_collection_with_prompts(self, client: TestClient, sample_collection_data, sample_prompt_data):
         """Test deleting a collection that has prompts.
-        
-        NOTE: Bug #4 - prompts become orphaned after collection deletion.
-        This test documents the current (buggy) behavior.
-        After fixing, update the test to verify correct behavior.
+
+        Updated after fixing Bug #4, as this test's original docstring
+        instructed. The chosen strategy is to null the prompt's collection_id
+        (see the delete_collection docstring in app/api.py), so the prompt must
+        survive the deletion with collection_id set to None.
         """
         # Create collection
         col_response = client.post("/collections", json=sample_collection_data)
@@ -206,10 +207,50 @@ class TestCollections:
         # Delete collection
         client.delete(f"/collections/{collection_id}")
         
-        # The prompt still exists but has invalid collection_id
-        # This is Bug #4 - should be handled properly
+        # The prompt survives the deletion, unfiled rather than orphaned.
         prompts = client.get("/prompts").json()["prompts"]
-        if prompts:
-            # Prompt exists with orphaned collection_id
-            assert prompts[0]["collection_id"] == collection_id
-            # After fix, collection_id should be None or prompt should be deleted
+        assert len(prompts) == 1
+        assert prompts[0]["id"] == prompt_id
+        assert prompts[0]["collection_id"] is None
+
+    def test_delete_collection_leaves_no_dangling_reference(
+        self, client: TestClient, sample_collection_data, sample_prompt_data
+    ):
+        """Verify that unfiling leaves no way to reach the deleted collection.
+
+        The test owed by the brief for Bug #4. It covers what
+        test_delete_collection_with_prompts does not: that the unfiled prompt is
+        still individually retrievable, that filtering by the dead collection id
+        now matches nothing, and that the collection itself is gone.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_collection_data: Valid collection payload fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        collection_id = client.post(
+            "/collections", json=sample_collection_data
+        ).json()["id"]
+        prompt_id = client.post(
+            "/prompts", json={**sample_prompt_data, "collection_id": collection_id}
+        ).json()["id"]
+
+        assert (
+            len(client.get(f"/prompts?collection_id={collection_id}").json()["prompts"])
+            == 1
+        )
+
+        assert client.delete(f"/collections/{collection_id}").status_code == 204
+
+        # The prompt is intact, with its required fields untouched.
+        prompt = client.get(f"/prompts/{prompt_id}")
+        assert prompt.status_code == 200
+        assert prompt.json()["title"] == sample_prompt_data["title"]
+        assert prompt.json()["content"] == sample_prompt_data["content"]
+        assert prompt.json()["collection_id"] is None
+
+        # The dead id no longer matches anything, and the collection is gone.
+        filtered = client.get(f"/prompts?collection_id={collection_id}").json()
+        assert filtered["prompts"] == []
+        assert filtered["total"] == 0
+        assert client.get(f"/collections/{collection_id}").status_code == 404

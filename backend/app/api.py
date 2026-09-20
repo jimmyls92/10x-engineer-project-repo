@@ -144,13 +144,26 @@ def create_collection(collection_data: CollectionCreate):
 
 @app.delete("/collections/{collection_id}", status_code=204)
 def delete_collection(collection_id: str):
-    # BUG #4: We delete the collection but don't handle the prompts!
-    # Prompts with this collection_id become orphaned with invalid reference
-    # Should either: delete the prompts, set collection_id to None, or prevent deletion
-    
+    """Delete a collection and unfile the prompts that belonged to it.
+
+    Strategy for orphaned prompts: their collection_id is set to None, rather
+    than deleting the prompts or refusing to delete a non-empty collection.
+    The data model treats collection membership as incidental, not essential --
+    collection_id is Optional with a default of None (models.py:23), it is the
+    only client-supplied field carrying no validation constraint, and
+    Collection declares no back-reference to its prompts (models.py:54-58).
+    Cascade-deleting would destroy the required fields title and content for
+    the sake of an optional one; refusing deletion would enforce an integrity
+    rule the model never declares. PUT already unfiles a prompt when the body
+    omits collection_id (api.py:108), so "unfiled" is an existing, tested
+    state rather than one invented here.
+    """
     if not storage.delete_collection(collection_id):
         raise HTTPException(status_code=404, detail="Collection not found")
-    
-    # Missing: Handle prompts that belong to this collection!
-    
+
+    for prompt in storage.get_prompts_by_collection(collection_id):
+        storage.update_prompt(
+            prompt.id, prompt.model_copy(update={"collection_id": None})
+        )
+
     return None

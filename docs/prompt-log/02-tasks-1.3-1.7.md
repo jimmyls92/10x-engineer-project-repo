@@ -644,3 +644,378 @@ reasoning the diff cannot show.
 **Why my next prompt changed:** Task 1.5 is closed and the suite is fully green. The next prompt opens
 Task 1.6, Bug #4 \u2014 where the strategy decision and the trap at `tests/test_api.py:154-179` have to be
 settled together.
+
+---
+
+## Entry 58 — Task 1.6 opened: Bug #4, orphaned prompts
+
+**Task:** 1.6, step 1 — deciding what settles the strategy.
+
+**Prompt sent:**
+
+> lets go with task 1.6
+
+**What came back.** Not a strategy. Task 1.6 was opened under Rule 0b, and step 1 was framed around
+the one thing that makes this bug unlike the previous three: it has **no single obviously-correct
+fix**. Cascade-delete the prompts, null their `collection_id`, or refuse to delete a non-empty
+collection are all defensible, and the choice is a design decision that has to be defended in the
+Module 5 oral. Three candidates were offered for what should settle it first \u2014 the brief's own
+wording, the provided test that currently asserts the buggy behaviour, or the handler itself.
+
+**Why my next prompt changed:** the strategy cannot be chosen until it is known whether the brief
+already names one; the next prompt picks the evidence source.
+
+---
+
+## Entry 59 — Task 1.6 step 1: the brief confirms the choice is mine, and adds an obligation
+
+**Task:** 1.6, step 1 — checking whether the brief already names a strategy.
+
+**Prompt sent:**
+
+> lets go with A, but my understanding it is that its an open choice.
+
+**Constraint added (C1.3).** The prompt does not just pick an option \u2014 it states my own reading and
+asks for it to be checked. That is a different request from "read the brief": it makes the step a
+verification of a claim I am making, so a disagreement has to surface rather than being smoothed over.
+
+**What came back.** My reading is correct, and the brief is explicit about it. `brief.txt:64-67`:
+
+> Bug #4 \u2014 collection deletion orphans prompts
+> Deleting a collection leaves its prompts with an invalid collection_id. Decide on a strategy \u2014 delete
+> the prompts, null the field, or prevent deletion \u2014 implement it, and add a test. Record your
+> reasoning in a line or two: you may be asked about this choice in your Module 5 defense.
+
+Three things the wording settles:
+
+1. **The choice is genuinely open** \u2014 the brief names all three options and delegates the decision. The
+   three candidates carried in `CLAUDE.md` under *Open decisions* are exactly the brief's own three,
+   in the brief's own order.
+2. **There is a written obligation beyond the code** \u2014 "Record your reasoning in a line or two." That
+   is a deliverable, not a chat answer, and it has to survive to the Module 5 defence.
+3. **The rubric is outcome-agnostic.** The C1.4 evidence line says only "orphaned prompts **handled**"
+   (`brief.txt:183`), never which way \u2014 so no strategy is graded higher than another, and the grade
+   rests on the reasoning and the test, not on the pick.
+
+**Noted for a later task, not acted on:** `brief.txt:84` proposes collection-deletion as the
+deliberate probe for the AI-verification note \u2014 "Ask it to explain the collection-deletion behaviour
+or to justify a fix, then check the answer against the code." That belongs to Task 1.8 (C1.5) and is
+recorded in `CLAUDE.md` rather than pursued here, per Rule 0.
+
+**Why my next prompt changed:** the decision is confirmed mine to make, so the next step is to find
+what narrows it \u2014 the provided test at `tests/test_api.py:154-179`, which currently asserts the buggy
+behaviour.
+
+---
+
+## Entry 60 \u2014 Task 1.6 step 2A: the guard `if prompts:` decides which strategies survive
+
+**Task:** 1.6, step 2, angle A \u2014 reading the provided test that asserts the current buggy behaviour.
+
+**Prompt sent:**
+
+> We will go thorugh all of them. Start with A.
+
+**Restructured (C1.3).** Three angles were offered as alternatives; the prompt converted them into a
+**sequence** \u2014 test, then implementation cost, then semantics \u2014 and set the starting point. Same shape
+as the restructuring in Task 1.4 (entry 47): refusing a forced choice between complementary evidence
+sources, while still keeping one step per reply.
+
+**Line numbers corrected.** `CLAUDE.md` recorded this test at `tests/test_api.py:154-179`. That is
+**stale** \u2014 the new test added in Task 1.4 pushed the file down by 36 lines. It now lives at
+`tests/test_api.py:190-215`, and the file is 215 lines long. Corrected in `CLAUDE.md`.
+
+**What came back.** The decisive detail is the **guard**, not the assertion:
+
+```python
+prompts = client.get("/prompts").json()["prompts"]     # :211
+if prompts:                                             # :212
+    # Prompt exists with orphaned collection_id
+    assert prompts[0]["collection_id"] == collection_id # :214
+    # After fix, collection_id should be None or prompt should be deleted
+```
+
+Running each candidate strategy through it:
+
+| Strategy | What `GET /prompts` returns afterwards | `if prompts:` | Result |
+|---|---|---|---|
+| **Cascade-delete the prompts** | empty list | falsy \u2014 body **skipped** | **passes** |
+| **Null the `collection_id`** | one prompt, `collection_id is None` | truthy \u2014 body runs, `None != collection_id` | **fails** |
+| **Prevent deletion of a non-empty collection** | one prompt, id intact | truthy \u2014 body runs, ids match | **passes** |
+
+So the test does **not** eliminate cascade, which was the expectation going in \u2014 the `if prompts:`
+guard was written precisely so that a cascade fix would not break it. What it eliminates is
+**nulling the field**, the one option whose own name appears in the test's closing comment at `:215`.
+
+**The conflict this exposes.** The docstring at `:193-195` says "After fixing, update the test to
+verify correct behavior" \u2014 the test invites its own modification. That collides head-on with the
+standing constraint set in Task 1.4: **no provided test may be modified.** Under that constraint the
+strategy space is cascade or prevent. If the constraint is relaxed for this one test, on the test's own
+written invitation, all three are back open. That is a decision for the user, not an inference for me,
+and it is put to them rather than resolved here.
+
+**Why my next prompt changed:** the constraint is now precise, and one strategy is conditionally dead.
+The next step is B \u2014 what each surviving strategy costs to build \u2014 as the sequence set out.
+
+---
+
+## Entry 61 \u2014 Task 1.6 step 2B: what each strategy costs to build
+
+**Task:** 1.6, step 2, angle B \u2014 the handler plus the storage primitives, to price the three options.
+
+**Prompt sent:**
+
+> B
+
+**The handler**, `api.py:143-156`:
+
+```python
+@app.delete("/collections/{collection_id}", status_code=204)
+def delete_collection(collection_id: str):
+    # BUG #4 ... Should either: delete the prompts, set collection_id to None, or prevent deletion
+    if not storage.delete_collection(collection_id):
+        raise HTTPException(status_code=404, detail="Collection not found")
+    # Missing: Handle prompts that belong to this collection!
+    return None
+```
+
+**The primitives that exist** in `storage.py`: `get_prompts_by_collection` (`:58-59`, called by
+nothing), `delete_prompt` (`:34-38`), `update_prompt` (`:27-31`). Every strategy is buildable from
+what is already there \u2014 **no new storage method is needed by any of the three.** Cost is therefore not
+a tie-breaker on its own, and the differences are structural rather than in line count.
+
+| Strategy | Sketch | Structural notes |
+|---|---|---|
+| **Cascade-delete** | `for p in storage.get_prompts_by_collection(id): storage.delete_prompt(p.id)` | Finally gives `get_prompts_by_collection` its first caller. Order is irrelevant \u2014 the two dicts are structurally independent (stage 5), so the prompts remain findable after the collection is gone. Iterating a fresh list while deleting from `_prompts` is safe because `get_prompts_by_collection` already materialises a new list. |
+| **Null the field** | fetch, set `collection_id = None`, `storage.update_prompt(...)` | `update_prompt` re-binds the same object into the same key, so it is nearly a no-op \u2014 storage hands out **uncopied** objects (stage 3), meaning a plain in-place mutation would also "work". Going through `update_prompt` anyway keeps the write visible instead of relying on the aliasing hazard. Killed by the provided test (entry 60) unless that test is modified. |
+| **Prevent deletion** | `if storage.get_prompts_by_collection(id): raise HTTPException(409, ...)` | **The only one that forces the handler to be restructured.** The 404 check is currently *fused* with the delete at `:151` \u2014 `if not storage.delete_collection(...)` both tests existence and performs the deletion in one expression. A non-empty guard has to run **before** the delete, so existence must first be established separately via `storage.get_collection`, splitting one line into two. It also changes the route's public contract: a `204`-only endpoint gains a second, non-404 error status. |
+
+**Why my next prompt changed:** cost does not separate the options \u2014 all three are three lines against
+existing primitives. The differences that matter are semantic, which is exactly angle C, the last of
+the three.
+
+---
+
+## Entry 62 \u2014 Task 1.6 step 2C: what the data model says about the relationship
+
+**Task:** 1.6, step 2, angle C \u2014 framing the strategy argument from the repository's own declarations.
+
+**Prompt sent:**
+
+> I agree with A
+
+**The declarations**, `models.py:19-58`:
+
+```python
+class PromptBase(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    content: str = Field(..., min_length=1)
+    description: Optional[str] = Field(None, max_length=500)
+    collection_id: Optional[str] = None            # :23
+
+class Collection(CollectionBase):                  # :54-58
+    id, name, description, created_at              # no prompt list, no back-reference
+```
+
+Five facts, each one evidence about whether membership is essential or incidental:
+
+1. **`collection_id` is `Optional` with a default of `None`** (`:23`). A prompt with no collection is a
+   fully valid prompt, not a degraded one. The model already has a first-class representation for
+   "unfiled".
+2. **It is the only client-supplied field with no `Field(...)` constraint** (contrast `:20-22`). Nothing
+   is asserted about it \u2014 not a length, not a format, not that it refers to anything real.
+3. **`title` and `content` are required and non-empty; `collection_id` is neither.** The model's own
+   ranking of what a prompt *is* puts the collection link last.
+4. **`Collection` has no back-reference** (`:54-58`). It does not own or enumerate its prompts. The link
+   is declared once, on the child, pointing up.
+5. **`PUT` already unfiles a prompt silently** when the body omits `collection_id` (`api.py:108`,
+   exercised by `test_api.py:92-101`). Transitioning a prompt to "no collection" is **existing,
+   tested, accepted behaviour** \u2014 not a new state this fix would invent.
+
+What each fact implies, read against the three strategies:
+
+| Strategy | The model-based case for it | The model-based case against it |
+|---|---|---|
+| **Cascade-delete** | Treats the collection as an owner; matches a user's folder intuition | Nothing in the model expresses ownership \u2014 `Collection` has no prompt list (fact 4), and `content` being required while `collection_id` is optional (fact 3) says the prompt is the valuable entity. Destroys data the model says stands alone |
+| **Null the field** | Facts 1 and 5 make it the state the model already has a name for, and the one the API already reaches by another route | Blocked by the provided test unless that test is modified (entry 60) |
+| **Prevent deletion** | Protects against surprise data loss | Facts 1 and 2 say the reference was never guaranteed to be valid; adding a new error status to a `204` endpoint asserts an integrity rule the model never declared |
+
+The evidence is laid out; the choice is the user's and is deliberately not made here.
+
+**Why my next prompt changed:** all three angles are gathered. The next prompt makes the decision \u2014
+including whether the no-modify-provided-tests constraint holds for `test_api.py:190-215`.
+
+---
+
+## Entry 63 \u2014 Task 1.6 step 3: strategy chosen, and the test-modification question
+
+**Task:** 1.6, step 3 \u2014 the decision.
+
+**Prompt sent:**
+
+> I think Null the field is the better compromise, but I dont know if we should modify a test asi it
+> is a grading tool
+
+**Decision recorded: null the `collection_id`.** Reached from the data model (entry 62) and from the
+user-facing comparison: it is the only strategy that destroys no data and imposes no new workflow
+burden, and `Optional[str] = None` (`models.py:23`) is a state the model already declares and `PUT`
+already produces (`api.py:108`).
+
+**The second half of the prompt is the real question**, and it is the right one to have asked \u2014 the
+provided test suite *is* the C1.4 grading instrument, so editing it looks like editing the ruler.
+What the brief actually says, checked rather than assumed:
+
+- `brief.txt:53` \u2014 "all provided tests must pass"
+- `brief.txt:109` \u2014 "All provided tests passing"
+- `brief.txt:186` \u2014 "All provided tests pass and nothing that worked before is broken"
+
+Every one of these requires the suite to be **green**. **None of them says the test files are
+immutable.** And the test in question carries written instructions to the contrary in its own
+docstring (`tests/test_api.py:193-195`):
+
+> NOTE: Bug #4 - prompts become orphaned after collection deletion.
+> This test documents the current (buggy) behavior.
+> **After fixing, update the test to verify correct behavior.**
+
+So updating it is **following** the provided material, not circumventing it. The opposite reading
+creates a contradiction: a test whose own docstring says it "documents the current (buggy) behavior",
+still green in a repository that claims the bug is fixed, is a worse signal to a grader than a clean
+one-line diff. It would mean the suite asserts the bug is still present.
+
+The standing "no provided test may be modified" constraint from Task 1.4 is therefore **relaxed for
+this one test only**, on that test's own written invitation, and the reasoning is recorded here and in
+the commit body so the exception is visible rather than silent. `test_update_prompt`, the other test
+with a commented-out assertion, stays untouched \u2014 its docstring contains no such instruction.
+
+**Why my next prompt changed:** both halves of the decision are settled, so the next step is the
+implementation \u2014 handler, test edit, and the "line or two" of recorded reasoning the brief requires.
+
+---
+
+## Entry 64 \u2014 Task 1.6 step 4: implemented, with the reasoning on the handler
+
+**Task:** 1.6, step 4 \u2014 the implementation.
+
+**Prompt sent:**
+
+> Lets go for C
+
+**Where the reasoning lives.** On `delete_collection` itself (`api.py:145-158`), as a docstring. The
+brief's "record your reasoning in a line or two" (`brief.txt:66`) is satisfied by an artefact that
+sits on the code it justifies and is found by whoever next reads the handler \u2014 not by a `git log`
+entry. Task 1.9 will complete it with Args/Returns/Raises; the strategy paragraph is written now,
+while the argument is fresh, because that is the part that cannot be reconstructed later.
+
+**Three changes.**
+
+1. **`api.py`** \u2014 the three `BUG #4` comments and the `# Missing: Handle prompts...` marker removed,
+   the strategy docstring added, and the fix itself:
+
+   ```python
+   for prompt in storage.get_prompts_by_collection(collection_id):
+       storage.update_prompt(
+           prompt.id, prompt.model_copy(update={"collection_id": None})
+       )
+   ```
+
+   `model_copy` rather than mutating `prompt.collection_id` in place. Storage hands out **uncopied**
+   objects (stage 3), so in-place mutation would also appear to work \u2014 by writing through an alias,
+   silently, without the store being told. Going through `update_prompt` with a fresh object keeps the
+   write explicit and does not deepen the aliasing hazard. `updated_at` is deliberately **not** bumped:
+   unfiling is a consequence of deleting the collection, not a client edit of the prompt.
+
+   The loop runs **after** the 404 guard. It has to: the existence check and the deletion are fused
+   into one expression at `:159` (entry 61), and the two dicts are independent, so the prompts are
+   still findable once the collection is gone.
+
+2. **`tests/test_api.py:190-214`** \u2014 the provided test, updated on its own written instruction. The
+   docstring now states what it verifies and why, and the tail became:
+
+   ```python
+   prompts = client.get("/prompts").json()["prompts"]
+   assert len(prompts) == 1
+   assert prompts[0]["id"] == prompt_id
+   assert prompts[0]["collection_id"] is None
+   ```
+
+   The `if prompts:` guard was **removed rather than kept**. Retaining it would have let the test pass
+   silently if the prompt were wrongly deleted \u2014 the exact hole that made the original test tolerate a
+   cascade (entry 60). Survival of the prompt is now the first thing asserted. Name, fixtures and
+   setup are unchanged.
+
+3. **A new test**, `test_delete_collection_leaves_no_dangling_reference` \u2014 the one the brief demands
+   explicitly. It covers what the updated provided test does not: the unfiled prompt is still
+   individually retrievable with `title` and `content` intact, filtering by the dead id now returns
+   `[]` with `total == 0`, and the collection itself is 404.
+
+**Verified red first.** With the loop removed, both collection-deletion tests fail, each on
+`AssertionError: assert '<uuid>' is None` \u2014 the right reason, not a `KeyError` or a shape mismatch.
+With the loop restored: **15 passed**, nothing failing.
+
+**Why my next prompt changed:** Bug #4 is closed and the suite is green. The next prompt is the commit.
+
+---
+
+## Entry 65 \u2014 Task 1.6: full verbose run before committing
+
+**Task:** 1.6, step 5 \u2014 confirming the suite before the commit rather than after.
+
+**Prompt sent:**
+
+> Lets run all the test to check if they are all green (run pytest test/ -v) inside the backend folder
+
+**Constraint added (C1.3).** The commit was already proposed and awaiting approval; this prompt
+inserted a verification gate ahead of it and named the exact command and directory \u2014 the same
+`cd backend && pytest tests/ -v` that `CLAUDE.md` records as the project's verification command and
+that C1.4 is graded on. Running the graded command verbatim, rather than the `-q` form used while
+iterating, is the difference between "my tests pass" and "the graded command passes".
+
+**What came back.** `15 passed`, every test named:
+
+| | Test | Origin |
+|---|---|---|
+| 1 | `TestHealth::test_health_check` | provided |
+| 2\u20137 | `test_create_prompt`, `test_list_prompts_empty`, `test_list_prompts_with_data`, `test_get_prompt_success`, `test_get_prompt_not_found`, `test_delete_prompt` | provided |
+| 8 | `test_update_prompt` | provided \u2014 untouched, commented assertion still commented |
+| 9 | `test_update_prompt_refreshes_updated_at` | **added in Task 1.4** |
+| 10 | `test_sorting_order` | provided \u2014 green since Task 1.5 |
+| 11\u201313 | `test_create_collection`, `test_list_collections`, `test_get_collection_not_found` | provided |
+| 14 | `test_delete_collection_with_prompts` | provided \u2014 **updated in Task 1.6** |
+| 15 | `test_delete_collection_leaves_no_dangling_reference` | **added in Task 1.6** |
+
+Thirteen provided tests, all green; two added. Against the Task 1.3 baseline of 3 failed / 10 passed,
+every previously-passing test is still passing \u2014 the second half of the C1.4 condition, "nothing that
+worked before is broken".
+
+The 30 warnings are all pre-existing and unrelated to any fix: Pydantic V1-style `class Config`
+(`models.py:34,54`) and `datetime.utcnow()` deprecation (`models.py:14`). Not touched \u2014 out of scope
+for the bug tasks, and no task in the brief asks for them.
+
+**Why my next prompt changed:** nothing left to verify. The next prompt is the commit.
+
+---
+
+## Entry 66 \u2014 Task 1.6 committed
+
+**Task:** 1.6, step 6 \u2014 the commit.
+
+**Prompt sent:**
+
+> go ahead
+
+**What it approved.** The message proposed under Rule 6, unedited, and the single-commit split: the
+handler fix, the updated provided test and the new test are one logical change \u2014 the strategy is not
+implemented until all three exist.
+
+```
+Fix Bug #4: unfile prompts on collection delete
+
+Nulling collection_id fits a model where membership is optional and unconstrained
+while title and content are required; the provided test's docstring asked for this update.
+```
+
+The body spends one sentence on the strategy argument and one on the modification of a provided test
+\u2014 the two decisions an assessor is most likely to question, and neither visible in the diff.
+
+**Why my next prompt changed:** all four bugs are fixed and the suite is green. The next prompt opens
+Task 1.7, the missing `PATCH /prompts/{id}` endpoint \u2014 the last item of the C1.4 MUST PASS row.

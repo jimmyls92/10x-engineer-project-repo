@@ -11,9 +11,9 @@ work.** It is how a new session resumes without reading everything.
 
 | | |
 |---|---|
-| **Current task** | **Task 1.5 is COMPLETE** — Bug #3 fixed at `utils.py:9`, verified by the provided `test_sorting_order`; the suite is **fully green, 14 passed**. **Next: Task 1.6 — Bug #4, collection deletion orphans prompts.** Not started. |
-| **Log shard to append to** | `docs/prompt-log/02-tasks-1.3-1.7.md` — open, entries 41–56 written |
-| **Next entry number** | 57 |
+| **Current task** | **Task 1.6 is COMPLETE** — Bug #4 fixed at `api.py:159-164` by nulling `collection_id`; the provided test was updated on its own written instruction and a new test added; suite **15 passed**. **Next: Task 1.7 — implement `PATCH /prompts/{id}`.** Not started. |
+| **Log shard to append to** | `docs/prompt-log/02-tasks-1.3-1.7.md` — open, entries 41–64 written |
+| **Next entry number** | 65 |
 | **Context stage** | Task 1.1's staged exploration is finished. Six stages, six recorded context decisions: 1 whole-repo (size) · 2 file-level `api.py` (concentrated coupling) · 3 three files (`api.py`, `storage.py`, `utils.py`) · 4 whole-repo including `tests/` (distributed coupling) · 5 `storage.py` + `api.py` (supply vs. demand) · 6 `requirements.txt` against every import in `app/` + `main.py` (declaration vs. use). The bug-fix tasks are not staged exploration and open no new C1.2 rows; the table is closed at six. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
@@ -28,6 +28,20 @@ they fit, 1.4 characteristics) and the § Context Strategy stage-1 row. Task 1.1
 § Entry points (2.1 route table, 2.2 the FastAPI-contributed routes, 2.3 notes on the surface) and the
 § Context Strategy stage-2 row. Stages 3, 4, 5 and 6 likewise — **`docs/SYSTEM_MODEL.md` is finished**
 and nothing in it is outstanding.
+
+**Established in Task 1.6** (do not re-derive; do cite): **strategy chosen — null the `collection_id`**,
+recorded as a docstring on `delete_collection` (`api.py:145-158`), which is where the brief's "record
+your reasoning in a line or two" (`brief.txt:66`) is satisfied · the case rests on the data model:
+`collection_id` is `Optional`, unconstrained, and `Collection` has no back-reference, while `title` and
+`content` are required — so membership is incidental, not essential · **the brief never says provided
+tests are immutable**, only that they must pass (`brief.txt:53,109,186`), and `test_delete_collection_with_prompts`
+instructed its own update in its docstring, so the no-modify constraint was relaxed **for that one test
+only**; `test_update_prompt` stays untouched · the `if prompts:` guard was removed, not kept — it would
+let a wrongly-deleted prompt pass silently · `model_copy` + `update_prompt`, never in-place mutation,
+because storage hands out uncopied objects · `updated_at` is **not** bumped on unfiling · the loop must
+run after the 404 guard, since existence check and deletion are fused in one expression · **suite is
+15 passed** · `delete_collection` owes Args/Returns/Raises to Task 1.9, alongside `update_prompt` and
+`sort_prompts_by_date`.
 
 **Established in Task 1.5** (do not re-derive; do cite): the fix was one expression, `utils.py:9`,
 `reverse=descending` — not `reverse=True`, which would pass the test while leaving the parameter dead
@@ -118,8 +132,7 @@ with no injection seam (`storage.py:69`, `api.py:13`) · all validation is decla
 (`20-22`, `46-47`) · `extract_variables` and `validate_prompt_content` are unreferenced
 (`utils.py:30,43`) · the service never calls an LLM (`requirements.txt:1-6`).
 
-**Not started:** Task 1.6 (Bug #4,
-orphaned prompts) ← *next* · Task 1.7 (`PATCH /prompts/{id}`) · Task 1.8 (AI-verification note) · Task 1.9
+**Not started:** Task 1.7 (`PATCH /prompts/{id}`) ← *next* · Task 1.8 (AI-verification note) · Task 1.9
 (docstrings + README).
 
 **Why this restart exists.** An earlier attempt completed Tasks 1.1 and 1.2 in a single reply. The
@@ -131,16 +144,19 @@ honest record of the discarded attempt, not as a shortcut.
 
 **Open decisions:**
 
-- **Bug #4 strategy** — cascade-delete the prompts / null their `collection_id` / block deletion of a
-  non-empty collection. Belongs to Task 1.6; do not raise it before then. The reasoning must be
-  recorded; it is defended in the Module 5 oral.
+- ~~**Bug #4 strategy**~~ — **settled in Task 1.6: null the `collection_id`.** The reasoning is the
+  docstring on `delete_collection` (`api.py:145-158`); that is the artefact to take into the Module 5
+  oral. No longer open.
+
+- **Task 1.8 probe is pre-chosen by the brief.** `brief.txt:84` suggests asking the AI to explain the
+  collection-deletion behaviour or justify a fix, then checking it against the code, as the deliberate
+  C1.5 probe. Surfaced during Task 1.6; do not act on it before Task 1.8.
 
 **Known traps:**
 
-- **`tests/test_api.py:154-179` asserts the *current*, buggy orphaning behaviour** — line 178 asserts
-  the prompt keeps the deleted collection's id, guarded by `if prompts:`. C1.4 requires every provided
-  test green, so the Bug #4 strategy and this test have to be settled together in Task 1.6. Do not
-  raise it before then.
+- ~~**`tests/test_api.py` asserts the buggy orphaning behaviour**~~ — **resolved in Task 1.6**: that
+  test was updated on its own written instruction, and its `if prompts:` guard removed. The standing
+  "no provided test may be modified" constraint still holds for **every other** provided test.
 - **`TestClient` defaults to `raise_server_exceptions=True`**, which re-raises rather than returning
   500. Confirmed at the Task 1.3 baseline — both Bug #1 failures surfaced as a raised `AttributeError`,
   not as a 500 response. Kept because the same will hold for any later handler that can raise.
