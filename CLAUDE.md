@@ -11,10 +11,10 @@ work.** It is how a new session resumes without reading everything.
 
 | | |
 |---|---|
-| **Current task** | **Task 1.1 is COMPLETE.** All six checklist sections plus § Context Strategy are written, committed, and logged. **Next: Task 1.3 — Bug #1, the 404 on a missing prompt.** Not started. |
-| **Log shard to append to** | `docs/prompt-log/02-tasks-1.3-1.7.md` — **does not exist yet**; create it, starting at entry 41 |
-| **Next entry number** | 41 |
-| **Context stage** | Task 1.1's staged exploration is finished. Six stages, six recorded context decisions: 1 whole-repo (size) · 2 file-level `api.py` (concentrated coupling) · 3 three files (`api.py`, `storage.py`, `utils.py`) · 4 whole-repo including `tests/` (distributed coupling) · 5 `storage.py` + `api.py` (supply vs. demand) · 6 `requirements.txt` against every import in `app/` + `main.py` (declaration vs. use). Task 1.3 opens a fresh context decision of its own. |
+| **Current task** | **Task 1.3 is COMPLETE** — Bug #1 fixed at `api.py:66-71`, suite at **12 passed / 1 failed** (the one failure is Bug #3, Task 1.5). **Next: Task 1.4 — Bug #2, `updated_at` unchanged on PUT.** Not started. |
+| **Log shard to append to** | `docs/prompt-log/02-tasks-1.3-1.7.md` — open, entries 41–44 written |
+| **Next entry number** | 45 |
+| **Context stage** | Task 1.1's staged exploration is finished. Six stages, six recorded context decisions: 1 whole-repo (size) · 2 file-level `api.py` (concentrated coupling) · 3 three files (`api.py`, `storage.py`, `utils.py`) · 4 whole-repo including `tests/` (distributed coupling) · 5 `storage.py` + `api.py` (supply vs. demand) · 6 `requirements.txt` against every import in `app/` + `main.py` (declaration vs. use). The bug-fix tasks are not staged exploration and open no new C1.2 rows; the table is closed at six. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
 restructuring in entry 8, because one rationale cannot honestly cover six different questions.
@@ -28,6 +28,15 @@ they fit, 1.4 characteristics) and the § Context Strategy stage-1 row. Task 1.1
 § Entry points (2.1 route table, 2.2 the FastAPI-contributed routes, 2.3 notes on the surface) and the
 § Context Strategy stage-2 row. Stages 3, 4, 5 and 6 likewise — **`docs/SYSTEM_MODEL.md` is finished**
 and nothing in it is outstanding.
+
+**Established in Task 1.3** (do not re-derive; do cite): **baseline before any fix was 3 failed /
+10 passed** — `test_get_prompt_not_found`, `test_delete_prompt` (both `AttributeError` at the old
+`api.py:73`) and `test_sorting_order`. Ten passing tests are the bar for "nothing previously working
+broken" · **Bug #1 broke two tests, not one** — `test_delete_prompt` re-fetches after deleting
+(`test_api.py:83`) · **Bugs #2 and #4 have no failing provided test**: `test_update_prompt` passes with
+the `updated_at` bug present, and `test_delete_collection_with_prompts` passes *because* it asserts the
+orphaning · `storage.get_prompt` has exactly two callers, `api.py:70` and `api.py:91`, both wanting 404
+· after the fix: **12 passed / 1 failed**, the failure being Bug #3.
 
 **Established in stage 6** (do not re-derive; do cite): three of the six pins — `pytest`, `pytest-cov`,
 `httpx` — have no importer under `app/` or `main.py` (`requirements.txt:4-6`); `httpx` is imported by
@@ -88,8 +97,7 @@ with no injection seam (`storage.py:69`, `api.py:13`) · all validation is decla
 (`20-22`, `46-47`) · `extract_variables` and `validate_prompt_content` are unreferenced
 (`utils.py:30,43`) · the service never calls an LLM (`requirements.txt:1-6`).
 
-**Not started:** Task 1.3 (Bug #1, 404) ← *next* ·
-Task 1.4 (Bug #2, `updated_at` on PUT) · Task 1.5 (Bug #3, newest-first sorting) · Task 1.6 (Bug #4,
+**Not started:** Task 1.4 (Bug #2, `updated_at` on PUT) ← *next* · Task 1.5 (Bug #3, newest-first sorting) · Task 1.6 (Bug #4,
 orphaned prompts) · Task 1.7 (`PATCH /prompts/{id}`) · Task 1.8 (AI-verification note) · Task 1.9
 (docstrings + README).
 
@@ -113,7 +121,12 @@ honest record of the discarded attempt, not as a shortcut.
   test green, so the Bug #4 strategy and this test have to be settled together in Task 1.6. Do not
   raise it before then.
 - **`TestClient` defaults to `raise_server_exceptions=True`**, which re-raises rather than returning
-  500. Matters when writing the Task 1.3 test.
+  500. Confirmed at the Task 1.3 baseline — both Bug #1 failures surfaced as a raised `AttributeError`,
+  not as a 500 response. Kept because the same will hold for any later handler that can raise.
+- **The brief asks for a new test on two tasks only.** Bug #2 "verify with a test" (brief line 60) and
+  Bug #4 "add a test" (line 66). Bug #1 says "make the provided test pass" (57) and Bug #3 says only
+  "verify" (63); C1.4's evidence line asks for "all **provided** tests" (186). Do not invent test
+  obligations the brief does not impose — this file used to, see the work order.
 
 **Pending at the end:** merge the log shards into `docs/prompt-log.md` (see
 `docs/prompt-log/README.md`). That file is currently empty on purpose — until the merge commit exists,
@@ -303,7 +316,14 @@ Progress lives in CURRENT STATE at the top of this file, not here.
 1. Protocol setup — `CLAUDE.md` and the prompt log opened. ← *before any code is read*
 2. Task 1.1 — staged exploration → `docs/SYSTEM_MODEL.md`, six sections plus context strategy.
    (Task 1.2, the prompt log, runs continuously alongside every task — it is not a step of its own.)
-3. Tasks 1.3–1.7 — 4 bug fixes + `PATCH /prompts/{id}`, each with a test.
+3. Tasks 1.3–1.7 — 4 bug fixes + `PATCH /prompts/{id}`. **The test obligation is per task, in the
+   brief's own words, and is not uniform** — an earlier version of this line said "each with a test",
+   which overstates the brief and was corrected in Task 1.3:
+   - **1.3** Bug #1 — "make the **provided** test pass". No new test owed.
+   - **1.4** Bug #2 — "**verify with a test**". One is owed; nothing provided fails for this bug.
+   - **1.5** Bug #3 — "fix the order, **verify**". A provided test covers it; no new test demanded.
+   - **1.6** Bug #4 — "implement it, and **add a test**". One is owed, explicitly.
+   - **1.7** PATCH — four behaviour checkboxes, no test wording.
 4. Task 1.8 — `docs/ai-verification-note.md`.
 5. Task 1.9 — docstrings on touched functions + README run instructions.
 6. Merge the log shards → `docs/prompt-log.md`, as its own commit.
