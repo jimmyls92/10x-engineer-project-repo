@@ -11,9 +11,9 @@ work.** It is how a new session resumes without reading everything.
 
 | | |
 |---|---|
-| **Current task** | **Task 1.8 is COMPLETE** — `docs/ai-verification-note.md` written: three wrong AI outputs (log entries **16**, **25**, **43**) in chronological order, each with where-to-find-it plus the brief's four fields, and a closing section naming the shared failure mode and the two further cases (entries 33, 54) in one line each. **Next: Task 1.9 — docstrings on every touched function + README run steps.** Not started. |
-| **Log shard to append to** | `docs/prompt-log/04-task-1.9.md` — **not yet created**; shard `03` is closed at entry 75 |
-| **Next entry number** | 76 |
+| **Current task** | **Task 1.9 is COMPLETE in the working tree, NOT YET COMMITTED** — five Google-style docstrings (`get_prompt`, `update_prompt`, `sort_prompts_by_date`, `delete_collection`, `patch_prompt`), nine stale comments removed, `README.md` rewritten and **executed on a clean clone**, four false `SYSTEM_MODEL.md` claims about `main.py` corrected, and a fourth case added to `ai-verification-note.md`. **Next: propose the commit split, get each message approved, commit. Then the log merge.** Previously: **Task 1.8 was COMPLETE** — `docs/ai-verification-note.md` written: three wrong AI outputs (log entries **16**, **25**, **43**) in chronological order, each with where-to-find-it plus the brief's four fields, and a closing section naming the shared failure mode and the two further cases (entries 33, 54) in one line each. **Next: Task 1.9 — docstrings on every touched function + README run steps.** Not started. |
+| **Log shard to append to** | `docs/prompt-log/04-task-1.9.md` — complete, entries 76–88. The next task opens shard `05` |
+| **Next entry number** | 89 |
 | **Context stage** | Task 1.1's staged exploration is finished. Six stages, six recorded context decisions: 1 whole-repo (size) · 2 file-level `api.py` (concentrated coupling) · 3 three files (`api.py`, `storage.py`, `utils.py`) · 4 whole-repo including `tests/` (distributed coupling) · 5 `storage.py` + `api.py` (supply vs. demand) · 6 `requirements.txt` against every import in `app/` + `main.py` (declaration vs. use). The bug-fix tasks are not staged exploration and open no new C1.2 rows; the table is closed at six. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
@@ -148,7 +148,25 @@ with no injection seam (`storage.py:69`, `api.py:13`) · all validation is decla
 (`20-22`, `46-47`) · `extract_variables` and `validate_prompt_content` are unreferenced
 (`utils.py:30,43`) · the service never calls an LLM (`requirements.txt:1-6`).
 
-**Not started:** Task 1.9 (docstrings on the five touched functions + README run steps) ← *next*.
+**Established in Task 1.9** (do not re-derive; do cite): the Google Python Style Guide puts extended
+prose **between the summary line and `Args:`**, never below the sections, and says a docstring
+describes "semantics, but generally not its implementation details" — so `delete_collection`'s Bug #4
+rationale moved to a comment above the decorator and the docstring kept the semantics · both `api.py`
+and `utils.py` are already consistently **imperative**, which §3.8.3 requires be consistent within a
+file · **no docstring or comment in `app/` cites a `file.py:line` any more** (user's constraint —
+citations rot) · `sort_prompts_by_date` has **no `Raises:`**, deliberately · the no-modifying-provided-tests
+constraint was relaxed a **second** time, for **prose only** — nine stale "will fail due to Bug #N"
+notes deleted, no assertion touched · **`python main.py` has never worked**: it passes the app object
+with `reload=True`, which uvicorn refuses, exiting 1 (pinned 0.27.0) / 3 (dev 0.52.4); left unfixed as
+out of module scope and documented instead, in the README's *Known issues* and `SYSTEM_MODEL.md` §6.1 ·
+the suite cannot see it — `TestClient` imports `app.api:app` and never runs `main.py` · **the pinned
+`requirements.txt` installs and passes 17 tests on Python 3.12.13 and fails on 3.13** (no
+`pydantic-core` wheel, source build needs Rust), so the README says **3.10–3.12** · the working run
+command is **`uvicorn app.api:app --reload`** from `backend/` · the clean-clone procedure that found
+all this: `git archive HEAD | tar -x` into a scratch dir, fresh venv, then the README followed
+literally.
+
+**Not started:** the log merge into `docs/prompt-log.md` ← *next, after the Task 1.9 commits*.
 
 **Why this restart exists.** An earlier attempt completed Tasks 1.1 and 1.2 in a single reply. The
 output was accurate and it was **deliberately deleted**, because the user learned nothing from
