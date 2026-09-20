@@ -1019,3 +1019,210 @@ The body spends one sentence on the strategy argument and one on the modificatio
 
 **Why my next prompt changed:** all four bugs are fixed and the suite is green. The next prompt opens
 Task 1.7, the missing `PATCH /prompts/{id}` endpoint \u2014 the last item of the C1.4 MUST PASS row.
+
+---
+
+## Entry 67 — Task 1.7 opened: the missing PATCH endpoint
+
+**Prompt sent:**
+
+> Lets go for task 1.7
+
+**What came back.** No implementation — the reply opened step 1 of the task and stopped. It read the
+brief's four checkboxes for the endpoint (`brief.txt:69-73`: partial updates, `updated_at` refreshed,
+404 on a missing prompt, follow existing patterns) and the two things already in the repo that the
+endpoint has to be built against: the `PUT` handler at `api.py:85-109`, which is a full rebuild, and
+`PromptUpdate` at `models.py:31-32`, which is `PromptBase` unchanged and therefore has `title` and
+`content` required.
+
+The step it put to me is the request model — how the endpoint tells "field omitted" apart from "field
+set to null" — with three angles: a new all-`Optional` `PromptPatch` model read through
+`exclude_unset`; reusing `PromptUpdate` as-is; or taking a raw `dict` body and merging by hand.
+
+It also flagged, outside the task, that this shard contains literal `\u2014` text instead of em dashes
+from an earlier session's escaping.
+
+**Why my next prompt changed:** n/a — this is the opening prompt of the task.
+
+---
+
+## Entry 68 — Task 1.7 step 1, clarified: the three angles as concrete requests
+
+**Prompt sent:**
+
+> what you mean in B with " but collection_id: None becomes unexpressible — you could never unfile a
+> prompt via PATCH, and title/content are still required, failing the checkbox outright. Use an example
+> if needed for each trade-off
+
+**What came back.** The same three angles, re-expressed as actual request bodies against a stored
+prompt, rather than as prose about model shapes.
+
+The core of it: with **B** (reuse `PromptUpdate`), `PATCH {"description": "new"}` never reaches the
+handler at all — `title` and `content` are required on `PromptBase` (`models.py:20-21`), so FastAPI
+returns 422 during validation. And a handler written as "skip fields that are `None`" cannot tell
+`{"collection_id": null}` — meaning *take this prompt out of its collection* — from a body that simply
+omitted the key, because both arrive as `None` on the model. Both are read as "leave it alone", so
+unfiling is unreachable. This matters because `PUT` **can** unfile (`api.py:108`, exercised by
+`test_api.py:92-101`), so B would make PATCH strictly weaker than the endpoint it supplements.
+
+**A** fixes exactly that by not using `None` as the signal: all fields `Optional`, and *presence* is
+read from `model_dump(exclude_unset=True)`, which reports which keys the client actually sent.
+**C** (raw `dict`) has the same correct presence semantics but loses `min_length=1`, so
+`PATCH {"title": ""}` would be stored where `POST`/`PUT` would have rejected it with a 422.
+
+**Why my next prompt changed:** this narrowed the question — the trade-off is not three-way. B fails a
+brief checkbox outright and C drops validation the rest of the API enforces, so the next prompt can
+settle A's remaining detail (whether the optional fields keep their `Field` constraints) instead of
+re-opening the choice. **C1.3: this iteration added a constraint** — it asked for the comparison to be
+grounded in concrete request bodies rather than model descriptions.
+
+---
+
+## Entry 69 — Task 1.7 step 1: can the handler fetch the missing fields instead?
+
+**Prompt sent:**
+
+> For A, couldnt we retrieve from the id the title and the content? Using prompt search function or
+> simillar?
+
+**What came back.** Yes — and the answer separated two layers I had been treating as one. Fetching the
+stored prompt by id is exactly the second half of angle A: `storage.get_prompt(prompt_id)`, the same
+call `PUT` already makes at `api.py:87`, supplies every field the client did not send. That is the
+merge.
+
+What it cannot do is rescue angle B, because of a property established back in stage 3: **validation is
+entirely pre-handler**. FastAPI builds and validates the body model before the handler function is
+entered, so with `PromptUpdate` a body missing `title` is a 422 while `prompt_id` is still just a string
+in the URL — no lookup has happened and none can. The model must stop *demanding* the field; only then
+does the handler get the chance to *supply* it from storage.
+
+So the division is: the model says which fields the client is allowed to omit, and storage says what
+those omitted fields are worth. The handler is where they meet.
+
+Also confirmed which function: `storage.get_prompt(prompt_id)` (`storage.py:21-23`), not the search
+helper in `utils.py` — search filters a list of prompts by text, it does not fetch one by id.
+
+**Why my next prompt changed:** the question is now settled in favour of A and the merge mechanism is
+clear, so the next prompt can close step 1 on the one detail left open — whether `PromptPatch`
+re-declares the `Field` constraints — and move to writing the handler.
+
+---
+
+## Entry 70 — Task 1.7 step 1 closed: `PromptPatch` written
+
+**Prompt sent:**
+
+> then I understand you decided to go for angle A, in that case I agree
+
+**What came back.** Angle A confirmed and written: a new `PromptPatch` in `app/models.py:34-49`, a
+plain `BaseModel` rather than a subclass of `PromptBase` — subclassing would inherit the required
+`title` and `content`, which is the whole thing being avoided.
+
+The one detail left open at the end of the last step, whether the optional fields re-declare their
+constraints, was taken as the consistency option and flagged as reversible: `title` keeps
+`min_length=1, max_length=200`, `content` keeps `min_length=1`, `description` keeps `max_length=500`.
+The alternative — bare `Optional[str] = None` — would have left a hole only `PATCH` has, where
+`{"title": ""}` succeeds while the same body is a 422 on `POST` and `PUT`.
+
+A class docstring on the model records why presence is read through `exclude_unset` rather than by
+testing for `None`, so the omitted-versus-explicit-null distinction is documented where the model is
+defined rather than only in this log.
+
+**Why my next prompt changed:** the request model is settled, so the next prompt moves to the handler
+— specifically how it merges the sent fields onto the stored prompt, which is where the
+`model_copy`-versus-rebuild choice from Task 1.6 comes back.
+
+---
+
+## Entry 71 — Task 1.7 step 2: the handler written, angle B
+
+**Prompt sent:**
+
+> Lets go for B. Regarding: 1- do not update un this case. 2-ok
+
+**What came back.** `patch_prompt` written at `api.py:112-145`, plus `PromptPatch` added to the import
+at `api.py:8`. The explicit rebuild, mirroring the shape of `PUT` at `api.py:96-105` rather than
+collapsing into a `model_copy` call, so the two write routes read alike.
+
+The three decisions, as they landed in code:
+
+- **Merge** — `changes = prompt_data.model_dump(exclude_unset=True)`, then each field is
+  `changes.get("field", existing.field)`. A key the client did not send falls through to the stored
+  value; a key sent as `null` is present in `changes` and therefore wins, which is what makes unfiling
+  reachable.
+- **Empty body** — `updated_at=get_current_time() if changes else existing.updated_at`. My call: no
+  fields sent is not an edit, so the timestamp does not move.
+- **Collection validation** — `if changes.get("collection_id") is not None:`. One condition covers both
+  cases, since a key that was never sent and a key sent as null both fail it; the first must not be
+  validated because nothing was asked for, the second because `null` means unfile and there is no
+  collection to look up. A 400 is raised for an unknown id, the same status and detail `PUT` uses at
+  `api.py:99-100`.
+
+The 404 guard is first, before the body is touched, as in every other handler that addresses a prompt
+by id. A docstring on the handler records the `exclude_unset` reasoning and the empty-body rule;
+Args/Returns/Raises are owed to Task 1.9 along with the earlier functions.
+
+**Suite: 15 passed** — unchanged from the end of Task 1.6, so nothing that worked before is broken.
+
+**Why my next prompt changed:** the endpoint exists and the provided tests still pass, but nothing yet
+exercises `PATCH` itself — the four brief checkboxes are so far only claims. The next prompt is about
+how to demonstrate them.
+
+---
+
+## Entry 72 — Task 1.7 step 3: two tests, the compromise option
+
+**Prompt sent:**
+
+> Lets go for B as its a compromise
+
+**What came back.** Two tests appended to `TestPrompts` in `tests/test_api.py`, ahead of
+`class TestCollections`, rather than a new file — appending leaves every provided test byte-identical,
+so the no-modification constraint holds, and the `client` / `sample_prompt_data` fixtures are already
+in scope. That was the open question I left unanswered in my prompt; it was taken as the
+append-in-place option and flagged.
+
+- `test_patch_prompt_partial_update` — creates a prompt, sends `{"description": "Revised description"}`
+  and nothing else, then asserts the description changed, `title`, `content` and `id` did not,
+  `created_at` is byte-identical, and `updated_at` moved. It closes with a `GET` so the change is shown
+  to be stored rather than echoed back by the handler. No `sleep` is needed: `utcnow()` was measured at
+  microsecond resolution back in Task 1.4.
+- `test_patch_prompt_not_found` — `PATCH` against an unknown id is 404.
+
+**Suite: 17 passed.**
+
+What this angle consciously does not cover, which angle A would have: explicit-null unfiling, and the
+empty body leaving `updated_at` alone. Both are behaviours I decided rather than inherited from the
+brief, and both are now documented only in the handler docstring.
+
+**Why my next prompt changed:** the endpoint is implemented and demonstrated, so the task is finished
+and the next prompt is the commit.
+
+---
+
+## Entry 73 — Task 1.7 committed
+
+**Prompt sent:**
+
+> only one commit
+
+**What it approved.** The message proposed under Rule 6, unedited, and a single commit rather than
+splitting the model and handler from the tests — the endpoint is not implemented until something
+demonstrates it.
+
+```
+Add PATCH /prompts/{id} for partial updates
+
+Presence is read from exclude_unset, not from None, so an explicit null unfiles
+a prompt while an omitted key leaves it alone; an empty body is not an edit.
+```
+
+Both sentences go on the decisions that leave no trace in the diff — the presence rule and the
+empty-body rule — rather than on the explicit-rebuild style, which the diff shows plainly.
+
+**This closes Tasks 1.3-1.7 and shard `02`.** All four bugs are fixed, `PATCH /prompts/{id}` exists,
+and the suite is 17 passed, which is the whole of the C1.4 MUST PASS row.
+
+**Why my next prompt changed:** the code work is done. The next prompt opens Task 1.8, the
+AI-verification note, in a new shard `03-task-1.8.md` starting at entry 74 — and the brief has already
+pre-chosen the probe if no organic mistake is to hand (`brief.txt:84`).

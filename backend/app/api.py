@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 
 from app.models import (
-    Prompt, PromptCreate, PromptUpdate,
+    Prompt, PromptCreate, PromptUpdate, PromptPatch,
     Collection, CollectionCreate,
     PromptList, CollectionList, HealthResponse,
     get_current_time
@@ -109,8 +109,40 @@ def update_prompt(prompt_id: str, prompt_data: PromptUpdate):
     return storage.update_prompt(prompt_id, updated_prompt)
 
 
-# NOTE: PATCH endpoint is missing! Students need to implement this.
-# It should allow partial updates (only update provided fields)
+@app.patch("/prompts/{prompt_id}", response_model=Prompt)
+def patch_prompt(prompt_id: str, prompt_data: PromptPatch):
+    """Partially update a prompt.
+
+    Only the fields present in the request body are changed. Presence is read
+    from ``model_dump(exclude_unset=True)`` rather than by testing for ``None``,
+    so an explicit ``"collection_id": null`` unfiles the prompt while omitting
+    the key leaves its collection alone. ``updated_at`` is refreshed only when
+    the body actually carries a field; an empty body is not an edit.
+    """
+    existing = storage.get_prompt(prompt_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Prompt not found")
+
+    changes = prompt_data.model_dump(exclude_unset=True)
+
+    # Validate the collection only when one was actually sent. An explicit null
+    # means "unfile", which is not a collection to look up.
+    if changes.get("collection_id") is not None:
+        collection = storage.get_collection(changes["collection_id"])
+        if not collection:
+            raise HTTPException(status_code=400, detail="Collection not found")
+
+    updated_prompt = Prompt(
+        id=existing.id,
+        title=changes.get("title", existing.title),
+        content=changes.get("content", existing.content),
+        description=changes.get("description", existing.description),
+        collection_id=changes.get("collection_id", existing.collection_id),
+        created_at=existing.created_at,
+        updated_at=get_current_time() if changes else existing.updated_at
+    )
+
+    return storage.update_prompt(prompt_id, updated_prompt)
 
 
 @app.delete("/prompts/{prompt_id}", status_code=204)

@@ -165,6 +165,49 @@ class TestPrompts:
         assert prompts[0]["title"] == "Second"  # Will fail until Bug #3 fixed
 
 
+    def test_patch_prompt_partial_update(self, client: TestClient, sample_prompt_data):
+        """Verify PATCH changes only the fields the body carries.
+
+        Covers three of the four behaviours the brief asks of the endpoint at
+        once: only the sent field is updated, the untouched fields keep their
+        stored values, and updated_at is refreshed while created_at is not.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        created = client.post("/prompts", json=sample_prompt_data).json()
+        original_updated_at = datetime.fromisoformat(created["updated_at"])
+
+        # A body carrying one field only - PUT would reject this as incomplete.
+        response = client.patch(
+            f"/prompts/{created['id']}", json={"description": "Revised description"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["description"] == "Revised description"
+        assert data["title"] == sample_prompt_data["title"]
+        assert data["content"] == sample_prompt_data["content"]
+        assert data["id"] == created["id"]
+        assert data["created_at"] == created["created_at"]
+        assert datetime.fromisoformat(data["updated_at"]) > original_updated_at
+
+        # The change is stored, not merely echoed back by the handler.
+        assert client.get(f"/prompts/{created['id']}").json()["description"] == (
+            "Revised description"
+        )
+
+    def test_patch_prompt_not_found(self, client: TestClient):
+        """Verify PATCH on an unknown id is a 404, not a 500 or a silent create.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.patch("/prompts/nonexistent-id", json={"title": "New title"})
+        assert response.status_code == 404
+
+
 class TestCollections:
     """Tests for collection endpoints."""
     

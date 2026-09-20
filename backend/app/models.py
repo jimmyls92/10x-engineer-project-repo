@@ -31,6 +31,23 @@ class PromptUpdate(PromptBase):
     pass
 
 
+class PromptPatch(BaseModel):
+    """Body of a partial update.
+
+    Every field is optional so that a client may omit it. Which fields were
+    actually sent is read with ``model_dump(exclude_unset=True)``, not by
+    testing for ``None`` -- that keeps an explicit ``null`` (clear the field)
+    distinct from an absent key (leave the field alone). The validation
+    constraints are repeated from ``PromptBase`` so a partial update cannot
+    store a value that ``POST`` or ``PUT`` would have rejected.
+    """
+
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    content: Optional[str] = Field(None, min_length=1)
+    description: Optional[str] = Field(None, max_length=500)
+    collection_id: Optional[str] = None
+
+
 class Prompt(PromptBase):
     id: str = Field(default_factory=generate_id)
     created_at: datetime = Field(default_factory=get_current_time)

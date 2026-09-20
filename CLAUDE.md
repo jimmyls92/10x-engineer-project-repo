@@ -11,9 +11,9 @@ work.** It is how a new session resumes without reading everything.
 
 | | |
 |---|---|
-| **Current task** | **Task 1.6 is COMPLETE** — Bug #4 fixed at `api.py:159-164` by nulling `collection_id`; the provided test was updated on its own written instruction and a new test added; suite **15 passed**. **Next: Task 1.7 — implement `PATCH /prompts/{id}`.** Not started. |
-| **Log shard to append to** | `docs/prompt-log/02-tasks-1.3-1.7.md` — open, entries 41–64 written |
-| **Next entry number** | 65 |
+| **Current task** | **Task 1.7 is COMPLETE** — `PATCH /prompts/{id}` implemented at `api.py:112-145` with a new `PromptPatch` model (`models.py:34-49`) and two tests; suite **17 passed**. **That closes C1.4: all four bugs fixed, PATCH implemented, nothing previously working broken.** **Next: Task 1.8 — `docs/ai-verification-note.md`.** Not started. |
+| **Log shard to append to** | `docs/prompt-log/03-task-1.8.md` — **not yet created**; shard `02` is closed at entry 73 |
+| **Next entry number** | 74 |
 | **Context stage** | Task 1.1's staged exploration is finished. Six stages, six recorded context decisions: 1 whole-repo (size) · 2 file-level `api.py` (concentrated coupling) · 3 three files (`api.py`, `storage.py`, `utils.py`) · 4 whole-repo including `tests/` (distributed coupling) · 5 `storage.py` + `api.py` (supply vs. demand) · 6 `requirements.txt` against every import in `app/` + `main.py` (declaration vs. use). The bug-fix tasks are not staged exploration and open no new C1.2 rows; the table is closed at six. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
@@ -28,6 +28,22 @@ they fit, 1.4 characteristics) and the § Context Strategy stage-1 row. Task 1.1
 § Entry points (2.1 route table, 2.2 the FastAPI-contributed routes, 2.3 notes on the surface) and the
 § Context Strategy stage-2 row. Stages 3, 4, 5 and 6 likewise — **`docs/SYSTEM_MODEL.md` is finished**
 and nothing in it is outstanding.
+
+**Established in Task 1.7** (do not re-derive; do cite): **`PromptPatch` is a plain `BaseModel`, not a
+subclass of `PromptBase`** (`models.py:34-49`) — subclassing would inherit the required `title` and
+`content`, which is exactly the "PATCH requiring all fields" *Not Yet* at `brief.txt:192-193` · the
+constraints are **re-declared** on the optional fields, so `PATCH {"title": ""}` is a 422 like `POST`
+and `PUT` · **presence is read from `model_dump(exclude_unset=True)`, never by testing for `None`** —
+that is what keeps an explicit `"collection_id": null` (unfile) distinct from an omitted key (leave
+alone); with `PromptUpdate` the two collide and unfiling is unreachable · validation is **pre-handler**,
+so no model can be rescued by fetching the stored prompt — the model must stop demanding a field before
+the handler can supply it · the merge is the **explicit rebuild**, `changes.get("field", existing.field)`
+×4, mirroring `PUT` at `api.py:96-105`, not `model_copy` · **an empty body does not bump `updated_at`**
+(user's call) · the collection guard is `if changes.get("collection_id") is not None:`, one condition
+covering both "not sent" and "sent as null" · the two tests are the **consolidated** option: partial
+update + 404. **Explicit-null unfiling and the empty-body rule are untested**, documented only in the
+handler docstring · `patch_prompt` owes Args/Returns/Raises to Task 1.9, alongside `delete_collection`,
+`update_prompt` and `sort_prompts_by_date`.
 
 **Established in Task 1.6** (do not re-derive; do cite): **strategy chosen — null the `collection_id`**,
 recorded as a docstring on `delete_collection` (`api.py:145-158`), which is where the brief's "record
@@ -132,8 +148,7 @@ with no injection seam (`storage.py:69`, `api.py:13`) · all validation is decla
 (`20-22`, `46-47`) · `extract_variables` and `validate_prompt_content` are unreferenced
 (`utils.py:30,43`) · the service never calls an LLM (`requirements.txt:1-6`).
 
-**Not started:** Task 1.7 (`PATCH /prompts/{id}`) ← *next* · Task 1.8 (AI-verification note) · Task 1.9
-(docstrings + README).
+**Not started:** Task 1.8 (AI-verification note) ← *next* · Task 1.9 (docstrings + README).
 
 **Why this restart exists.** An earlier attempt completed Tasks 1.1 and 1.2 in a single reply. The
 output was accurate and it was **deliberately deleted**, because the user learned nothing from
@@ -164,6 +179,10 @@ honest record of the discarded attempt, not as a shortcut.
   Bug #4 "add a test" (line 66). Bug #1 says "make the provided test pass" (57) and Bug #3 says only
   "verify" (63); C1.4's evidence line asks for "all **provided** tests" (186). Do not invent test
   obligations the brief does not impose — this file used to, see the work order.
+
+- **The log shards contain literal `—` text where em dashes belong**, from an earlier session's
+  escaping. Harmless in the shards, but it will render that way in the merged `docs/prompt-log.md`.
+  Fix it during the merge step, not before.
 
 **Pending at the end:** merge the log shards into `docs/prompt-log.md` (see
 `docs/prompt-log/README.md`). That file is currently empty on purpose — until the merge commit exists,
