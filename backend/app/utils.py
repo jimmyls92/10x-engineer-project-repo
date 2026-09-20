@@ -5,7 +5,16 @@ from app.models import Prompt
 
 
 def sort_prompts_by_date(prompts: List[Prompt], descending: bool = True) -> List[Prompt]:
-    """Sort prompts by creation date, newest first by default."""
+    """Sort prompts by creation date, newest first by default.
+
+    Args:
+        prompts: The prompts to sort. The list itself is not modified.
+        descending: If True, the default, the newest prompt comes first; if
+            False, the oldest does.
+
+    Returns:
+        A new list holding the same prompts, ordered by creation date.
+    """
     return sorted(prompts, key=lambda p: p.created_at, reverse=descending)
 
 

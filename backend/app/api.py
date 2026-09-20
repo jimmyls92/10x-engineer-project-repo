@@ -64,6 +64,17 @@ def list_prompts(
 
 @app.get("/prompts/{prompt_id}", response_model=Prompt)
 def get_prompt(prompt_id: str):
+    """Return a single prompt by its identifier.
+
+    Args:
+        prompt_id: Identifier of the prompt to return.
+
+    Returns:
+        The stored prompt.
+
+    Raises:
+        HTTPException: With status 404 if no prompt has that identifier.
+    """
     prompt = storage.get_prompt(prompt_id)
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
@@ -84,6 +95,26 @@ def create_prompt(prompt_data: PromptCreate):
 
 @app.put("/prompts/{prompt_id}", response_model=Prompt)
 def update_prompt(prompt_id: str, prompt_data: PromptUpdate):
+    """Replace a prompt in full and refresh its update timestamp.
+
+    Every client-supplied field is taken from the request body, so a field the
+    body leaves out is reset to its default rather than kept -- omitting
+    collection_id unfiles the prompt. The creation timestamp is carried over
+    from the stored prompt and the update timestamp is set to the current time.
+
+    Args:
+        prompt_id: Identifier of the prompt to replace.
+        prompt_data: The full replacement body. Title and content are required;
+            description and collection_id are optional.
+
+    Returns:
+        The stored prompt as it stands after the replacement.
+
+    Raises:
+        HTTPException: With status 404 if no prompt has that identifier, or
+            status 400 if collection_id is given but names no existing
+            collection.
+    """
     existing = storage.get_prompt(prompt_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Prompt not found")
@@ -94,8 +125,6 @@ def update_prompt(prompt_id: str, prompt_data: PromptUpdate):
         if not collection:
             raise HTTPException(status_code=400, detail="Collection not found")
     
-    # Full replacement: every client-supplied field is taken from the request body.
-    # created_at is carried over from the stored prompt; updated_at is refreshed.
     updated_prompt = Prompt(
         id=existing.id,
         title=prompt_data.title,
@@ -111,13 +140,27 @@ def update_prompt(prompt_id: str, prompt_data: PromptUpdate):
 
 @app.patch("/prompts/{prompt_id}", response_model=Prompt)
 def patch_prompt(prompt_id: str, prompt_data: PromptPatch):
-    """Partially update a prompt.
+    """Update only the fields that the request body carries.
 
-    Only the fields present in the request body are changed. Presence is read
-    from ``model_dump(exclude_unset=True)`` rather than by testing for ``None``,
-    so an explicit ``"collection_id": null`` unfiles the prompt while omitting
-    the key leaves its collection alone. ``updated_at`` is refreshed only when
-    the body actually carries a field; an empty body is not an edit.
+    Presence is judged by whether a key appears in the body, not by whether its
+    value is null, so an explicit null collection_id unfiles the prompt while
+    leaving the key out keeps the prompt in its collection. The update timestamp
+    is refreshed only when the body carries at least one field; an empty body is
+    not an edit.
+
+    Args:
+        prompt_id: Identifier of the prompt to update.
+        prompt_data: The partial update body. Every field is optional, but a
+            field that is present must satisfy the same constraints as it does
+            on create.
+
+    Returns:
+        The stored prompt as it stands after the merge.
+
+    Raises:
+        HTTPException: With status 404 if no prompt has that identifier, or
+            status 400 if collection_id is present and not null but names no
+            existing collection.
     """
     existing = storage.get_prompt(prompt_id)
     if not existing:
@@ -174,21 +217,33 @@ def create_collection(collection_data: CollectionCreate):
     return storage.create_collection(collection)
 
 
+# Why the prompts are unfiled rather than deleted, and why deleting a non-empty
+# collection is allowed at all: the data model treats collection membership as
+# incidental, not essential. A prompt's collection_id is optional, it is the one
+# client-supplied field carrying no validation constraint, and a collection
+# declares no back-reference to its prompts. Cascade-deleting would destroy the
+# required fields, title and content, for the sake of an optional one; refusing
+# to delete a non-empty collection would enforce an integrity rule the model
+# never declares. A full update already unfiles a prompt when the body omits
+# collection_id, so "unfiled" is an existing, tested state rather than one
+# invented here.
 @app.delete("/collections/{collection_id}", status_code=204)
 def delete_collection(collection_id: str):
     """Delete a collection and unfile the prompts that belonged to it.
 
-    Strategy for orphaned prompts: their collection_id is set to None, rather
-    than deleting the prompts or refusing to delete a non-empty collection.
-    The data model treats collection membership as incidental, not essential --
-    collection_id is Optional with a default of None (models.py:23), it is the
-    only client-supplied field carrying no validation constraint, and
-    Collection declares no back-reference to its prompts (models.py:54-58).
-    Cascade-deleting would destroy the required fields title and content for
-    the sake of an optional one; refusing deletion would enforce an integrity
-    rule the model never declares. PUT already unfiles a prompt when the body
-    omits collection_id (api.py:108), so "unfiled" is an existing, tested
-    state rather than one invented here.
+    The prompts themselves are kept; each one that pointed at this collection
+    has its collection_id cleared. Their update timestamp is left alone, since
+    unfiling is a consequence of deleting the collection rather than an edit the
+    client made to the prompt.
+
+    Args:
+        collection_id: Identifier of the collection to delete.
+
+    Returns:
+        None. The route responds with 204 No Content.
+
+    Raises:
+        HTTPException: With status 404 if no collection has that identifier.
     """
     if not storage.delete_collection(collection_id):
         raise HTTPException(status_code=404, detail="Collection not found")
