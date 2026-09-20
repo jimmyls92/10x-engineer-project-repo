@@ -1,158 +1,165 @@
 # PromptLab
 
-**Your AI Prompt Engineering Platform**
+**A REST API for storing and organising AI prompts.**
+
+PromptLab is an internal tool for AI engineers: a place to keep prompt templates, group them into
+collections, and find them again. Think "Postman for prompts". A prompt has a title, a body that may
+contain template variables such as `{{code}}`, an optional description, and an optional collection it
+belongs to. Collections are flat named groups; a prompt belongs to at most one.
+
+The service is a FastAPI application with **in-memory storage** — everything lives in a dictionary in
+the server process and is lost when it stops. That is deliberate for now; swapping in a database is a
+later module.
 
 ---
 
-## Welcome to the Team! 👋
-
-Congratulations on joining the PromptLab engineering team! You've been brought on to help us build the next generation of prompt engineering tools.
-
-### What is PromptLab?
-
-PromptLab is an internal tool for AI engineers to **store, organize, and manage their prompts**. Think of it as a "Postman for Prompts" — a professional workspace where teams can:
-
-- 📝 Store prompt templates with variables (`{{input}}`, `{{context}}`)
-- 📁 Organize prompts into collections
-- 🏷️ Tag and search prompts
-- 📜 Track version history
-- 🧪 Test prompts with sample inputs
-
-### The Current Situation
-
-The previous developer left us with a *partially working* backend. The core structure is there, but:
-
-- There are **several bugs** that need fixing
-- Some **features are incomplete**
-- The **documentation is minimal** (you'll fix that)
-- There are **no tests** worth mentioning
-- **No CI/CD pipeline** exists
-- **No frontend** has been built yet
-
-Your job over the next 4 weeks is to transform this into a **production-ready, full-stack application**.
-
----
-
-## Quick Start
+## Quick start
 
 ### Prerequisites
 
-- Python 3.10+
-- Node.js 18+ (for Week 4)
-- Git
+- **Python 3.10–3.12** (`python --version`). **Not 3.13** — the pinned `pydantic==2.5.3` publishes
+  no wheel for it and the source build needs a Rust toolchain. Tested on **3.12.13**.
+- **git**
 
-### Run Locally
+Nothing else. No database, no message broker, no API keys — the service calls no external system.
+
+### Run the API
 
 ```bash
-# Clone the repo
 git clone <your-repo-url>
-cd promptlab
+cd 10x-engineer-project-repo/backend
 
-# Set up backend
-cd backend
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
 pip install -r requirements.txt
-python main.py
+uvicorn app.api:app --reload
 ```
 
-API runs at: http://localhost:8000
+The last two commands must be run **from the `backend/` directory** — the application is imported as
+`app.api`, which only resolves when `backend/` is the working directory.
 
-API docs at: http://localhost:8000/docs
+> **Do not use `python main.py`.** It is the repository's original entry point and it does not start a
+> server; see *Known issues* below. `uvicorn app.api:app --reload` is the working equivalent.
 
-### Run Tests
+| What | Where |
+|---|---|
+| API | http://localhost:8000 |
+| Interactive docs (Swagger UI) | http://localhost:8000/docs |
+| Alternative docs (ReDoc) | http://localhost:8000/redoc |
+| OpenAPI schema | http://localhost:8000/openapi.json |
+
+Stop the server with `Ctrl+C`.
+
+### Run the tests
+
+From the same `backend/` directory, with the virtual environment active:
 
 ```bash
-cd backend
 pytest tests/ -v
 ```
 
+All tests should pass.
+
+### Check it is alive
+
+```bash
+curl http://localhost:8000/health
+# {"status":"healthy","version":"0.1.0"}
+```
+
 ---
 
-## Project Structure
+## API endpoints
+
+| Method | Endpoint | What it does |
+|---|---|---|
+| `GET` | `/health` | Service status and version |
+| `GET` | `/prompts` | List prompts, newest first. Optional `?collection_id=` and `?search=` |
+| `GET` | `/prompts/{id}` | Fetch one prompt; 404 if it does not exist |
+| `POST` | `/prompts` | Create a prompt; 201 with the created prompt |
+| `PUT` | `/prompts/{id}` | **Full** replacement — every field is taken from the body, so an omitted field is reset |
+| `PATCH` | `/prompts/{id}` | **Partial** update — only the fields the body carries are changed |
+| `DELETE` | `/prompts/{id}` | Delete a prompt; 204 with no body |
+| `GET` | `/collections` | List all collections |
+| `GET` | `/collections/{id}` | Fetch one collection; 404 if it does not exist |
+| `POST` | `/collections` | Create a collection; 201 with the created collection |
+| `DELETE` | `/collections/{id}` | Delete a collection and **unfile** its prompts — the prompts survive with `collection_id` cleared |
+
+`search` matches case-insensitively against a prompt's title and description. `GET /prompts` always
+sorts by creation date, newest first; it is not a client-controlled parameter.
+
+**Status codes.** A missing addressed resource is `404`. A body that names a collection which does not
+exist is `400`. A body that breaks a field constraint — an empty title, a title over 200 characters —
+is `422`, produced by validation before the handler runs.
+
+---
+
+## Project structure
 
 ```
-promptlab/
-├── README.md                    # You are here
-├── PROJECT_BRIEF.md             # Your assignment details
-├── GRADING_RUBRIC.md            # How you'll be graded
+.
+├── README.md                 # You are here
+├── CLAUDE.md                 # Working protocol for this repository
+├── config.yaml
 │
 ├── backend/
 │   ├── app/
-│   │   ├── __init__.py
-│   │   ├── api.py              # FastAPI routes (has bugs!)
-│   │   ├── models.py           # Pydantic models
-│   │   ├── storage.py          # In-memory storage
-│   │   └── utils.py            # Helper functions
+│   │   ├── api.py            # FastAPI routes — every endpoint lives here
+│   │   ├── models.py         # Pydantic models and request/response bodies
+│   │   ├── storage.py        # In-memory storage, one module-level instance
+│   │   └── utils.py          # Sorting, filtering and search helpers
 │   ├── tests/
-│   │   ├── __init__.py
-│   │   ├── test_api.py         # Basic tests
-│   │   └── conftest.py         # Test fixtures
-│   ├── main.py                 # Entry point
+│   │   ├── conftest.py       # Fixtures; storage is cleared around every test
+│   │   └── test_api.py
+│   ├── main.py               # Original entry point — does not work, see Known issues
 │   └── requirements.txt
 │
-├── frontend/                    # You'll create this in Week 4
-├── specs/                       # You'll create this in Week 2
-├── docs/                        # You'll create this in Week 2
-└── .github/                     # You'll set up CI/CD in Week 3
+├── docs/
+│   ├── SYSTEM_MODEL.md       # How the service works, verified against the code
+│   ├── prompt-log.md         # The AI-assisted working log
+│   └── ai-verification-note.md
+│
+├── frontend/                 # Empty — Module 4
+└── specs/                    # Empty — Module 2
 ```
 
 ---
 
-## Your Mission
+## Known issues and limitations
 
-### 🧪 Experimentation Encouraged!
-While we provide guidelines, **you are the engineer**. If you see a better way to solve a problem using AI, do it!
-- Want to swap the storage layer for a real database? **Go for it.**
-- Want to add Authentication? **Do it.**
-- Want to rewrite the API in a different style? **As long as tests pass, you're clear.**
-
-The goal is to learn how to build *better* software *faster* with AI. Don't be afraid to break things and rebuild them better.
-
-### Week 1: Fix the Backend
-- Understand this codebase using AI
-- Find and fix the bugs
-- Implement missing features
-
-### Week 2: Document Everything
-- Write proper documentation
-- Create feature specifications
-- Set up coding standards
-
-### Week 3: Make it Production-Ready
-- Write comprehensive tests
-- Implement new features with TDD
-- Set up CI/CD and Docker
-
-### Week 4: Build the Frontend
-- Create a React frontend
-- Connect it to the backend
-- Polish the user experience
+- **`python main.py` does not start the server.** It passes the application object to `uvicorn.run`
+  together with `reload=True`, which uvicorn accepts only for an application given as an import string.
+  It prints `WARNING: You must pass the application as an import string to enable 'reload' or
+  'workers'.` and exits without binding a port — on every version tested, pinned and current. The file
+  is left as it stands because changing it was outside this module's scope; use
+  `uvicorn app.api:app --reload` instead. The test suite cannot catch this, since it drives the app
+  through `TestClient` and never runs `main.py`.
+- **The supported Python range is undeclared and has an upper bound.** There is no `pyproject.toml`,
+  no `python_requires` and no lock file. `pip install -r requirements.txt` fails on Python 3.13 and
+  succeeds on 3.12.
+- **Storage is in memory.** Restarting the server empties it. There is no persistence, no migration
+  path and no backup.
+- **Single process only.** The store is a plain dictionary on one module-level instance, so running
+  more than one worker gives each worker its own, silently diverging data.
+- **No authentication or authorisation.** Every endpoint is open, and CORS is configured to allow all
+  origins.
+- **No concurrency primitive.** Storage offers nothing to serialise concurrent writes; two overlapping
+  updates to the same prompt can interleave.
+- **Timestamps are naive UTC.** `created_at` and `updated_at` carry no timezone, and the underlying
+  `datetime.utcnow()` is deprecated in recent Python versions — the test run prints deprecation
+  warnings because of it.
+- **`test_delete_prompt` asserts a loose status code** (`404` or `500`), so it would still pass if the
+  404 behaviour regressed.
+- **Dependencies are pinned but unverified.** `requirements.txt` pins six packages; Starlette is used
+  directly by the CORS middleware import and is not declared, and there is no lock file.
 
 ---
 
-## API Endpoints (Current)
+## Roadmap
 
-| Method | Endpoint | Description | Status |
-|--------|----------|-------------|--------|
-| GET | `/health` | Health check | ✅ Works |
-| GET | `/prompts` | List all prompts | ⚠️ Has issues |
-| GET | `/prompts/{id}` | Get single prompt | ❌ Bug |
-| POST | `/prompts` | Create prompt | ✅ Works |
-| PUT | `/prompts/{id}` | Update prompt | ⚠️ Has issues |
-| DELETE | `/prompts/{id}` | Delete prompt | ✅ Works |
-| GET | `/collections` | List collections | ✅ Works |
-| GET | `/collections/{id}` | Get collection | ✅ Works |
-| POST | `/collections` | Create collection | ✅ Works |
-| DELETE | `/collections/{id}` | Delete collection | ❌ Bug |
-
----
-
-## Tech Stack
-
-- **Backend**: Python 3.10+, FastAPI, Pydantic
-- **Frontend**: React, Vite (Week 4)
-- **Testing**: pytest
-- **DevOps**: Docker, GitHub Actions (Week 3)
-
----
-
-Good luck, and welcome to the team! 🚀
+- **Module 1 — fix the backend.** ✅ Four bugs fixed, `PATCH /prompts/{id}` added, the codebase
+  documented in `docs/SYSTEM_MODEL.md`.
+- **Module 2 — documentation and specs.** Feature specifications under `specs/`, coding standards.
+- **Module 3 — production readiness.** Broader test coverage, CI/CD, Docker.
+- **Module 4 — frontend.** A React client under `frontend/`.
