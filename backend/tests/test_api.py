@@ -61,14 +61,9 @@ class TestPrompts:
         assert data["id"] == prompt_id
     
     def test_get_prompt_not_found(self, client: TestClient):
-        """Test that getting a non-existent prompt returns 404.
-        
-        NOTE: This test currently FAILS due to Bug #1!
-        The API returns 500 instead of 404.
-        """
+        """Test that getting a non-existent prompt returns 404."""
         response = client.get("/prompts/nonexistent-id")
-        # This should be 404, but there's a bug...
-        assert response.status_code == 404  # Will fail until bug is fixed
+        assert response.status_code == 404
     
     def test_delete_prompt(self, client: TestClient, sample_prompt_data):
         # Create a prompt first
@@ -81,8 +76,7 @@ class TestPrompts:
         
         # Verify it's gone
         get_response = client.get(f"/prompts/{prompt_id}")
-        # Note: This might fail due to Bug #1
-        assert get_response.status_code in [404, 500]  # 404 after fix
+        assert get_response.status_code in [404, 500]
     
     def test_update_prompt(self, client: TestClient, sample_prompt_data):
         # Create a prompt first
@@ -105,9 +99,8 @@ class TestPrompts:
         data = response.json()
         assert data["title"] == "Updated Title"
         
-        # NOTE: This assertion will fail due to Bug #2!
         # The updated_at should be different from original
-        # assert data["updated_at"] != original_updated_at  # Uncomment after fix
+        # assert data["updated_at"] != original_updated_at
     
     def test_update_prompt_refreshes_updated_at(self, client: TestClient, sample_prompt_data):
         """Verify that PUT /prompts/{id} refreshes updated_at and preserves created_at.
@@ -144,10 +137,7 @@ class TestPrompts:
         assert datetime.fromisoformat(data["created_at"]) == original_created_at
 
     def test_sorting_order(self, client: TestClient):
-        """Test that prompts are sorted newest first.
-        
-        NOTE: This test might fail due to Bug #3!
-        """
+        """Test that prompts are sorted newest first."""
         import time
         
         # Create prompts with delay
@@ -162,7 +152,7 @@ class TestPrompts:
         prompts = response.json()["prompts"]
         
         # Newest (Second) should be first
-        assert prompts[0]["title"] == "Second"  # Will fail until Bug #3 fixed
+        assert prompts[0]["title"] == "Second"
 
 
     def test_patch_prompt_partial_update(self, client: TestClient, sample_prompt_data):
@@ -234,9 +224,9 @@ class TestCollections:
         """Test deleting a collection that has prompts.
 
         Updated after fixing Bug #4, as this test's original docstring
-        instructed. The chosen strategy is to null the prompt's collection_id
-        (see the delete_collection docstring in app/api.py), so the prompt must
-        survive the deletion with collection_id set to None.
+        instructed. The chosen strategy is to unfile the prompt by clearing its
+        collection_id rather than to delete it, so the prompt must survive the
+        deletion of its collection with collection_id set to None.
         """
         # Create collection
         col_response = client.post("/collections", json=sample_collection_data)
