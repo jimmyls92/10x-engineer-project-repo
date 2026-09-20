@@ -11,9 +11,9 @@ work.** It is how a new session resumes without reading everything.
 
 | | |
 |---|---|
-| **Current task** | **Task 1.9 is COMPLETE in the working tree, NOT YET COMMITTED** — five Google-style docstrings (`get_prompt`, `update_prompt`, `sort_prompts_by_date`, `delete_collection`, `patch_prompt`), nine stale comments removed, `README.md` rewritten and **executed on a clean clone**, four false `SYSTEM_MODEL.md` claims about `main.py` corrected, and a fourth case added to `ai-verification-note.md`. **Next: propose the commit split, get each message approved, commit. Then the log merge.** Previously: **Task 1.8 was COMPLETE** — `docs/ai-verification-note.md` written: three wrong AI outputs (log entries **16**, **25**, **43**) in chronological order, each with where-to-find-it plus the brief's four fields, and a closing section naming the shared failure mode and the two further cases (entries 33, 54) in one line each. **Next: Task 1.9 — docstrings on every touched function + README run steps.** Not started. |
-| **Log shard to append to** | `docs/prompt-log/04-task-1.9.md` — complete, entries 76–88. The next task opens shard `05` |
-| **Next entry number** | 89 |
+| **Current task** | **Module 1 is COMPLETE.** The log merge is done: `docs/prompt-log.md` holds all 88 entries, and every deliverable in the table below exists and is committed. **Nothing is outstanding except the final verification pass** — `cd backend && pytest tests/ -v`, then a fresh clone followed by the README. Previously: **Task 1.9 was COMPLETE in the working tree** — five Google-style docstrings (`get_prompt`, `update_prompt`, `sort_prompts_by_date`, `delete_collection`, `patch_prompt`), nine stale comments removed, `README.md` rewritten and **executed on a clean clone**, four false `SYSTEM_MODEL.md` claims about `main.py` corrected, and a fourth case added to `ai-verification-note.md`. **Next: propose the commit split, get each message approved, commit. Then the log merge.** Previously: **Task 1.8 was COMPLETE** — `docs/ai-verification-note.md` written: three wrong AI outputs (log entries **16**, **25**, **43**) in chronological order, each with where-to-find-it plus the brief's four fields, and a closing section naming the shared failure mode and the two further cases (entries 33, 54) in one line each. **Next: Task 1.9 — docstrings on every touched function + README run steps.** Not started. |
+| **Log shard to append to** | `docs/prompt-log/04-task-1.9.md` — complete, entries 76–89. A new task opens shard `05`; the merge must then be re-run |
+| **Next entry number** | 90 |
 | **Context stage** | Task 1.1's staged exploration is finished. Six stages, six recorded context decisions: 1 whole-repo (size) · 2 file-level `api.py` (concentrated coupling) · 3 three files (`api.py`, `storage.py`, `utils.py`) · 4 whole-repo including `tests/` (distributed coupling) · 5 `storage.py` + `api.py` (supply vs. demand) · 6 `requirements.txt` against every import in `app/` + `main.py` (declaration vs. use). The bug-fix tasks are not staged exploration and open no new C1.2 rows; the table is closed at six. |
 
 **Task 1.1 is staged by section of the deliverable**, one context decision each — the user's
@@ -198,13 +198,17 @@ honest record of the discarded attempt, not as a shortcut.
   "verify" (63); C1.4's evidence line asks for "all **provided** tests" (186). Do not invent test
   obligations the brief does not impose — this file used to, see the work order.
 
-- **The log shards contain literal `—` text where em dashes belong**, from an earlier session's
-  escaping. Harmless in the shards, but it will render that way in the merged `docs/prompt-log.md`.
-  Fix it during the merge step, not before.
+- ~~**The log shards contain literal `—` text where em dashes belong**~~ — **resolved in the merge,
+  and the description here was imprecise.** The damage was 68 literal `\u2014` and 2 `\u2013`
+  escape sequences, all in shard `02` only; the other four shards were clean UTF-8 throughout. The
+  merge script unescapes any `\uXXXX` on the way into `docs/prompt-log.md` and leaves the shards as
+  they were committed. Re-running the merge repairs it again automatically.
 
-**Pending at the end:** merge the log shards into `docs/prompt-log.md` (see
-`docs/prompt-log/README.md`). That file is currently empty on purpose — until the merge commit exists,
-the graded deliverable does not.
+**The merge is done.** `docs/prompt-log.md` is generated from the five shards by
+`docs/prompt-log/merge_log.py`: front matter dropped, `\uXXXX` escapes repaired, one header carrying
+a task map and an index of the C1.3 iterations, then all 88 entries concatenated in order. Content is
+verified identical to the shards, whitespace aside. **If any shard changes, re-run it** —
+`python docs/prompt-log/merge_log.py` from the repository root — rather than editing the merged file.
 
 ---
 

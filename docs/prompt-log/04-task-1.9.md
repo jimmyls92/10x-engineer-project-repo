@@ -460,3 +460,44 @@ over-generalisation cannot afford to over-generalise in its own conclusion.
 
 **Why the next prompt changed:** Task 1.9's work is complete and unstaged. What remains is the commit
 split and the messages, which need approval before anything is written.
+
+---
+
+## Entry 89 — the shards are merged, and the merge is made repeatable
+
+**Prompt:**
+
+> do it
+
+**What came back:** `docs/prompt-log.md`, the C1.3 deliverable, written for the first time — it had
+been deliberately empty until now, so that no merged file could exist before the work it records.
+
+The merge is a script, `docs/prompt-log/merge_log.py`, rather than a one-off paste, because the shards
+stay in place and any later task will invalidate a hand-merged file. It drops each shard's front
+matter, splits on the entry headings rather than on `---` rules, and concatenates in filename order
+under one heading.
+
+**Two things it found that a paste would not have.**
+
+- **The first splitter lost eleven entries.** Splitting on `\n---\n` silently dropped every entry
+  containing a horizontal rule of its own: 88 entries went in, 77 came out, and the gap was caught
+  only because the script asserts that the numbers it collects run 1..N with no holes. The assertion
+  was there before the bug, which is the only reason it was a two-minute problem.
+- **The em-dash trap recorded in `CLAUDE.md` was real but described wrongly.** It said the shards hold
+  literal `—` text. They do not. Four shards are clean UTF-8; shard `02` alone carries **68 literal
+  `\u2014` and 2 `\u2013` escape sequences**, written that way by an earlier session. The merge
+  unescapes any `\uXXXX` on the way out and leaves the shards exactly as committed, which is what the
+  trap note instructed. The note has been corrected rather than just ticked off.
+
+**The header is not a summary of the log**; it is the part a grader needs and the entries cannot
+provide: what the file is, that the first person is me rather than the assistant, how the liveness is
+evidenced (one shard per task, each committed as written, interleaved with the work), a task map from
+entry ranges to deliverables, and an index of the **30 C1.3 iterations** with what each one did. The
+index is derived from the entries by the script, not hand-kept, so it cannot drift from them.
+
+**Verification:** 88 entries in, 88 out, numbering continuous from 1; zero `\uXXXX` escapes left; and
+the merged body compared against the shard bodies character for character with whitespace stripped —
+identical, so nothing was lost or silently rewritten.
+
+**Why the next prompt changed:** Module 1's deliverables are all in place. What remains is the
+verification pass the brief describes — the suite, then a fresh clone followed by my own README.
