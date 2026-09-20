@@ -32,5 +32,12 @@ candidate — five items). Splits keep the numeric prefix and add a suffix, e.g.
 
 ## Merge
 
-Once, after Task 1.9, as its own commit: concatenate in filename order under a single heading, drop
-the per-shard front matter, write to `docs/prompt-log.md`. The shards stay in place afterwards.
+**Done.** Run `python docs/prompt-log/merge_log.py` from the repository root; it rewrites
+`docs/prompt-log.md` from these shards. It concatenates in filename order under a single heading,
+drops the per-shard front matter, repairs the literal `\uXXXX` escape sequences that shard `02` was
+written with, and builds the header's task map and C1.3 index from the entries themselves. It asserts
+that the entry numbers it collects are continuous from 1, which is what catches a shard that has been
+split or renumbered.
+
+The shards stay in place and remain the working originals. **Never edit `docs/prompt-log.md` by
+hand** â€” edit the shard and re-run the script.
