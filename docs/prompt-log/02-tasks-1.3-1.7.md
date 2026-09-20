@@ -458,3 +458,189 @@ The body spends its two sentences on the reasoning that leaves no trace in the d
 assertion was rejected — rather than restating the one-line change, which the diff already shows.
 
 **Why my next prompt changed:** Task 1.4 is closed. The next prompt opens Task 1.5, Bug #3.
+
+---
+
+## Entry 52 — Task 1.5 opened: Bug #3, sort order
+
+**Task:** 1.5, step 1 — deciding where to look first.
+
+**Prompt sent:**
+
+> lets go for the next bug
+
+**What came back.** Not the fix. Task 1.5 was opened under Rule 0b and step 1 was framed as a choice
+of *evidence source* before any code is changed: the helper (`utils.py`), the failing provided test
+(`test_sorting_order`), or the observed pytest output. The brief's wording for Bug #3 is "fix the
+order, **verify**" — a provided test already covers it, so no new test is owed, and the only open
+question is what to read first.
+
+**Why my next prompt changed:** the task is open but no evidence has been gathered yet; the next
+prompt picks the starting point.
+
+---
+
+## Entry 53 — Task 1.5 step 1: the contract `test_sorting_order` actually imposes
+
+**Task:** 1.5, step 1 — reading the failing provided test before touching the helper.
+
+**Prompt sent:**
+
+> lets go for B
+
+**What came back.** `tests/test_api.py:146-165`, read in full. Four facts, all of which constrain the
+fix:
+
+1. **The request carries no query parameters** — `client.get("/prompts")` at `:161`. The fix therefore
+   has to land on the endpoint's *defaults*; making `descending=true` work only when a client asks for
+   it explicitly would leave this test red.
+2. **"Newest" is defined by creation order, not by a named field.** The test creates `First`, sleeps
+   0.1 s, creates `Second`, and asserts `prompts[0]["title"] == "Second"` (`:165`). It never names
+   `created_at` or any `sort_by` value.
+3. **One assertion, position 0 only.** `prompts[1]` is not checked, nor `total`, nor the order of any
+   third item. The bar is low and precise.
+4. **The 0.1 s sleep at `:158` means the test does not depend on clock resolution** — unlike the
+   timestamp question settled in Task 1.4, there is nothing to measure here.
+
+The docstring at `:147-150` states the intent in the brief's own words — "prompts are sorted newest
+first" — and flags the bug.
+
+**Why my next prompt changed:** the contract is now fixed and it is narrower than expected: the
+defaults are load-bearing. That makes the endpoint's declared default parameter values the next thing
+to check, not the helper body.
+
+---
+
+## Entry 54 — Task 1.5 step 2: there are no sort query parameters at all
+
+**Task:** 1.5, step 2 — checking what `GET /prompts` defaults to, since the test sends no parameters.
+
+**Prompt sent:**
+
+> lets go with A
+
+**What came back.** `api.py:42-61`. The step was framed around "the declared default values of the
+`sort_by` and `descending` query parameters" — **and that framing was wrong**. `list_prompts` declares
+exactly two parameters, `collection_id` and `search` (`api.py:44-45`). Sorting is not part of the
+endpoint's public surface at all: `descending=True` is a **literal at the call site**
+(`api.py:60`), not a client-controllable default.
+
+Consequences for the fix:
+
+- The worry the step existed to rule out — "fix the helper, and the test is still red because the
+  default is ascending" — **cannot occur**. There is no default to get wrong.
+- Every caller of the listing endpoint gets `descending=True`, unconditionally. So the helper only has
+  to honour the argument it is handed; no new parameter, no signature change on the route.
+- `api.py:58` already carries the comment `# Sort by date (newest first)` and `:59` the hint
+  `# Note: There might be an issue with the sorting...`. The call site states the correct intent — it
+  is the helper that does not deliver it. This confirms, from the other side, what was established in
+  stage 3.
+
+**Why my next prompt changed:** the last thing that could have made this a two-file fix is ruled out.
+The fix is confined to `utils.py`, and the next prompt reads the helper body.
+
+---
+
+## Entry 55 — Task 1.5 step 3: one caller, and the helper body
+
+**Task:** 1.5, step 3 — proving the helper has no other caller before changing it, then reading it.
+
+**Prompt sent:**
+
+> lets go with B
+
+**What came back.** `grep -rn "sort_prompts_by_date" --include=*.py .` returns **three lines and no
+more**: the definition (`utils.py:7`), the import (`api.py:14`), and the single call (`api.py:60`).
+Nothing in `tests/` calls it directly — the provided test goes through the HTTP route. So the helper
+has exactly one caller, and changing its behaviour cannot silently flip the order anywhere else. That
+satisfies the C1.4 condition "nothing previously working broken" by construction rather than by
+hoping.
+
+The body, `utils.py:7-14`:
+
+```python
+def sort_prompts_by_date(prompts: List[Prompt], descending: bool = True) -> List[Prompt]:
+    """Sort prompts by creation date.
+
+    Note: There might be a bug here. Check the sort order!
+    """
+    # BUG #3: This sorts ascending (oldest first) when it should sort descending (newest first)
+    # The 'descending' parameter is ignored!
+    return sorted(prompts, key=lambda p: p.created_at)
+```
+
+Three things worth naming:
+
+1. **The signature already defaults to `descending: bool = True`** — so the declared contract has
+   always been newest-first. The parameter is accepted, documented by its own name, and then dropped.
+2. **The sort key is `created_at`, not `updated_at`.** That matches what the test means by "newest"
+   (creation order, entry 53) and it is the field Task 1.4 deliberately left untouched.
+3. `sorted` is stable and returns a new list — the helper does not mutate its argument, which is
+   consistent with the uncopied-objects hazard recorded in stage 3 but does not worsen it.
+
+**Why my next prompt changed:** the defect is now fully specified — one expression, one file, one
+caller. The next prompt is the fix itself.
+
+---
+
+## Entry 56 — Task 1.5 step 4: the fix, and a fully green suite
+
+**Task:** 1.5, step 4 — making `descending` load-bearing.
+
+**Prompt sent:**
+
+> Lets go for A
+
+**What was changed.** One file, `backend/app/utils.py`, one expression:
+
+```python
+return sorted(prompts, key=lambda p: p.created_at, reverse=descending)
+```
+
+`reverse=descending` was chosen over the alternative that also passes the test, `reverse=True`.
+Hard-coding `True` would have made `test_sorting_order` green while leaving the parameter as dead as
+it was — the signature would still promise something the body does not honour. Rule 5 calls that a bug
+still present, not a bug fixed. The three-line docstring-plus-comment block announcing the defect
+(`# BUG #3: ...`, `# The 'descending' parameter is ignored!`, and the docstring's "Check the sort
+order!") was replaced by a single line describing what the function now does; a comment advertising a
+bug that is gone is a false statement about the code. The full Google-style docstring is owed to
+Task 1.9, not written here.
+
+Nothing in `api.py` was touched. The call site was already correct (entry 54).
+
+**Result: `14 passed`, nothing failing.** This is the first fully green run of the project — the
+baseline was 3 failed / 10 passed (Task 1.3), then 12 passed / 1 failed, then 13 passed / 1 failed,
+and the one remaining failure was this bug. `test_delete_collection_with_prompts` is still green,
+because Bug #4 is not fixed yet and that test asserts the current orphaning behaviour — the trap
+recorded for Task 1.6 is unchanged.
+
+**Why my next prompt changed:** the fix is verified by the provided test, which is exactly what the
+brief asks for Bug #3 ("fix the order, verify"). The next prompt is the commit.
+
+---
+
+## Entry 57 — Task 1.5 committed
+
+**Task:** 1.5, step 5 — the commit.
+
+**Prompt sent:**
+
+> yes
+
+**What it approved.** The message proposed under Rule 6, unedited, and the single-commit split: the
+one-expression fix travels with the log shard and the `CLAUDE.md` bookkeeping, because no new test was
+written for this bug \u2014 the provided one already covers it.
+
+```
+Fix Bug #3: sort prompts newest first
+
+reverse=True would also pass test_sorting_order but leaves the declared descending
+parameter dead at utils.py:7; reverse=descending makes the signature honest.
+```
+
+The body names the rejected alternative rather than the change itself, which is the one piece of
+reasoning the diff cannot show.
+
+**Why my next prompt changed:** Task 1.5 is closed and the suite is fully green. The next prompt opens
+Task 1.6, Bug #4 \u2014 where the strategy decision and the trap at `tests/test_api.py:154-179` have to be
+settled together.
