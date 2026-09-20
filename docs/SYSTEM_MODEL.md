@@ -31,7 +31,8 @@ shape: `"Review the following code and provide feedback:\n\n{{code}}"` (`tests/c
 
 Technically it is a **FastAPI JSON REST backend and nothing else**. There is no frontend, no
 database, no authentication and no configuration layer anywhere in the repository; all state is held
-in process memory. It runs as a single process with a single entrypoint (`main.py:6-10`).
+in process memory. It runs as a single process. The file written as its entrypoint, `main.py:6-10`,
+does not in fact start it (§6.1).
 
 Two negative findings matter as much as the positive ones, because a description that omits them
 would overstate the system:
@@ -50,7 +51,7 @@ the system being described.
 
 | Unit | Job | Size |
 |---|---|---|
-| `main.py` | Process entrypoint. Imports the app and hands it to uvicorn on port 8000 (`main.py:7,10`). Holds no logic. | 10 |
+| `main.py` | **Intended** process entrypoint. Imports the app and passes the object to `uvicorn.run` together with `reload=True` (`main.py:7,10`) — a combination uvicorn refuses, so running it starts no server (§6.1). Holds no logic. | 10 |
 | `app/models.py` | Schema and contract layer. Defines the data, its validation rules, and the id/timestamp factories (`generate_id` `app/models.py:9`, `get_current_time` `app/models.py:13`). | 76 |
 | `app/storage.py` | Persistence. A `Storage` class wrapping two dictionaries (`app/storage.py:11-14`), exposed as one module-level instance (`app/storage.py:69`). | 69 |
 | `app/utils.py` | Stateless helper functions over `List[Prompt]`: sort, filter, search (`app/utils.py:7,17,21`). Two further helpers are defined but unreferenced (`app/utils.py:30,43`). | 50 |
@@ -570,7 +571,7 @@ All six pins, verbatim from `requirements.txt:1-6`, read against every `import` 
 | Package | Pin | Imported at | What it is relied on for |
 |---|---|---|---|
 | `fastapi` | `==0.109.0` | `api.py:3-4` | The application object, `HTTPException`, and the CORS middleware re-export. The entire HTTP surface of §2. |
-| `uvicorn` | `==0.27.0` | `main.py:6` | ASGI server. Called once, at `main.py:10`. |
+| `uvicorn` | `==0.27.0` | `main.py:6` | ASGI server. Called once, at `main.py:10`, in a form it rejects — see below. |
 | `pydantic` | `==2.5.3` | `models.py:5` | `BaseModel` and `Field` — every schema and every declarative constraint in §4.4. |
 | `pytest` | `==7.4.4` | nowhere in `app/` or `main.py` | Test runner. See §6.2. |
 | `pytest-cov` | `==4.1.0` | nowhere at all | Coverage plugin. See §6.2. |
@@ -579,6 +580,19 @@ All six pins, verbatim from `requirements.txt:1-6`, read against every `import` 
 **`uvicorn` is a dependency of one entry path only.** It is imported at `main.py:6` and used at
 `main.py:10`, inside the `if __name__ == "__main__"` guard. Served by any external ASGI runner pointed
 at `app.api:app`, the service never touches uvicorn at all.
+
+**And that one entry path does not work.** `main.py:10` passes the imported `app` *object* together
+with `reload=True`. uvicorn accepts `reload` only for an application given as an import string, so it
+prints `WARNING: You must pass the application as an import string to enable 'reload' or 'workers'.`
+and exits without binding a port. **Verified by execution, not by reading**: on the pinned stack
+(uvicorn 0.27.0, Python 3.12.13) `python main.py` exits with status 1, and on the environment this
+document was written in (uvicorn 0.52.4, Python 3.13.14) with status 3. Neither starts a server.
+
+The defect is invisible to the test suite, which reaches the application through `TestClient` and
+therefore imports `app.api:app` directly, never running `main.py`. A fully green suite and a service
+that cannot be started by its own documented command are compatible states. The working way to run it
+is the external runner named above, `uvicorn app.api:app`, which is what the README documents; the
+`Run with: python main.py` line in `main.py:3` is wrong about its own module.
 
 **Pinning discipline.** All six are exact `==` pins. There are no version ranges, no extras, no
 environment markers, and **no lock file of any kind** — no `poetry.lock`, no `requirements.lock`, no
@@ -642,13 +656,18 @@ something calls `extract_variables`, and within the application nothing does.
 
 There is **no `pyproject.toml`, no `setup.py`, no `python_requires`, no `.python-version` and no
 `Dockerfile`** anywhere in the repository. Nothing states which Python the service supports. The
-service is not a packaged distribution at all — it is a directory run in place by `python main.py`
-(`main.py:3`), which makes the interpreter an undeclared dependency in exactly the way Starlette is,
-one level further down.
+service is not a packaged distribution at all — it is a directory run in place by an ASGI runner
+pointed at `app.api:app`, which makes the interpreter an undeclared dependency in exactly the way
+Starlette is, one level further down. (`main.py:3` claims the command is `python main.py`; §6.1 records
+why that command starts nothing.)
 
 A version is bounded only in practice, not in writing: `pydantic==2.5.3` will not build on an
-interpreter far from the one it was released for. That is an inference from the pin, not a statement
-the repository makes.
+interpreter far from the one it was released for. That was first recorded here as an inference from the
+pin; it has since been **measured**. On Python 3.13 `pip install -r requirements.txt` fails — no
+`pydantic-core` wheel is published for 3.13, pip falls back to building it from source, and the build
+needs a Rust toolchain that is not present. On Python 3.12.13 the same file installs cleanly and the
+full suite passes. The upper bound is therefore real and undeclared: the repository supports an
+interpreter range it never states, and the range excludes the current release of Python.
 
 ### 6.6 What the service does not depend on
 
