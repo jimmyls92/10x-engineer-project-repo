@@ -1,12 +1,17 @@
 # AI verification note
 
-**Criterion C1.5.** Three specific instances of wrong AI output produced during this module: what the
+**Criterion C1.5.** Four specific instances of wrong AI output produced during this module: what the
 AI produced, why it was wrong, how it was detected, and what was done instead. Each is traceable to a
 numbered entry in the prompt log.
 
-None of the three is a syntax error, and none would have been caught by an editor, a type checker or
-the test suite — all three read as authoritative and all three were false. They are given in the order
-they happened, because the second is a repeat of the first and that only shows in sequence.
+None of the four is a syntax error, and none would have been caught by an editor, a type checker or
+the test suite — all four read as authoritative and all four were false. They are given in the order
+they happened, because the second is a repeat of the first and that only shows in sequence, and
+because the fourth was not caught until the last task of the module, having survived every review in
+between.
+
+Cases 1 to 3 share one failure mode; **case 4 is a different one**, and the closing section treats
+them separately rather than forcing them together.
 
 ---
 
@@ -125,7 +130,79 @@ without catching an exception. Option A was then applied at `api.py:66-73`, and 
 
 ---
 
-## What the three have in common
+## Case 4 — "a directory run in place by `python main.py`"
+
+**Where to find it:** prompt log **entries 85 and 86** (`docs/prompt-log.md`; working shard
+`docs/prompt-log/04-task-1.9.md`). Task 1.9 — the README run steps. The claim itself is older: it was
+written during Task 1.1, exploration stages 1 and 6, and shipped in `docs/SYSTEM_MODEL.md`.
+
+**What the AI produced.** Four separate statements, across two sections of a deliverable that was
+recorded as finished:
+
+> It runs as a single process with a single entrypoint (`main.py:6-10`). — §1.1
+>
+> `main.py` — Process entrypoint. Imports the app and hands it to uvicorn on port 8000
+> (`main.py:7,10`). Holds no logic. — §1.2
+>
+> `uvicorn` — ASGI server. Called once, at `main.py:10`. — §6.1
+>
+> The service … is a directory run in place by `python main.py` (`main.py:3`). — §6.5
+
+**Why it was wrong.** `python main.py` does not start a server. `main.py:10` passes the imported `app`
+*object* together with `reload=True`, and uvicorn accepts `reload` only for an application given as an
+import string. It prints `WARNING: You must pass the application as an import string to enable
+'reload' or 'workers'.` and exits without binding a port — status 1 on the pinned stack
+(uvicorn 0.27.0, Python 3.12.13), status 3 on the environment the document was written in
+(uvicorn 0.52.4, Python 3.13.14).
+
+The interesting part is not that the claim was false but **how it was corroborated**. The §6.5
+sentence cites `main.py:3` as its evidence. `main.py:3` is the module docstring, and it reads
+`Run with: python main.py`. The document established how the service runs by quoting the code's own
+claim about how it runs. Both are wrong, and they agree with each other, which is precisely why
+neither looked suspicious — a citation was present, and it checked out.
+
+Nothing else in the repository contradicts it. The test suite reaches the application through
+`TestClient`, which imports `app.api:app` directly and never executes `main.py`: a fully green suite
+and a service that cannot be started by its own documented command are compatible states. Seventeen
+passing tests carried no information about this at all.
+
+**How I detected it.** Not by reading. The README's run steps were **executed on a clean clone** — a
+tree built with `git archive HEAD`, with no `.git`, no virtual environment and no build cache —
+because the brief says C1.6 is checked that way, so the steps had to be run rather than reviewed. The
+install step failed first, for an unrelated reason (no `pydantic-core` wheel for Python 3.13), and
+only once that was cleared by fetching a 3.12 did the run step get reached at all. It failed
+immediately.
+
+This case is the one that best justifies the whole exercise: the claim had been read and approved
+several times, carried a line citation, and was consistent with every other document in the
+repository.
+
+**What I did instead.** The four statements were corrected in place, and §6.1 gained a paragraph
+recording the defect with both measured exit statuses and the reason the suite cannot see it. The
+README now documents `uvicorn app.api:app --reload`, the command that works, with `python main.py`
+named in *Known issues* as broken rather than quietly dropped — the module was not asked to change
+that file, and an unfixed defect that is documented is not a hidden one.
+
+One correction produced a finding of its own. §6.5 had said that `pydantic==2.5.3` "will not build on
+an interpreter far from the one it was released for", labelling it explicitly as "an inference from
+the pin, not a statement the repository makes". The inference was sound and is now **measured**: the
+install fails on Python 3.13 and succeeds on 3.12.13. The repository has an undeclared upper bound on
+its interpreter, and that bound excludes the current release of Python.
+
+It is also worth recording what the document already had right. §6.1 contained the sentence "served by
+any external ASGI runner pointed at `app.api:app`, the service never touches uvicorn at all" — the
+only accurate description of how to start the service anywhere in the repository, written to make a
+point about dependency coupling and never connected to the run instructions three sections away.
+
+---
+
+## What the four have in common
+
+**Two failure modes, not one.** Cases 1 to 3 are a single error with different subjects; case 4 is a
+different error that the first three would not have predicted. Forcing all four under one heading
+would be the same over-generalisation this note is about, so they are kept apart.
+
+### Mode 1 — a claim about a set, asserted without enumerating the set (cases 1, 2, 3)
 
 All three are the same error with different subjects: **a claim about a set, asserted without
 enumerating the set.** Cases 1 and 2 assert "only" over routes and over fields; case 3 asserts a
@@ -133,20 +210,48 @@ relationship between `get_prompt` and `create_prompt` without looking at who cal
 instance the enumeration was cheap — ten routes, six fields, two call sites — and in every instance it
 was skipped in favour of a sentence that read well.
 
-Three properties they share, which is what makes them worth documenting rather than just fixing:
+### Mode 2 — a self-description read instead of executed (case 4)
+
+Case 4 quantifies over nothing and generalises from nothing. The claim is specific, it names a file and
+a line, and the line it names **supports it**. It is wrong because `main.py` describes itself
+incorrectly and that description was read rather than run.
+
+The two modes fail differently and are caught differently:
+
+| | Mode 1 | Mode 2 |
+|---|---|---|
+| The claim | Quantified — "the only", "always", "would break" | Specific, and cited |
+| Why it is wrong | The set was never enumerated | The behaviour was never executed |
+| What the source says | Contradicts it, if you look | **Agrees with it** — the docstring repeats the same false thing |
+| The cheap check that catches it | `grep`, or one counter-example | Run the command |
+| How long it survived | Caught inside the same exchange | Four tasks and several reviews, until the last one |
+
+Mode 2 is the more dangerous of the two, and the survival time is why. A mode 1 error is refuted by
+the source, so any reader who opens the file can catch it. A mode 2 error is *confirmed* by the
+source, so reading more carefully makes it look better rather than worse. Nothing short of execution
+separates "documented" from "true".
+
+### Four properties they share
 
 1. **They looked right.** No syntax error, no type error, no failing test. Cases 1 and 2 were prose
    about code that a reader without the file open would have believed; case 3 named a function and a
    status code, which is exactly what a trustworthy answer looks like.
-2. **The detection was always the same move** — name a counter-example, or make the model enumerate
-   the set it is quantifying over. *"list_prompts also does not have this pattern"*, *"what do you mean
-   by this?"*, *"would C create another Bug?"*. None required expertise the codebase didn't supply;
-   they required not accepting the first answer.
+2. **Detection never needed expertise the codebase didn't supply** — only a refusal to accept the
+   first answer. For mode 1 the move is to name a counter-example or force an enumeration:
+   *"list_prompts also does not have this pattern"*, *"what do you mean by this?"*, *"would C create
+   another Bug?"*. For mode 2 no question would have worked, because the document and the code agreed
+   with each other; the move is to stop asking and run it.
 3. **Correcting them produced findings the wrong version had hidden.** Case 1 surfaced the unchecked
    `Optional` return at `api.py:113`; case 2 separated model-layer validation from handler-layer
    integrity, which is the frame Bug #4 is reasoned in; case 3 replaced a fake correctness argument
-   with the layering argument that actually governs where an `HTTPException` belongs. The corrected
-   claim was in each case more useful than the original would have been if it had happened to be true.
+   with the layering argument that actually governs where an `HTTPException` belongs; case 4 turned an
+   explicitly labelled inference about the interpreter bound into a measured fact, and produced a
+   README *Known issues* section that would otherwise not exist. The corrected claim was in each case
+   more useful than the original would have been if it had happened to be true.
+4. **None of them was caught by tooling.** The suite was green throughout all four. Case 4 makes the
+   point sharpest: seventeen passing tests and a service that will not start are not in conflict,
+   because the tests import the application directly and the broken file is never executed. A test
+   suite verifies what it imports, not what the documentation claims.
 
 Two further instances were caught the same way and are recorded in the log rather than written up
 here: **entry 33**, where a storage limitation was called "unreachable" and the word did not survive
