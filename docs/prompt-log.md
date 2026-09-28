@@ -397,3 +397,91 @@ origins; single-process storage and no write locking; naive UTC timestamps from 
 **Why the next prompt changed**
 
 The README now matches the brief's scope. What is left is committing it, then the clean clone.
+
+### Entry 15
+
+**Prompt**
+
+> go ahead with both commits, then the clean clone
+
+**What came back**
+
+Two commits: `431d394` Restructure README under Task 2.1 headings, and `3a83725` Open the Module 2
+prompt log.
+
+Then the clean clone. `Week-2` was cloned from the local repository, since nothing is pushed yet,
+into a short temp folder (the scratchpad path is too long for a venv on Windows), and every README
+step was followed as written:
+
+| README step | Result |
+|---|---|
+| Python 3.12 venv, `pip install -r requirements.txt` | ✅ installs the pins (fastapi 0.109.0, pydantic 2.5.3, uvicorn 0.27.0) |
+| `pytest tests/ -v` | ✅ 17 passed |
+| Coverage command | ✅ 88% total, same as before |
+| Quick start guide, steps 1–5 | ✅ responses match the samples in shape and status |
+| All 11 endpoint-table examples | ✅ PUT unfiles, PATCH changes only `description`, DELETE gives 204 then 404; 422 and 400 as documented |
+| `/docs`, `/redoc`, `/openapi.json` | ✅ 200 |
+| `python main.py` | ✅ prints the import-string warning, exits 1, never binds port 8000 |
+| Install on Python 3.13 | ✅ fails, building from source and needing Rust |
+
+**Inaccuracy found.** The README says "the pinned `pydantic==2.5.3` publishes no wheel" for 3.13.
+The pip log shows the package that fails is **`pydantic-core`**, a dependency of pydantic. Pydantic
+itself is pure Python.
+
+Two things went wrong during the run. The test server outlived the first shutdown attempt and had
+to be killed by PID; `main.py` was then re-run with the port free, so its failure is not a port
+clash. The 3.13 attempt also left a Rust-installer cache (`AppData\Local\puccinialin`), created by
+pip's source build. The temp clone was deleted afterwards.
+
+**Why the next prompt changed**
+
+The clean clone passes. The next prompt decides whether to correct the pydantic-core wording.
+
+### Entry 16
+
+**Prompt**
+
+> go for A and commit it
+
+**What came back**
+
+Claude changed `README.md:55-56` to say that the pinned `pydantic==2.5.3` needs `pydantic-core`,
+which publishes no wheel for 3.13, and that its source build needs Rust. Claude showed the commit
+message before committing. I had said "commit it", which the protocol takes as approval of the
+commit but not of its message.
+
+**Why the next prompt changed**
+
+The fix is one line and complete. The message is waiting for approval.
+
+### Entry 17
+
+**Prompt**
+
+> go ahead, then commit the log and state too
+
+**What came back**
+
+Claude committed the fix as `67a7698` Name pydantic-core as the missing 3.13 wheel. With it, Task
+2.1 is complete: the README has the brief's seven headings, and every setup step passed on a clean
+clone. Claude marked Task 2.1 complete in `CLAUDE.md` CURRENT STATE, then showed the message for the
+log-and-state commit before committing it.
+
+**Why the next prompt changed**
+
+Task 2.1 is done. The next prompt approves the last commit.
+
+### Entry 18
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude committed the log and state ("Log Task 2.1's clean clone and close the task"), with this
+entry in the same commit, and stopped. Task 2.2 starts only when I ask for it.
+
+**Why the next prompt changed**
+
+Task 2.1 is closed. The next prompt opens Task 2.2.
