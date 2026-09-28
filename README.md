@@ -52,8 +52,8 @@ later module.
 
 ### Prerequisites
 
-- **Python 3.10–3.12** (`python --version`). **Not 3.13** — the pinned `pydantic==2.5.3` publishes
-  no wheel for it and the source build needs a Rust toolchain. Tested on **3.12.13**.
+- **Python 3.10–3.12** (`python --version`). **Not 3.13** — the pinned `pydantic==2.5.3` needs
+  `pydantic-core`, which publishes no wheel for 3.13, and its source build needs a Rust toolchain. Tested on **3.12.13**.
 - **git**
 
 Nothing else. No database, no message broker, no API keys — the service calls no external system.
