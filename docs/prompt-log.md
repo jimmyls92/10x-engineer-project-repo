@@ -1,0 +1,399 @@
+# Prompt log — Module 2
+
+Written live, one entry per prompt, in the order sent. It starts at Task 2.1: the set-up prompts that
+adapted `CLAUDE.md` for this module came before the log was opened and are not recorded here.
+
+---
+
+## Task 2.1 — Comprehensive README
+
+### Entry 1
+
+**Prompt**
+
+> go with B, audit the README against the code
+
+**What came back**
+
+Claude had offered three ways to begin: (A) audit the README against the brief's checklist, (B) do
+the same and also check each claim against the code, (C) rewrite from scratch. I picked B.
+
+Against the brief's seven checklist items:
+
+| Checklist item | Current README |
+|---|---|
+| Project overview and purpose | Present — `README.md:1-12` |
+| Features list | Missing — no section; the endpoint table is the nearest thing |
+| Prerequisites and installation | Present — `README.md:18-37` |
+| Quick start guide | Present — `README.md:16-69` |
+| API endpoint summary with examples | Partial — table at `README.md:73-94`; the only example is `curl /health` |
+| Development setup | Partial — running the tests only (`README.md:54-62`) |
+| Contributing guidelines | Missing |
+
+Against the code:
+
+- **Confirmed**: all eleven endpoints in the table exist in `api.py`, with the stated status codes
+  (404 / 400 / 201 / 204, 422 from validation); search covers title and description
+  (`utils.py:25-31`); `main.py:10` passes the app object with `reload=True`; `datetime.utcnow()` at
+  `models.py:14`; the loose `[404, 500]` assertion at `test_api.py:79`.
+- **Stale**: the project-structure tree (`README.md:120-121`) lists `docs/prompt-log.md` and
+  `docs/ai-verification-note.md`, which were removed from this branch in `3984720`.
+- **Wrong**: `README.md:154-155` says Starlette "is used directly by the CORS middleware import and
+  is not declared". `api.py:4` imports from `fastapi.middleware.cors`, which only re-exports
+  Starlette's class, and FastAPI declares Starlette as its own dependency.
+- **Not re-checked in this step**: the Python 3.13 install failure and `main.py` exiting without
+  binding a port. They need a run, not a read. The machine in use has Python 3.13.14.
+
+**AI mistake caught.** The Starlette claim came from Module 1's README, written with AI. It read as
+a careful dependency note, but it was wrong. Found by opening `api.py:4` and printing the source of
+`fastapi.middleware.cors`, which is a single re-export line.
+
+**Why the next prompt changed**
+
+The audit is enough to act on. What comes next is how to handle the gaps and the wrong claims.
+
+### Entry 2
+
+**Prompt**
+
+> go with B, restructure under the brief's headings, But lets go one by one, reviewing what to write in every heading before writting it
+
+**Iteration: added a constraint.** Instead of restructuring the whole README in one pass, I review
+each heading's content with Claude before anything is written.
+
+**What came back**
+
+Nothing was written. Claude reviewed the first heading, **Project overview and purpose**, against
+the current text at `README.md:1-12`:
+
+- **Sourced**: "an internal tool for AI engineers" and "Postman for prompts" both come from the
+  original README (first commit, `README.md:13`). Template variables appear in the course guide's
+  core features (p. 1).
+- **Matches the code**: title, content, optional description, one optional collection per prompt
+  (`models.py:19-23`); flat collections (`models.py:62-64`); in-memory dict storage
+  (`storage.py:12-14`).
+- **Possible overclaim**: `{{code}}` suggests the service handles variables. `extract_variables`
+  exists (`utils.py:47`), but nothing in `api.py` calls it, so variables are stored as plain text.
+
+Options offered: keep the text as it is, keep it and add one sentence saying variables are not
+processed, or rewrite it. Claude recommended the second.
+
+**Why the next prompt changed**
+
+The next prompt chooses how to write this heading.
+
+### Entry 3
+
+**Prompt**
+
+> go for B
+
+**What came back**
+
+Claude wrote heading 1 in `README.md`. It added `## Project overview and purpose` above the
+existing two paragraphs, which stay as they were, and one closing sentence: "Template variables are
+stored as plain text: the service does not parse them or fill them in."
+
+Then Claude reviewed heading 2, **Features list**. The README has no such section. Claude built an
+inventory from the 11 routes in `api.py` and the constraints in `models.py`, and set it against the
+course guide's core features (p. 1: variables, collections, search and filter). It flagged two
+helpers in `utils.py` that no endpoint calls: `validate_prompt_content` (`utils.py:34`) and
+`extract_variables` (`utils.py:47`). Listing either as a feature would overclaim.
+
+Options offered: list only what is implemented, list implemented plus planned features, or copy the
+course guide's list. Claude recommended implemented only.
+
+**Why the next prompt changed**
+
+Heading 1 was good enough as written. The next prompt decides what goes into the features list.
+
+### Entry 4
+
+**Prompt**
+
+> go for A
+
+**What came back**
+
+Claude wrote `## Features list` in `README.md` with eight bullets, each backed by the code: prompt
+CRUD, PUT vs PATCH, collections with no edit, unfiling on collection delete, combinable filter and
+search, newest-first sorting, the validation limits with `422`, and the health check plus generated
+docs. The two uncalled helpers in `utils.py` are left out.
+
+Then Claude reviewed heading 3, **Prerequisites and installation**. Today that content sits inside
+`## Quick start`, mixed in with running the server. Findings:
+
+- The prerequisites (Python 3.10–3.12, git, no database or keys) match `requirements.txt`, and
+  nothing in `backend/` reads any configuration.
+- `config.yaml` at the root holds an OpenRouter key placeholder for the AI editor. The app never
+  reads it, but a reader could take it for a required setting.
+- The "not 3.13" claim needs an install run, which is left for the clean-clone check. This machine
+  has Python 3.13.14.
+
+Options offered: split the section (install here, running the server under Quick start), keep
+install and run together here, or also verify the 3.13 claim now. Claude recommended splitting.
+
+**Why the next prompt changed**
+
+The features list was good enough as written. The next prompt decides how to split install from the
+quick start.
+
+### Entry 5
+
+**Prompt**
+
+> I do not like how you wrote the features list... they should have a descriptive name with a sustantive shape and have a description where it enters a bit more in what it allows the feature and how
+
+**Iteration: restructured.** The first version was one short line per feature, starting with a
+label ("Prompts:", "Validation:"). I asked for a descriptive noun-phrase name per feature, followed by
+a description of what the feature allows and how it works.
+
+**What came back**
+
+Claude rewrote `## Features list` in `README.md`. The same eight features now have noun-phrase names
+(e.g. "Prompt storage and retrieval", "Non-destructive collection deletion"), each followed by two to
+four sentences. The new detail was checked against the code:
+
+- Server-assigned UUID and timestamps (`models.py:52-54`).
+- Explicit `null` vs missing key in `PATCH`, and an empty `PATCH` leaving `updated_at` alone
+  (`api.py:168`, `api.py:184`).
+- `400` for an unknown `collection_id` (`api.py:89`), and no rename endpoint for collections.
+- `updated_at` left alone when a collection delete unfiles its prompts (`api.py:250-253`).
+- An unknown `collection_id` filter returns an empty list (`utils.py:22`); search skips the prompt
+  body (`utils.py:28-30`).
+
+**Why the next prompt changed**
+
+The heading 3 choice from entry 4 (how to split installation from the quick start) is still open.
+
+### Entry 6
+
+**Prompt**
+
+> Can you show me again what you were proposing?
+
+**What came back**
+
+Claude restated the heading 3 review from entry 4 with nothing new added: the findings on
+prerequisites, `config.yaml` and the unverified 3.13 claim, and options A (split), B (keep install
+and run together) and C (split, and check 3.13 now). The recommendation was still A, plus one line
+saying `config.yaml` is not needed.
+
+**Why the next prompt changed**
+
+I asked to see the proposal again because the features rewrite had pushed it out of view. The
+choice itself is still open.
+
+### Entry 7
+
+**Prompt**
+
+> agree
+
+**What came back**
+
+Claude wrote `## Prerequisites and installation` in `README.md`, taken out of `## Quick start`. It
+has two parts: the prerequisites as they were, plus one sentence saying `config.yaml` configures an
+AI coding assistant and is not needed; and an installation block (clone, venv, `pip install`). The
+`uvicorn` command now opens `## Quick start`. The 3.13 claim stays unverified until the clean-clone
+check.
+
+Then Claude reviewed heading 4, **Quick start guide**. What remains there: start the server, a
+`main.py` warning, the URL table, running the tests, and a `curl /health` check. Findings:
+
+- The `/health` sample output matches `api.py:38` and `__version__` in `app/__init__.py`.
+- Running the tests is development work, not a first run.
+- There is no example of the service's actual job: creating a prompt and getting it back.
+- In Windows PowerShell 5.1, `curl` is an alias for `Invoke-WebRequest`, so `curl` commands with
+  JSON bodies fail as written; `curl.exe` works.
+
+Options offered: keep the section as it is; turn it into a walkthrough (run, health, create a
+collection and a prompt, list or search) with the tests moved to development setup; or cut it to
+run plus health, leaving every example to the endpoint summary. Claude recommended the walkthrough.
+
+**Why the next prompt changed**
+
+Heading 3 was good enough as written. The next prompt decides what the quick start should walk
+through.
+
+### Entry 8
+
+**Prompt**
+
+> B
+
+**What came back**
+
+Claude rewrote `## Quick start` in `README.md` as a five-step walkthrough: start the server, check
+`/health`, create a collection, save a prompt in it, find it again by search (and by
+`collection_id`). The sample responses are real output. Claude ran the same requests through
+FastAPI's `TestClient` rather than writing JSON by hand. The machine has FastAPI 0.141.1 on Python
+3.13, not the pinned versions; the response shapes come from `models.py` either way. "Run the
+tests" stays at the end of the section for now and moves when Development setup is written.
+
+**AI mistake caught.** In entry 7, Claude said PowerShell users could type `curl.exe` and the
+examples would work. That is false for these commands: Windows PowerShell 5.1 strips the inner double
+quotes from a JSON argument passed to a native program, and `\` does not continue a line in
+PowerShell. Claude caught this while writing the Windows note, before anything was committed. The
+note now says the commands are for a POSIX shell and points Windows users to Git Bash or the
+Swagger UI at `/docs`.
+
+**Why the next prompt changed**
+
+The quick start is written. Heading 5, the API endpoint summary with examples, is next.
+
+### Entry 9
+
+**Prompt**
+
+> show me B before writting
+
+**Iteration: added a constraint.** For this heading I asked to see the draft before anything is
+written to the README.
+
+**What came back**
+
+Claude showed option B as a draft in the chat, with nothing written. It is the existing 11-row table
+with an **Example** column added: one `curl` line per endpoint, and an `API=http://localhost:8000`
+variable defined above the table so the lines stay short. The PUT example leaves out
+`collection_id` on purpose, to show that PUT resets it. The status-codes paragraph under the table
+is unchanged.
+
+**Why the next prompt changed**
+
+The draft is for me to review. The next prompt approves or changes it.
+
+### Entry 10
+
+**Prompt**
+
+> I approve
+
+**What came back**
+
+Claude replaced `## API endpoints` in `README.md` with the approved draft: the heading is now
+`## API endpoint summary with examples` (the brief's wording), there is an `API=` variable, and each
+row has an Example column. The search, sorting and status-code paragraphs are unchanged.
+
+Then Claude reviewed heading 6, **Development setup**. What exists today is only "Run the tests" at
+the end of Quick start. Findings:
+
+- `tests/conftest.py` clears storage before and after every test (an autouse fixture), and the
+  tests drive the app through `TestClient`, so no server needs to be running. There are 17 tests in
+  `test_api.py`.
+- `requirements.txt` puts runtime and development packages in one file (`pytest`, `pytest-cov` and
+  `httpx` next to `fastapi`), so the one install from heading 3 covers development as well.
+- `pytest-cov` is pinned, but nothing documents a coverage command.
+- **The repository has no `.gitignore`.** `__pycache__/` already shows up as untracked, and a
+  `.venv/` created under `backend/` as the installation step says would too, so it could be
+  committed by mistake. There is no linter, formatter or CI configuration either.
+
+Options offered: move only the test command here; move it and add how the tests work plus a
+coverage command (checked by running it before writing); or also add a `.gitignore`, which would
+change the repository and not just the README. Claude recommended the second, and asked whether the
+missing `.gitignore` should be recorded as an open decision.
+
+**Why the next prompt changed**
+
+The endpoint summary was good enough as approved. The next prompt decides the scope of Development
+setup.
+
+### Entry 11
+
+**Prompt**
+
+> just go for B
+
+**What came back**
+
+Claude checked the coverage command before writing it down. It failed on the machine's global Python
+3.13 (`pytest-cov` is not installed there). A venv in the scratchpad then failed on the Windows path
+length limit. It finally ran in a throwaway `uv` environment with Python 3.12.13 and the pinned
+`requirements.txt`: **17 passed, 88% total coverage** (`utils.py` is the lowest, at 53%).
+
+Claude then wrote `## Development setup` in `README.md` with three parts: the server with
+`--reload` (and a note that each reload empties storage), the tests (moved out of Quick start,
+with how `TestClient` and the autouse fixture in `conftest.py` work), and the coverage command.
+Nothing was written about the missing `.gitignore`. Its open-decision question went unanswered,
+so it is not recorded either.
+
+**Why the next prompt changed**
+
+The next heading, and the last of the seven, is Contributing guidelines.
+
+### Entry 12
+
+**Prompt**
+
+> Lets go for C including also rule 5. I guess the "all test must past" is implicitly understood, wouldnt you say?
+
+**What came back**
+
+**AI mistake caught.** Claude had argued against option C by saying generic advice is "the pattern
+assessors mark Not Yet". That common mistake belongs to **C2.3**, the agent-instructions file, not
+to the README. C2.2 only asks that the README's setup steps work on a clean clone. Claude caught it
+while re-reading the brief to answer my question, and withdrew the argument.
+
+On my question, Claude disagreed. Passing tests is not implicit for a contributor: the course guide
+returns a submission whose provided tests fail, and a contributing section is where a newcomer looks
+for that rule. It costs one line.
+
+Claude checked the repository before drafting C: the remote is on GitHub, there is no `.github/`
+folder (so no issue or PR templates), and `main` has no merge commits. A generic template would
+describe things that do not exist, so the draft adapts each template step to what the repository
+has, adds the commit rules from `CLAUDE.md` Rule 5, and was shown in the chat without being written.
+
+**Why the next prompt changed**
+
+Two things are open: whether to keep the tests line, and approval of the draft.
+
+### Entry 13
+
+**Prompt**
+
+> its ok like this, lets go check it on a clean clone
+
+**What came back**
+
+Claude wrote `## Contributing guidelines` exactly as drafted, with the tests line kept. It also
+renamed `## Quick start` to `## Quick start guide`, the brief's wording, and deleted the
+`backend/.coverage` file left by its own coverage run.
+
+The clean-clone check itself was not started, for two reasons Claude raised:
+
+- **A clone only contains what is committed.** Every README change is still uncommitted, so a clone
+  now would test the old README. The work has to be committed first.
+- **Two claims found wrong in entry 1 are still in the README**, because the seven headings did not
+  cover them: `ai-verification-note.md` in the project-structure tree, and the Starlette sentence in
+  Known issues. A clone check would pass over them, since they are not setup steps.
+
+**Why the next prompt changed**
+
+The next prompt decides whether to fix those two lines before committing, and approves the commit.
+
+### Entry 14
+
+**Prompt**
+
+> elminate everythin in the readme that is not part of the headlines in Task 2.1
+
+**Iteration: narrowed.** Instead of fixing the two wrong lines (Claude's option A), I cut the
+README down to the brief's seven headings. The two wrong lines go with the sections they were in.
+
+**What came back**
+
+Claude deleted `## Project structure`, `## Known issues and limitations` and `## Roadmap`. The
+README now holds the title and tagline plus the seven Task 2.1 headings, in the brief's order.
+
+One reference pointed into a deleted section: the Quick start guide's `main.py` warning said "see
+*Known issues* below". Claude replaced it with the reason, stated inline: `main.py:10` passes the
+application object with `reload=True`, which uvicorn only supports for an import string. That the
+server then fails to start is still to be confirmed by the clean-clone run.
+
+What the cut removed, and no remaining section covers: no authentication and CORS open to all
+origins; single-process storage and no write locking; naive UTC timestamps from the deprecated
+`utcnow()`; the loose `[404, 500]` test assertion; the roadmap.
+
+**Why the next prompt changed**
+
+The README now matches the brief's scope. What is left is committing it, then the clean clone.
