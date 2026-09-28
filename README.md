@@ -2,18 +2,53 @@
 
 **A REST API for storing and organising AI prompts.**
 
+## Project overview and purpose
+
 PromptLab is an internal tool for AI engineers: a place to keep prompt templates, group them into
 collections, and find them again. Think "Postman for prompts". A prompt has a title, a body that may
 contain template variables such as `{{code}}`, an optional description, and an optional collection it
-belongs to. Collections are flat named groups; a prompt belongs to at most one.
+belongs to. Collections are flat named groups; a prompt belongs to at most one. Template variables
+are stored as plain text: the service does not parse them or fill them in.
 
 The service is a FastAPI application with **in-memory storage** — everything lives in a dictionary in
 the server process and is lost when it stops. That is deliberate for now; swapping in a database is a
 later module.
 
+## Features list
+
+- **Prompt storage and retrieval.** Save a prompt as a title, a body and an optional description,
+  then fetch it by id or list every prompt. The server assigns each prompt a UUID and its
+  `created_at` / `updated_at` timestamps; the client never sets them. Deleting a prompt removes it
+  for good.
+- **Full and partial prompt updates.** `PUT` replaces a prompt in full: every field comes from the
+  body, so an optional field that is left out is reset (leaving out `collection_id` unfiles the
+  prompt). `PATCH` changes only the fields the body carries: an explicit `null` clears a field, and
+  a missing key leaves it alone. Both keep `created_at` and refresh `updated_at`, except that a
+  `PATCH` with an empty body changes nothing, not even the timestamp.
+- **Collections for grouping prompts.** Create a named collection with an optional description,
+  then file a prompt in it by setting `collection_id` on create, `PUT` or `PATCH`. The id must name
+  an existing collection, or the request is refused with `400`. A prompt sits in at most one
+  collection, and a collection cannot be renamed after it is created.
+- **Non-destructive collection deletion.** Deleting a collection keeps its prompts: each one is
+  unfiled (its `collection_id` is cleared) and its `updated_at` is left as it was, since the
+  client did not edit it.
+- **Filtering and search.** `GET /prompts?collection_id=` returns only the prompts in that
+  collection; an unknown id gives an empty list, not an error. `?search=` keeps the prompts whose
+  title or description contains the text, ignoring case. The prompt body is not searched. The two
+  parameters can be combined.
+- **Newest-first ordering.** Prompt lists are always sorted by creation date, newest first. The
+  order is fixed; no parameter changes it.
+- **Input validation.** A title must be 1–200 characters, the body must not be empty, a description
+  is at most 500 characters and a collection name is 1–100 characters. A body that breaks a rule is
+  rejected with `422` and a per-field error before it reaches storage; `PATCH` applies the same
+  rules to the fields it carries.
+- **Health check and interactive API docs.** `GET /health` returns `{"status": "healthy"}` and the
+  service version. FastAPI generates Swagger UI (`/docs`) and ReDoc (`/redoc`) pages from the code,
+  where every endpoint can be tried from the browser.
+
 ---
 
-## Quick start
+## Prerequisites and installation
 
 ### Prerequisites
 
@@ -22,8 +57,10 @@ later module.
 - **git**
 
 Nothing else. No database, no message broker, no API keys — the service calls no external system.
+The `config.yaml` at the repository root configures an AI coding assistant; the service never reads
+it, and it is not needed to install or run PromptLab.
 
-### Run the API
+### Installation
 
 ```bash
 git clone <your-repo-url>
@@ -33,14 +70,36 @@ python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 
 pip install -r requirements.txt
+```
+
+`requirements.txt` lives in `backend/`, so install from there.
+
+---
+
+## Quick start guide
+
+From installation to a stored, searchable prompt in five steps.
+
+> **The commands below are for a POSIX shell** (bash, zsh, Git Bash). In Windows PowerShell, `curl`
+> is an alias for `Invoke-WebRequest`, `\` does not continue a line, and the quotes inside the JSON
+> bodies are not passed through as written. On Windows, use Git Bash, or send the same requests from
+> the Swagger UI at http://localhost:8000/docs.
+
+### 1. Start the server
+
+From `backend/`, with the virtual environment active:
+
+```bash
 uvicorn app.api:app --reload
 ```
 
-The last two commands must be run **from the `backend/` directory** — the application is imported as
+This must be run **from the `backend/` directory** — the application is imported as
 `app.api`, which only resolves when `backend/` is the working directory.
 
 > **Do not use `python main.py`.** It is the repository's original entry point and it does not start a
-> server; see *Known issues* below. `uvicorn app.api:app --reload` is the working equivalent.
+> server: `main.py:10` passes the application object together with `reload=True`, and uvicorn only
+> supports reload for an application given as an import string. `uvicorn app.api:app --reload` is
+> the working equivalent.
 
 | What | Where |
 |---|---|
@@ -49,42 +108,84 @@ The last two commands must be run **from the `backend/` directory** — the appl
 | Alternative docs (ReDoc) | http://localhost:8000/redoc |
 | OpenAPI schema | http://localhost:8000/openapi.json |
 
-Stop the server with `Ctrl+C`.
+Leave it running and use a second terminal for the next steps. Stop it with `Ctrl+C`.
 
-### Run the tests
-
-From the same `backend/` directory, with the virtual environment active:
-
-```bash
-pytest tests/ -v
-```
-
-All tests should pass.
-
-### Check it is alive
+### 2. Check it is alive
 
 ```bash
 curl http://localhost:8000/health
 # {"status":"healthy","version":"0.1.0"}
 ```
 
+### 3. Create a collection
+
+```bash
+curl -X POST http://localhost:8000/collections \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Code review", "description": "Prompts for reviewing pull requests"}'
+```
+
+The response is `201` with the new collection. Copy its `id`: the next step needs it.
+
+```json
+{"name":"Code review","description":"Prompts for reviewing pull requests","id":"6227466d-0d9e-4917-9b15-cd4bddbbd73e","created_at":"2026-09-28T18:50:29.143284"}
+```
+
+### 4. Save a prompt in it
+
+Replace `<collection-id>` with the id from step 3:
+
+```bash
+curl -X POST http://localhost:8000/prompts \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Review a diff", "content": "Review this diff and list any bugs: {{diff}}", "collection_id": "<collection-id>"}'
+```
+
+The response is `201` with the stored prompt. The server has added its `id` and both timestamps:
+
+```json
+{"title":"Review a diff","content":"Review this diff and list any bugs: {{diff}}","description":null,"collection_id":"6227466d-0d9e-4917-9b15-cd4bddbbd73e","id":"74a8dd4c-bd33-4762-b606-e174dc3e9a69","created_at":"2026-09-28T18:50:29.156637","updated_at":"2026-09-28T18:50:29.156642"}
+```
+
+### 5. Find it again
+
+Search matches titles and descriptions, ignoring case:
+
+```bash
+curl "http://localhost:8000/prompts?search=review"
+```
+
+```json
+{"prompts":[{"title":"Review a diff","content":"Review this diff and list any bugs: {{diff}}","description":null,"collection_id":"6227466d-0d9e-4917-9b15-cd4bddbbd73e","id":"74a8dd4c-bd33-4762-b606-e174dc3e9a69","created_at":"2026-09-28T18:50:29.156637","updated_at":"2026-09-28T18:50:29.156642"}],"total":1}
+```
+
+`curl "http://localhost:8000/prompts?collection_id=<collection-id>"` lists the collection's prompts
+in the same shape. Your ids and timestamps will differ. Storage is in memory, so restarting the
+server empties it.
+
 ---
 
-## API endpoints
+## API endpoint summary with examples
 
-| Method | Endpoint | What it does |
-|---|---|---|
-| `GET` | `/health` | Service status and version |
-| `GET` | `/prompts` | List prompts, newest first. Optional `?collection_id=` and `?search=` |
-| `GET` | `/prompts/{id}` | Fetch one prompt; 404 if it does not exist |
-| `POST` | `/prompts` | Create a prompt; 201 with the created prompt |
-| `PUT` | `/prompts/{id}` | **Full** replacement — every field is taken from the body, so an omitted field is reset |
-| `PATCH` | `/prompts/{id}` | **Partial** update — only the fields the body carries are changed |
-| `DELETE` | `/prompts/{id}` | Delete a prompt; 204 with no body |
-| `GET` | `/collections` | List all collections |
-| `GET` | `/collections/{id}` | Fetch one collection; 404 if it does not exist |
-| `POST` | `/collections` | Create a collection; 201 with the created collection |
-| `DELETE` | `/collections/{id}` | Delete a collection and **unfile** its prompts — the prompts survive with `collection_id` cleared |
+The examples assume a POSIX shell (see Quick start guide) and this variable:
+
+```bash
+API=http://localhost:8000
+```
+
+| Method | Endpoint | What it does | Example |
+|---|---|---|---|
+| `GET` | `/health` | Service status and version | `curl $API/health` |
+| `GET` | `/prompts` | List prompts, newest first. Optional `?collection_id=` and `?search=` | `curl "$API/prompts?search=review"` |
+| `GET` | `/prompts/{id}` | Fetch one prompt; 404 if it does not exist | `curl $API/prompts/<id>` |
+| `POST` | `/prompts` | Create a prompt; 201 with the created prompt | `curl -X POST $API/prompts -H "Content-Type: application/json" -d '{"title": "Review a diff", "content": "List bugs in: {{diff}}"}'` |
+| `PUT` | `/prompts/{id}` | **Full** replacement: an omitted field is reset | `curl -X PUT $API/prompts/<id> -H "Content-Type: application/json" -d '{"title": "Review a diff", "content": "List bugs in: {{diff}}"}'` (no `collection_id`, so the prompt is unfiled) |
+| `PATCH` | `/prompts/{id}` | **Partial** update: only the fields sent change | `curl -X PATCH $API/prompts/<id> -H "Content-Type: application/json" -d '{"description": "For small PRs"}'` |
+| `DELETE` | `/prompts/{id}` | Delete a prompt; 204 with no body | `curl -X DELETE $API/prompts/<id>` |
+| `GET` | `/collections` | List all collections | `curl $API/collections` |
+| `GET` | `/collections/{id}` | Fetch one collection; 404 if it does not exist | `curl $API/collections/<id>` |
+| `POST` | `/collections` | Create a collection; 201 with the created collection | `curl -X POST $API/collections -H "Content-Type: application/json" -d '{"name": "Code review"}'` |
+| `DELETE` | `/collections/{id}` | Delete a collection and **unfile** its prompts | `curl -X DELETE $API/collections/<id>` |
 
 `search` matches case-insensitively against a prompt's title and description. `GET /prompts` always
 sorts by creation date, newest first; it is not a client-controlled parameter.
@@ -95,71 +196,54 @@ is `422`, produced by validation before the handler runs.
 
 ---
 
-## Project structure
+## Development setup
 
+Follow **Prerequisites and installation** first. `requirements.txt` holds the development tools
+(`pytest`, `pytest-cov`, `httpx`) as well as the runtime packages, so that one install is all a
+contributor needs. Every command below runs from `backend/` with the virtual environment active.
+
+### Run the server with auto-reload
+
+```bash
+uvicorn app.api:app --reload
 ```
-.
-├── README.md                 # You are here
-├── CLAUDE.md                 # Working protocol for this repository
-├── config.yaml
-│
-├── backend/
-│   ├── app/
-│   │   ├── api.py            # FastAPI routes — every endpoint lives here
-│   │   ├── models.py         # Pydantic models and request/response bodies
-│   │   ├── storage.py        # In-memory storage, one module-level instance
-│   │   └── utils.py          # Sorting, filtering and search helpers
-│   ├── tests/
-│   │   ├── conftest.py       # Fixtures; storage is cleared around every test
-│   │   └── test_api.py
-│   ├── main.py               # Original entry point — does not work, see Known issues
-│   └── requirements.txt
-│
-├── docs/
-│   ├── SYSTEM_MODEL.md       # How the service works, verified against the code
-│   ├── prompt-log.md         # The AI-assisted working log
-│   └── ai-verification-note.md
-│
-├── frontend/                 # Empty — Module 4
-└── specs/                    # Empty — Module 2
+
+`--reload` restarts the server whenever a `.py` file under `backend/` changes. Every restart empties the
+in-memory storage, so data created before an edit is gone after it.
+
+### Run the tests
+
+```bash
+pytest tests/ -v
 ```
+
+All 17 tests in `tests/test_api.py` should pass. They drive the application through FastAPI's
+`TestClient`, so **no server needs to be running**. An autouse fixture in `tests/conftest.py`
+empties storage before and after every test, so no test depends on data another test left behind.
+`conftest.py` also provides `client`, `sample_prompt_data` and `sample_collection_data` fixtures
+for new tests.
+
+### Measure test coverage
+
+```bash
+pytest tests/ --cov=app --cov-report=term-missing
+```
+
+This prints the coverage of each module under `app/`, with the line numbers no test reaches.
 
 ---
 
-## Known issues and limitations
+## Contributing guidelines
 
-- **`python main.py` does not start the server.** It passes the application object to `uvicorn.run`
-  together with `reload=True`, which uvicorn accepts only for an application given as an import string.
-  It prints `WARNING: You must pass the application as an import string to enable 'reload' or
-  'workers'.` and exits without binding a port — on every version tested, pinned and current. The file
-  is left as it stands because changing it was outside this module's scope; use
-  `uvicorn app.api:app --reload` instead. The test suite cannot catch this, since it drives the app
-  through `TestClient` and never runs `main.py`.
-- **The supported Python range is undeclared and has an upper bound.** There is no `pyproject.toml`,
-  no `python_requires` and no lock file. `pip install -r requirements.txt` fails on Python 3.13 and
-  succeeds on 3.12.
-- **Storage is in memory.** Restarting the server empties it. There is no persistence, no migration
-  path and no backup.
-- **Single process only.** The store is a plain dictionary on one module-level instance, so running
-  more than one worker gives each worker its own, silently diverging data.
-- **No authentication or authorisation.** Every endpoint is open, and CORS is configured to allow all
-  origins.
-- **No concurrency primitive.** Storage offers nothing to serialise concurrent writes; two overlapping
-  updates to the same prompt can interleave.
-- **Timestamps are naive UTC.** `created_at` and `updated_at` carry no timezone, and the underlying
-  `datetime.utcnow()` is deprecated in recent Python versions — the test run prints deprecation
-  warnings because of it.
-- **`test_delete_prompt` asserts a loose status code** (`404` or `500`), so it would still pass if the
-  404 behaviour regressed.
-- **Dependencies are pinned but unverified.** `requirements.txt` pins six packages; Starlette is used
-  directly by the CORS middleware import and is not declared, and there is no lock file.
-
----
-
-## Roadmap
-
-- **Module 1 — fix the backend.** ✅ Four bugs fixed, `PATCH /prompts/{id}` added, the codebase
-  documented in `docs/SYSTEM_MODEL.md`.
-- **Module 2 — documentation and specs.** Feature specifications under `specs/`, coding standards.
-- **Module 3 — production readiness.** Broader test coverage, CI/CD, Docker.
-- **Module 4 — frontend.** A React client under `frontend/`.
+1. **Report a bug or propose a change** by opening an issue on the GitHub repository. Say what you
+   expected, what happened, and the request that shows it.
+2. **Branch from `main`** for your change. Never commit to `main` directly.
+3. **Keep the docs true to the code.** If your change alters behaviour, update this README, the
+   docstrings and the API reference in the same branch.
+4. **Run the tests before you push.** `pytest tests/ -v` must pass in full; see *Development setup*.
+5. **Write commits the way the history is written:**
+   - an imperative subject of **50 characters or fewer**, naming the change;
+   - a body of **at most two sentences** saying *why*, not *what*;
+   - **one logical change per commit** — if the message needs an "Also…", it is two commits;
+   - **never squash** — the history is kept as it happened.
+6. **Open a pull request against `main`** on GitHub, describing what changed and how you checked it.

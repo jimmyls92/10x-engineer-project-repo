@@ -16,9 +16,9 @@ work.** It is how a new session resumes without reading everything.
 | | |
 |---|---|
 | **Current module** | **Module 2** — branch `Week-2`. Brief: `brief.txt`, from `Module_2_Project_Spec_Driven_Development.pdf`. |
-| **Current task** | **Not started.** |
-| **Log file to append to** | `docs/prompt-log.md` — not created yet. |
-| **Next entry number** | 1 |
+| **Current task** | **Task 2.1 — Comprehensive README.** Step 2 (restructure under the brief's 7 headings, one heading at a time, reviewed before writing): heading 1 (Project overview and purpose) written; heading 2 (Features list) written; heading 3 (Prerequisites and installation) written; heading 4 (Quick start guide) written; heading 5 (API endpoint summary with examples) written; heading 6 (Development setup) written; heading 7 (Contributing guidelines) written. Sections outside the 7 headings (Project structure, Known issues, Roadmap) deleted. Nothing committed yet. Next: commit, then step 3, check the README on a clean clone. |
+| **Log file to append to** | `docs/prompt-log.md` |
+| **Next entry number** | 15 |
 
 **Open decisions:**
 
