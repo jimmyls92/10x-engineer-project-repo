@@ -17,12 +17,12 @@ work.** It is how a new session resumes without reading everything.
 |---|---|
 | **Current module** | **Module 2** — branch `Week-2`. Brief: `brief.txt`, from `Module_2_Project_Spec_Driven_Development.pdf`. |
 | **Current task** | **Not started.** |
-| **Log file to append to** | *Not decided.* |
-| **Next entry number** | *Not decided.* |
+| **Log file to append to** | `docs/prompt-log.md` — not created yet. |
+| **Next entry number** | 1 |
 
 **Open decisions:**
 
-- **Where this module's prompt log lives**, and whether its entry numbering restarts.
+- *None yet.*
 
 **Known traps:**
 
@@ -58,6 +58,20 @@ cannot print some of the characters used):
 ```
 python -c "import pymupdf,pathlib; d=pymupdf.open('<module PDF>'); pathlib.Path('brief.txt').write_text('\n'.join(p.get_text() for p in d),encoding='utf-8')"
 ```
+
+## Agent instructions live in CLAUDE.md
+
+**This project is carried out with Claude Code, and `CLAUDE.md` is its agent-instructions file** —
+whatever a brief names instead (`.github/copilot-instructions.md`, `.continuerules`, or any other
+tool's file). Adapt the assignment to this; do not create the file the brief names.
+
+- A task that asks for "the agent file" is answered in `CLAUDE.md`, under the brief's own section
+  names.
+- Wherever a brief's evidence, checklist or criterion names the other file, `CLAUDE.md` stands in
+  for it. Say so in the deliverable (e.g. the README or an effect note), so the assessor is not
+  left to infer the substitution.
+- Everything else the brief requires of that file — its content, specificity, and proof that it
+  changed generated output — still applies in full.
 
 ## Section naming
 
@@ -106,15 +120,19 @@ Hard limits:
 
 ### 1. Prompt log is written live, never reconstructed
 
-After **every** user prompt in this repo, append an entry to the current log (named in CURRENT STATE)
-before or alongside doing the work. An entry contains:
+Every module keeps a prompt log, in **one file per module: `docs/prompt-log.md`**. It is not split by
+task; entries are numbered in order from 1 for the whole module.
+
+After **every** user prompt in this repo, append an entry to that file before or alongside doing the
+work. An entry contains:
 
 - **Prompt** — the user's message, verbatim.
 - **What came back** — summary of the response; paste the relevant part.
 - **Why the next prompt changed** — one line. If the output was good enough, say so.
 
-Write entries in the user's first-person voice — he is the one prompting. Never invent a prompt that
-was not actually sent. Never backfill a gap by guessing; if an entry is missing, mark it as missing.
+Write entries in the user's first-person voice — they are the one prompting. Never invent a prompt
+that was not actually sent. Never backfill a gap by guessing; if an entry is missing, mark it as
+missing.
 
 Flag explicitly in the entry whenever an iteration **narrowed context, added a constraint, or
 restructured** the prompt.
@@ -124,17 +142,11 @@ restructured** the prompt.
 Documentation and specs must describe what the code does, not what the AI said it does. Before
 writing any claim about behaviour, confirm it in the source.
 
-### 3. Capture AI mistakes the moment they happen
-
-When a statement turns out to contradict the code, **stop and record it** in the current log entry:
-what was produced, why it was wrong, how it was caught, what was done instead. A syntax error an
-editor would flag does not count; the target is output that *looked right*.
-
-### 4. Never hide a bug
+### 3. Never hide a bug
 
 Catching an exception and discarding it counts as a bug still present. Fixes must address the cause.
 
-### 5. Keep replies short and scannable
+### 4. Keep replies short and scannable
 
 The user asked for this explicitly.
 
@@ -149,7 +161,7 @@ The user asked for this explicitly.
 
 Rule 0b still holds: short does not mean skipping the step, the angles, or the stop.
 
-### 6. Commit messages are graded, and the user approves every one before it is written
+### 5. Commit messages are graded, and the user approves every one before it is written
 
 Meaningful, specific messages; **one logical change per commit**. Commit in small steps and **never
 squash** — the history is process evidence.
