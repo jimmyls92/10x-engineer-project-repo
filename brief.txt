@@ -1,0 +1,183 @@
+AIE 500 — PromptLab  |  Module 2 Project 
+Page 1 of 5 
+Module 2 Project 
+Spec-Driven Development 
+AIE 500 — PromptLab  |  Competency C2, first part 
+Competency 
+C2 — Specification-Driven Development & Automated Quality Engineering 
+Criteria judged in this module 
+C2.1 – C2.3. C2.1 and C2.2 are judged provisionally here and finally at 
+Module 3. 
+What you submit 
+Specification package: documentation, agent configuration and two feature 
+specs 
+Does this complete the 
+competency? 
+No. C2 is completed at Module 3. 
+Attempts 
+Three attempts at this module submission. Attempts are counted per 
+module — needing a second attempt here does not affect any other 
+module. 
+ 
+Scenario 
+The backend works, but nobody can understand it and nobody has planned what comes next. Good 
+documentation and precise specifications are the difference between a project and a product. 
+About “Provisional”. Two criteria here come back marked Provisional — meaning no problems so far, 
+but they get looked at again at the end of Module 3. Your documentation still has to match your code 
+after Module 3's feature work and refactoring. 
+Tasks 
+Task 2.1 — Comprehensive README 
+Replace the basic README with a professional one: 
+□ Project overview and purpose 
+□ Features list 
+□ Prerequisites and installation 
+□ Quick start guide 
+□ API endpoint summary with examples 
+□ Development setup 
+□ Contributing guidelines 
+
+AIE 500 — PromptLab  |  Module 2 Project 
+Page 2 of 5 
+Check it on a clean clone. Missing environment variables and dependencies are the usual failure. 
+Task 2.2 — Docstrings across the codebase 
+Google-style docstrings on every function and class: 
+□ backend/app/models.py — all Pydantic models and fields 
+□ backend/app/api.py — all endpoint functions with Args, Returns, Raises 
+□ backend/app/storage.py — the storage class and all methods 
+□ backend/app/utils.py — all utility functions, with examples where helpful 
+Documented parameters, returns and exceptions must match what the code actually does. A docstring 
+that restates the function name as a sentence does not meet the standard. 
+Task 2.3 — API reference → docs/API_REFERENCE.md 
+□ Every endpoint documented — including the PATCH endpoint you added in Module 1 
+□ curl or fetch request examples for each 
+□ Sample responses 
+□ Error codes and response formats 
+□ Authentication notes (even if “none” for now) 
+Task 2.4 — Custom AI agent 
+Create .github/copilot-instructions.md or .continuerules with: 
+□ Coding standards specific to this project 
+□ Preferred patterns and conventions 
+□ File naming conventions 
+□ Error handling approach 
+□ Testing requirements 
+Also required: docs/agent-effect-note.md — a short note showing one concrete instance where 
+generated output changed because of this file. Show the before and after. Generic best-practice advice 
+that would suit any project, with no evidence it affected anything, does not meet C2.3. 
+Task 2.5 — Feature specifications 
+Two specs in specs/. You will implement one in Module 3 and the other in Module 4, so both need to be 
+genuinely implementable. 
+specs/prompt-versions.md and specs/tagging-system.md must each contain: 
+□ Overview and goals 
+□ User stories with acceptance criteria 
+□ Data model changes needed 
+
+AIE 500 — PromptLab  |  Module 2 Project 
+Page 3 of 5 
+□ API endpoints with request and response shapes 
+□ Error conditions and edge cases — specified, not left implicit 
+Every endpoint needs at least one acceptance criterion you could write a test from directly. “Handles 
+input correctly” is not testable. “Returns 422 with a field-level message when tag is longer than 32 
+characters” is. 
+Time spent here has the highest return in the course. Vague requirements produce vague generated 
+code, and you pay for it in Modules 3 and 4. 
+What You Submit 
+□ Updated README.md, verified on a clean clone 
+□ Docstrings across models.py, api.py, storage.py and utils.py 
+□ docs/API_REFERENCE.md 
+□ .github/copilot-instructions.md or .continuerules 
+□ docs/agent-effect-note.md 
+□ specs/prompt-versions.md 
+□ specs/tagging-system.md 
+□ Your GitHub repository link, a brief summary, and any known issues 
+Verification 
+python -m pydoc backend.app.models    # docstrings visible 
+□ README has all required sections and works on a clean clone 
+□ API reference matches the endpoints that actually exist 
+□ Specs are detailed enough that someone else could implement from them 
+ 
+ 
+
+AIE 500 — PromptLab  |  Module 2 Project 
+Page 4 of 5 
+What This Module Is Judged Against 
+Generated from PromptLab Criterion Set v2.1 (see the PromptLab Grading Rubric). Do not edit here — changes must be made in the 
+rubric and regenerated. 
+These are the exact criteria your assessor works through for this submission. Nothing is hidden and 
+nothing is judged on impression. Read the right-hand column first — if your work matches one of those 
+patterns, the criterion comes back Not Yet. 
+What is checked 
+What earns “Met” 
+Common mistakes to avoid 
+C2.1 — Your specs are 
+specific enough 
+Evidence: specs/prompt-
+versions.md, specs/tagging-
+system.md 
+Provisional until Module 3 
+Each spec has overview and goals, user 
+stories with acceptance criteria, data 
+model changes, API endpoints with request 
+and response shapes, and specified error 
+conditions and edge cases. Every endpoint 
+has at least one acceptance criterion you 
+could write a test from directly. 
+– Requirements that name a feature 
+without describing behaviour. 
+– Specifying the happy path and leaving 
+errors unstated. 
+– Criteria you can't test, like “handles 
+input correctly”. 
+C2.2 — Your docs match 
+your code 
+Evidence: README.md, 
+docstrings in models.py / api.py 
+/ storage.py / utils.py, 
+docs/API_REFERENCE.md 
+Provisional until Module 3 
+Docstrings on every function and class 
+across all four source modules, with 
+parameters, returns and exceptions 
+matching the implementation. API 
+reference documents every endpoint that 
+exists — including PATCH and your Module 
+3 feature — with request examples, sample 
+responses and error formats. README 
+setup steps work on a clean clone. 
+– API reference describing an earlier draft 
+of the spec. 
+– Docs not updated after Module 3's 
+feature work. 
+– Setup steps missing an environment 
+variable or dependency. 
+– Docstrings that restate the function 
+name. 
+C2.3 — Your agent 
+instructions do something 
+Evidence: .github/copilot-
+instructions.md or 
+.continuerules; docs/agent-
+effect-note.md 
+The file states standards specific to 
+PromptLab — its patterns, naming, error 
+handling, testing expectations. The note 
+shows one concrete before-and-after case 
+where generated output changed because 
+of it. 
+– Generic best-practice advice that would 
+suit any project. 
+– No evidence it affected any output. 
+– Standards in the file that your own code 
+contradicts. 
+ 
+ 
+
+AIE 500 — PromptLab  |  Module 2 Project 
+Page 5 of 5 
+Where the Rules Live 
+This file contains the tasks and criteria for this module only. Everything else lives in Getting Started: 
+• Syllabus — grading policy, re-attempt policy, integrity and AI attribution. 
+• Course & Project Guide — how mastery grading works in plain language, and how to do well. 
+• PromptLab Grading Rubric — all 22 criteria across all five modules, if you want to see what's 
+coming. 
+ 
+ 
