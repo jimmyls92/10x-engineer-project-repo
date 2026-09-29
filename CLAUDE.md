@@ -204,6 +204,113 @@ user decide.
 **What the body is for.** The reasoning that leaves no trace in the diff — a claim corrected, a section
 deliberately not written, an option rejected. If only one sentence can be spent, spend it there.
 
+## PromptLab coding standards
+
+**These sections are the project's agent instructions.** Module 2 asks for them in
+`.github/copilot-instructions.md` or `.continuerules`; here `CLAUDE.md` stands in for both. Every
+rule describes the code as it is. Where the code breaks a rule, the place is listed under **Known
+exceptions**. Do not copy those, and do not "fix" them unless a task asks for it.
+
+### Coding standards specific to this project
+
+- **Four modules, one layer each.** `models.py` declares and validates data, `storage.py` keeps it,
+  `api.py` owns HTTP, `utils.py` holds pure helpers. Nothing below `api.py` imports FastAPI or knows
+  about status codes.
+- **Type hints on every parameter.** Storage methods and helpers in `utils.py` also annotate their
+  return type. Endpoints do not, and declare `response_model` in the route decorator instead. Types
+  come from `typing` (`Optional`, `List`, `Dict`), not `X | None` or `list[X]`.
+- **Timestamps come only from `get_current_time()`**, never from `datetime` directly, so every
+  timestamp is naive UTC.
+- **Google-style docstrings on every module, class and function**, with `Args`, `Returns` and `Raises`
+  where they apply. A docstring states what the code does, quirks included, and never just restates
+  the name. Endpoints do not list 422 under `Raises`, because FastAPI rejects the body before the
+  function runs.
+- **Comments explain why, not what.** A decision that would look wrong without context gets a
+  comment above the code.
+
+### Preferred patterns and conventions
+
+- **Model family per resource**: `XBase` holds the client fields and their `Field` constraints;
+  `XCreate`, `XUpdate` (PUT) and `XPatch` are request bodies; `X` is the stored record and adds the
+  server fields. A patch model repeats the base constraints.
+- **The server assigns `id` and timestamps** through `default_factory`. A request body never declares
+  them, and undeclared keys are dropped.
+- **List responses are `{<resources>, total}`** (`PromptList`, `CollectionList`), with `total`
+  counted after filtering. A list of prompts is sorted newest first with `sort_prompts_by_date`.
+- **Replacing a stored prompt builds a new `Prompt`** that copies `existing.id` and
+  `existing.created_at` and refreshes `updated_at`. A change that is not a client edit uses
+  `model_copy(update=...)` and keeps `updated_at`.
+- **PATCH reads which fields were sent with `model_dump(exclude_unset=True)`**, never by testing for
+  `None`: an explicit `null` and an absent key mean different things.
+- **Check an optional id with `is not None`**, not with truthiness.
+- **Helpers in `utils.py` never modify their input**; they return a new list.
+- **Layout**: each module groups its code under banners of the form
+  `# ============== Prompt Endpoints ==============`. A new endpoint goes under its resource's banner.
+  Creation routes declare `status_code=201`; deletion routes declare `status_code=204` and return
+  `None`.
+
+**Known exceptions:** creating and replacing a prompt, and filtering the prompt list, test
+`collection_id` by truthiness, so an empty string is stored unchecked (see Known traps). The stored
+models use the deprecated class-based `Config`.
+
+### File naming conventions
+
+- **Source modules** are lowercase single nouns in `backend/app/`: `models.py`, `storage.py`,
+  `api.py`, `utils.py`. The entry point is `backend/main.py`. A new layer gets a new module; a new
+  resource does not.
+- **Tests** live in `backend/tests/test_<module>.py` (`test_api.py`), with shared fixtures in
+  `backend/tests/conftest.py`.
+- **Names in code**: functions and variables `snake_case`, classes `PascalCase`. Route handlers are
+  `<verb>_<resource>`: `list_prompts`, `get_prompt`, `create_prompt`, `update_prompt` (PUT),
+  `patch_prompt`, `delete_prompt`. Storage methods follow the same verbs (`get_all_prompts`,
+  `get_prompts_by_collection`). Path parameters are `<resource>_id` (`prompt_id`, `collection_id`).
+- **Docs**: references are `UPPER_SNAKE.md` in `docs/` (`API_REFERENCE.md`); notes and logs are
+  `kebab-case.md` (`docs/prompt-log.md`); feature specs are `specs/<feature>.md` in kebab-case.
+
+### Error handling approach
+
+- **Storage never raises for a missing record.** It returns `None` or `False`, and the endpoint
+  decides the status.
+- **Endpoints report errors only by raising `HTTPException`**, which FastAPI sends as
+  `{"detail": "<message>"}`. The message is `"<Resource> not found"`.
+- **Status codes follow what went wrong:**
+
+  | Status | When | Raised by |
+  |---|---|---|
+  | **422** | The body or a query parameter breaks a model constraint | Pydantic, before the endpoint runs |
+  | **404** | The id **in the path** names nothing | The endpoint |
+  | **400** | An id **in the body** names nothing, e.g. a `collection_id` | The endpoint |
+
+- **A filter that matches nothing is not an error.** An unknown id in a **query parameter** gives an
+  empty list with status 200, unlike an unknown id in the path.
+- **Checks run in this order**: body validation (422), then the path lookup (404), then references in
+  the body (400).
+- **Validation belongs in the model**: a `Field` constraint, or a `field_validator` raising
+  `ValueError`, which FastAPI reports as 422. Endpoints do not re-check what the model already
+  enforces.
+- **Never catch an exception to hide it** (Rule 3), and never let a known bad input reach a 500.
+
+### Testing requirements
+
+- **The suite must pass before any commit**: `cd backend` then `pytest tests/ -v`.
+- **Every endpoint, and every bug fix, gets tests for each status it can return**: the success case
+  and every error case.
+- **Tests go through the HTTP API** with the `client` fixture, never by calling storage directly.
+  Storage is cleared before and after every test by the autouse fixture. Payloads come from the
+  `sample_prompt_data` and `sample_collection_data` fixtures.
+- **Tests are grouped by resource** in `TestHealth`, `TestPrompts` and `TestCollections`, and named
+  `test_<verb>_<resource>_<behaviour>` (`test_patch_prompt_not_found`).
+- **Assert one exact status code**, never a set of acceptable ones.
+- **After a change, re-read the record with GET** to prove it was stored, not just echoed.
+- **Compare timestamps as values**, parsed with `datetime.fromisoformat`, never with `time.sleep`:
+  `get_current_time()` resolves to microseconds.
+- **Use `pytest.mark.parametrize`** for the same check over several fields.
+- **Each new test has a docstring** saying what it verifies, with `Args` for its fixtures.
+
+**Known exceptions**, all in tests provided with the course: one accepts either 404 or 500, two use
+`time.sleep`, and most have no docstring or one without `Args`. Leave them as they are unless a task
+asks to change them.
+
 ## Verification command
 
 The provided tests must pass in every module:
