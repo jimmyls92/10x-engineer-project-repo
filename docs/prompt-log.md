@@ -845,3 +845,78 @@ comes next.
 **Why the next prompt changed**
 
 The output was good enough. The next prompt opens step 5.
+
+### Entry 36
+
+**Prompt**
+
+> A and i
+
+**What came back**
+
+Step 5 will list the facts first. `Raises:` lists only the `HTTPException`s an endpoint raises
+itself; the 422 validation errors get one sentence in the module docstring. Claude traced all 11
+endpoints and ran edge cases through FastAPI's `TestClient`.
+
+The main finding: an empty-string `collection_id` is treated inconsistently. POST and PUT accept
+`""` and store it unchecked (201 and 200), because they test truthiness (`api.py:86`, `:122`).
+PATCH looks `""` up and returns 400, because it tests `is not None` (`api.py:172`). This makes the
+existing Module 1 `update_prompt` docstring inaccurate: it promises 400 whenever `collection_id` "is
+given but names no existing collection", and `""` is a counterexample.
+
+Other confirmed facts:
+- duplicate collection names are accepted;
+- `GET /collections` is returned in insertion order, unsorted;
+- `?collection_id=` with an empty value is ignored;
+- `DELETE` returns an empty body;
+- an invalid body gives 422 before the function runs.
+
+Claude asked how to handle the empty-string case.
+
+**Why the next prompt changed**
+
+The facts are listed but not yet confirmed, and the empty-string decision is open.
+
+### Entry 37
+
+**Prompt**
+
+> The lits is right and just follow the recommendation regarding the inconsistency
+
+**What came back**
+
+I confirmed the `api.py` fact list. Claude wrote Google-style docstrings for the 7 undocumented
+endpoints and expanded the module docstring. The module docstring now covers the `{"detail": ...}`
+error body, and the 422 errors FastAPI raises before an endpoint runs. It also corrected the
+existing Module 1 `update_prompt` docstring: 400 applies only to a non-empty unknown
+`collection_id`, and an empty string is stored unchecked. `create_prompt` states the same, and
+notes that PATCH rejects `""`. The inconsistency was added to Known traps in `CLAUDE.md`; the code
+is unchanged.
+
+Checks:
+- `pytest tests/` gives 17 passed;
+- `pydoc app.api`, run from `backend/`, shows 11 `Returns:` sections, one per endpoint;
+- every docstring line is 80 characters or fewer (the one longer line, `api.py:24`, is an existing
+  import);
+- an `ast` scan of all four files finds a module docstring in each and no function or class
+  without a docstring (models 15, api 11, storage 13, utils 5).
+
+**Why the next prompt changed**
+
+`api.py` is written and verified. The next prompt reviews the diff and decides on the commit.
+
+### Entry 38
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude committed `backend/app/api.py`, this log and `CLAUDE.md` (CURRENT STATE and the new Known
+trap) as "Document api.py endpoints in Google style", with the message I had approved. Step 5 is
+closed. Step 6, the final check across the four files, comes next.
+
+**Why the next prompt changed**
+
+The output was good enough. The next prompt opens step 6.

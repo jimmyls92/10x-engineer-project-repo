@@ -1,4 +1,14 @@
-"""FastAPI routes for PromptLab"""
+"""FastAPI routes for PromptLab.
+
+Defines the ``app`` object and every HTTP endpoint. Endpoints read and write
+the shared in-memory ``storage`` and report errors by raising
+``HTTPException``, which FastAPI sends as a JSON body of the form
+``{"detail": "<message>"}``.
+
+A request whose body or query parameters fail validation is rejected by
+FastAPI with status 422 before the endpoint function runs, so no endpoint
+lists 422 under ``Raises``.
+"""
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,6 +45,15 @@ app.add_middleware(
 
 @app.get("/health", response_model=HealthResponse)
 def health_check():
+    """Report that the service is running, and which version it is.
+
+    The endpoint checks nothing beyond being able to answer; it does not
+    touch storage.
+
+    Returns:
+        A ``HealthResponse`` with ``status`` set to ``"healthy"`` and
+        ``version`` set to ``app.__version__``.
+    """
     return HealthResponse(status="healthy", version=__version__)
 
 
@@ -45,6 +64,23 @@ def list_prompts(
     collection_id: Optional[str] = None,
     search: Optional[str] = None
 ):
+    """List prompts, optionally filtered by collection and search text.
+
+    The collection filter is applied first, then the search, and the result
+    is sorted by creation date, newest first. A query parameter that is
+    absent or empty is ignored. An unknown collection_id is not an error;
+    it gives an empty list.
+
+    Args:
+        collection_id: Optional. Keep only the prompts filed in this
+            collection.
+        search: Optional. Keep only the prompts whose title or description
+            contains this text, ignoring case. The prompt content is not
+            searched.
+
+    Returns:
+        A ``PromptList`` holding the matching prompts and their count.
+    """
     prompts = storage.get_all_prompts()
     
     # Filter by collection if specified
@@ -82,6 +118,24 @@ def get_prompt(prompt_id: str):
 
 @app.post("/prompts", response_model=Prompt, status_code=201)
 def create_prompt(prompt_data: PromptCreate):
+    """Create a prompt from the request body and store it.
+
+    The server assigns the id and both timestamps. A non-empty
+    collection_id must name an existing collection. An empty string is not
+    checked and is stored as is, although PATCH rejects the same value with
+    status 400.
+
+    Args:
+        prompt_data: The new prompt's title and content, with an optional
+            description and collection_id.
+
+    Returns:
+        The stored prompt, sent with status 201.
+
+    Raises:
+        HTTPException: With status 400 if collection_id is non-empty but
+            names no existing collection.
+    """
     # Validate collection exists if provided
     if prompt_data.collection_id:
         collection = storage.get_collection(prompt_data.collection_id)
@@ -100,6 +154,8 @@ def update_prompt(prompt_id: str, prompt_data: PromptUpdate):
     body leaves out is reset to its default rather than kept -- omitting
     collection_id unfiles the prompt. The creation timestamp is carried over
     from the stored prompt and the update timestamp is set to the current time.
+    A non-empty collection_id must name an existing collection; an empty string
+    is not checked and is stored as is, although PATCH rejects it with 400.
 
     Args:
         prompt_id: Identifier of the prompt to replace.
@@ -111,7 +167,7 @@ def update_prompt(prompt_id: str, prompt_data: PromptUpdate):
 
     Raises:
         HTTPException: With status 404 if no prompt has that identifier, or
-            status 400 if collection_id is given but names no existing
+            status 400 if collection_id is non-empty but names no existing
             collection.
     """
     existing = storage.get_prompt(prompt_id)
@@ -189,6 +245,17 @@ def patch_prompt(prompt_id: str, prompt_data: PromptPatch):
 
 @app.delete("/prompts/{prompt_id}", status_code=204)
 def delete_prompt(prompt_id: str):
+    """Remove a prompt from storage permanently.
+
+    Args:
+        prompt_id: Identifier of the prompt to delete.
+
+    Returns:
+        None. The route responds with 204 No Content and an empty body.
+
+    Raises:
+        HTTPException: With status 404 if no prompt has that identifier.
+    """
     if not storage.delete_prompt(prompt_id):
         raise HTTPException(status_code=404, detail="Prompt not found")
     return None
@@ -198,12 +265,34 @@ def delete_prompt(prompt_id: str):
 
 @app.get("/collections", response_model=CollectionList)
 def list_collections():
+    """Return every collection, in the order they were created.
+
+    No filter or sorting is applied.
+
+    Returns:
+        A ``CollectionList`` holding every stored collection and their
+        count.
+    """
     collections = storage.get_all_collections()
     return CollectionList(collections=collections, total=len(collections))
 
 
 @app.get("/collections/{collection_id}", response_model=Collection)
 def get_collection(collection_id: str):
+    """Return a single collection by its identifier.
+
+    The collection's prompts are not included; list them with
+    ``GET /prompts?collection_id=<id>``.
+
+    Args:
+        collection_id: Identifier of the collection to return.
+
+    Returns:
+        The stored collection.
+
+    Raises:
+        HTTPException: With status 404 if no collection has that identifier.
+    """
     collection = storage.get_collection(collection_id)
     if not collection:
         raise HTTPException(status_code=404, detail="Collection not found")
@@ -212,6 +301,19 @@ def get_collection(collection_id: str):
 
 @app.post("/collections", response_model=Collection, status_code=201)
 def create_collection(collection_data: CollectionCreate):
+    """Create a collection from the request body and store it.
+
+    The server assigns the id and creation timestamp. Names need not be
+    unique: a second collection with an existing name is created alongside
+    the first.
+
+    Args:
+        collection_data: The new collection's name, with an optional
+            description.
+
+    Returns:
+        The stored collection, sent with status 201.
+    """
     collection = Collection(**collection_data.model_dump())
     return storage.create_collection(collection)
 
