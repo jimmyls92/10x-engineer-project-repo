@@ -30,13 +30,13 @@ work.** It is how a new session resumes without reading everything.
   3's feature) must also go into the README's Features list and API endpoint summary, and get its own
   section in the API reference (curl example, sample response, errors), or C2.2 fails at Module 3.
 - **Two deprecation warnings in `models.py`** (seen in entry 22): the class-based `Config` blocks
-  (`models.py:56`, `:75`) and `datetime.utcnow()` (`models.py:14`). No Module 2 task covers them;
+  (`models.py:158`, `:207`) and `datetime.utcnow()` (`models.py:37`). No Module 2 task covers them;
   docstrings describe them as they are.
 - **`Storage.update_prompt` does not check that `prompt.id` equals `prompt_id`** (entry 30,
-  `storage.py:66`). Unreachable today, since PUT and PATCH copy `existing.id` (`api.py:128`, `:178`);
+  `storage.py:66`). Unreachable today, since PUT and PATCH copy `existing.id` (`api.py:184`, `:235`);
   any new code that replaces a prompt must do the same.
 - **An empty-string `collection_id` is handled inconsistently** (entry 37). POST and PUT store `""`
-  unchecked (`api.py:86`, `:122` test truthiness); PATCH looks it up and returns 400 (`api.py:172`,
+  unchecked (`api.py:140`, `:178` test truthiness); PATCH looks it up and returns 400 (`api.py:229`,
   `is not None`). The docstrings describe it; any spec or doc touching `collection_id` must too.
   A consequence (entry 50): `GET /prompts?collection_id=` ignores the empty value (`api.py:87`), so
   prompts stored with `""` cannot be listed by collection. Stated in the API reference's Known issues.
