@@ -85,8 +85,9 @@ class PromptPatch(BaseModel):
 
     Every field is optional so that a client may omit it. Which fields were
     actually sent is read with ``model_dump(exclude_unset=True)``, not by
-    testing for ``None`` -- that keeps an explicit ``null`` (clear the field)
-    distinct from an absent key (leave the field alone). The validation
+    testing for ``None`` -- that keeps an explicit ``null`` (clear the
+    description, or unfile the prompt) distinct from an absent key (leave the
+    field alone). The validation
     constraints are repeated from ``PromptBase`` so a partial update cannot
     store a value that ``POST`` or ``PUT`` would have rejected.
 
@@ -109,7 +110,24 @@ class PromptPatch(BaseModel):
     @field_validator("title", "content")
     @classmethod
     def reject_null(cls, value, info):
-        # Runs only for keys the body sent, so an omitted field is still left alone.
+        """Refuse an explicit null for ``title`` or ``content``.
+
+        Pydantic runs this only for keys the body carries, so an omitted field
+        is still left alone. It runs while the body is validated, before
+        ``patch_prompt`` looks anything up.
+
+        Args:
+            value: The value sent for the field.
+            info: Validation context; ``info.field_name`` names the field.
+
+        Returns:
+            The value unchanged, when it is not ``None``.
+
+        Raises:
+            ValueError: If the value is ``None``. FastAPI reports it as status
+                422, with ``msg`` "Value error, <field> cannot be null; send a
+                value or omit the field to keep the current one".
+        """
         if value is None:
             raise ValueError(
                 f"{info.field_name} cannot be null; send a value or omit the "

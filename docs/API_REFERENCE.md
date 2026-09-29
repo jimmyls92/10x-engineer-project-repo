@@ -9,7 +9,7 @@ with curl against a local server, and each response shown is the one that came b
 |---|---|
 | **Base URL** | `http://localhost:8000` (start the server from `backend/` with `uvicorn app.api:app --reload`) |
 | **Format** | Request and response bodies are JSON. Send `Content-Type: application/json` with every body. |
-| **Interactive docs** | FastAPI serves Swagger UI at `/docs`, ReDoc at `/redoc` and the schema at `/openapi.json`. The schema lists only the 200/201/204/422 responses, not the 400, 404 and 500 described below. |
+| **Interactive docs** | FastAPI serves Swagger UI at `/docs`, ReDoc at `/redoc` and the schema at `/openapi.json`. The schema lists only the 200/201/204/422 responses, not the 400 and 404 described below. It also shows `title` and `content` on `PATCH` as nullable, although a `null` there is rejected with 422. |
 | **Storage** | In memory (`storage.py:26-27`). Every prompt and collection is lost when the server stops. |
 | **Identifiers** | Server-assigned UUID4 strings, e.g. `"aa90acf0-8cb7-4e1c-a233-c612a8b65681"`. |
 | **Timestamps** | UTC, in ISO 8601 **without a timezone suffix**, e.g. `"2026-09-29T11:40:48.551871"` (`models.py:37`). Read them as UTC. The fraction is left out when the microseconds are 0 (`"2026-09-29T11:40:48"`), so the width is not fixed. |
@@ -43,8 +43,13 @@ says where the problem is (`["body", "<field>"]`, or just `["body"]` when there 
              "input": "aaaa…", "ctx": {"max_length": 200}}]}
 ```
 
+The one custom check, a `null` `title` or `content` on `PATCH`, has `"type": "value_error"`, a `msg`
+that starts with `"Value error, "`, and `"ctx": {"error": {}}`; see
+[PATCH /prompts/{prompt_id}](#patch-promptsprompt_id).
+
 **3. Plain text:** the body is `Internal Server Error` with `Content-Type: text/plain`, not JSON.
-Used for 500. A client that always parses the error body as JSON will fail on it.
+This is what an unhandled server error (500) returns; no request documented on this page produces
+one. A client that always parses the error body as JSON would fail on it.
 
 ### Status codes
 
@@ -57,21 +62,19 @@ Used for 500. A client that always parses the error body as JSON will fail on it
 | **404** | No prompt or collection with that id | `"Prompt not found"` / `"Collection not found"` | every endpoint with an id in the path |
 | **404** | Unknown path | `"Not Found"` | any undefined URL |
 | **405** | Method not allowed on that path | `"Method Not Allowed"` | e.g. `PATCH /collections/{collection_id}` |
-| **422** | The request body fails validation: a missing required field, a string too short or too long, a wrong type, malformed JSON, or no body | list of field errors | every endpoint that takes a body. Query and path parameters are plain strings, so they never cause a 422. |
-| **500** | `PATCH` with `"title": null` or `"content": null`, when no earlier check fails (see [Known issues](#known-issues)) | plain text | `PATCH /prompts/{prompt_id}` |
+| **422** | The request body fails validation: a missing required field, a string too short or too long, a wrong type, malformed JSON, or no body; on `PATCH`, also an explicit `null` for `title` or `content` | list of field errors | every endpoint that takes a body. Query and path parameters are plain strings, so they never cause a 422. |
 
 ### Order of checks
 
 When a request has more than one problem, only the first check that fails is reported:
 
 1. **422**: the body is validated before the endpoint runs. `PUT /prompts/nope` with a body missing
-   `title` returns 422, not 404.
-2. **404**: the prompt in the path is looked up next (`api.py:173`, `:224`).
-3. **400**: the `collection_id` is checked next (`api.py:178`, `:232`). `PUT /prompts/nope` with a
+   `title` returns 422, not 404. On `PATCH`, a `null` `title` or `content` is part of this step:
+   `PATCH /prompts/nope` with `{"title": null}` returns 422, not 404, and
+   `{"title": null, "collection_id": "nope"}` returns 422, not 400.
+2. **404**: the prompt in the path is looked up next (`api.py:173`, `:221`).
+3. **400**: the `collection_id` is checked next (`api.py:178`, `:229`). `PUT /prompts/nope` with a
    valid body and an unknown `collection_id` returns 404, not 400.
-4. **500**: only `PATCH` gets this far with a null `title` or `content`, which fails when the stored
-   prompt is built (`api.py:237`). `PATCH` with `{"title": null, "collection_id": "nope"}` returns
-   400, not 500.
 
 ## Data models
 
@@ -285,7 +288,7 @@ counts, not its value**:
 | key left out | field kept as it is |
 | `"description": null` | description cleared |
 | `"collection_id": null` | prompt unfiled |
-| `"title": null` or `"content": null` | **500**, prompt left unchanged (see [Known issues](#known-issues)) |
+| `"title": null` or `"content": null` | **422**, prompt left unchanged: a title or content cannot be cleared; leave the key out to keep it |
 | `{}` | nothing changes, **`updated_at` included** |
 
 A body with at least one field sets `updated_at` to now; `id` and `created_at` are kept.
@@ -314,8 +317,23 @@ curl -X PATCH http://localhost:8000/prompts/aa90acf0-8cb7-4e1c-a233-c612a8b65681
 |---|---|
 | 404 | No prompt has that id: `{"detail": "Prompt not found"}`. Checked before the collection. |
 | 400 | `collection_id` is present, not null, and names no collection, **including `""`**: `{"detail": "Collection not found"}` |
-| 422 | A field sent as text breaks its constraint, e.g. `"title": ""` gives `"msg": "String should have at least 1 character"` |
-| 500 | `"title": null` or `"content": null`, once the 404 and 400 checks pass. The body is plain text `Internal Server Error`, not JSON. |
+| 422 | A field sent as text breaks its constraint, e.g. `"title": ""` gives `"msg": "String should have at least 1 character"`; or `title` or `content` is `null` (below). Checked before the 404 and 400. |
+
+A `null` `title` (the same holds for `content`):
+
+```bash
+curl -X PATCH http://localhost:8000/prompts/aa90acf0-8cb7-4e1c-a233-c612a8b65681 \
+  -H "Content-Type: application/json" \
+  -d '{"title": null}'
+```
+
+**422 Unprocessable Entity**; the stored prompt is unchanged
+
+```json
+{"detail": [{"type": "value_error", "loc": ["body", "title"],
+             "msg": "Value error, title cannot be null; send a value or omit the field to keep the current one",
+             "input": null, "ctx": {"error": {}}}]}
+```
 
 ### DELETE /prompts/{prompt_id}
 
@@ -415,10 +433,9 @@ curl -X DELETE http://localhost:8000/collections/c4ce1cea-9306-44ac-803f-112795a
 
 ## Known issues
 
-All three are current behaviour, described as the code does it, and are **not fixed**.
+Both are current behaviour, described as the code does it, and are **not fixed**.
 
 | Issue | Where | Effect |
 |---|---|---|
-| **`PATCH` with `"title": null` or `"content": null` returns 500** | `api.py:237` | `PromptPatch` accepts the null, but building the stored `Prompt` then raises an unhandled `ValidationError`. The client gets plain-text `Internal Server Error` instead of a 422; the stored prompt is unchanged. |
-| **An empty `collection_id` is handled inconsistently** | `api.py:140`, `:178`, `:232` | `POST` and `PUT` test truthiness, so `""` is stored without a check. `PATCH` tests `is not None`, so `""` is looked up and rejected with 400. |
+| **An empty `collection_id` is handled inconsistently** | `api.py:140`, `:178`, `:229` | `POST` and `PUT` test truthiness, so `""` is stored without a check. `PATCH` tests `is not None`, so `""` is looked up and rejected with 400. |
 | **A prompt with `collection_id: ""` cannot be listed by collection** | `api.py:87` | `GET /prompts?collection_id=` treats the empty value as absent and returns every prompt, so there is no way to select only the prompts stored with `""`. |

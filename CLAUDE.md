@@ -16,9 +16,9 @@ work.** It is how a new session resumes without reading everything.
 | | |
 |---|---|
 | **Current module** | **Module 2** — branch `Week-2`. Brief: `brief.txt`, from `Module_2_Project_Spec_Driven_Development.pdf`. |
-| **Current task** | **Task 2.3 — API reference → `docs/API_REFERENCE.md`: COMPLETE.** All 11 endpoints, with a curl example, a real sample response and an error table for each; errors, response formats and authentication notes in shared sections. Every example was run against a live server, and a script re-runs them all on a fresh one (11/11). A fresh-context review found no false claims and 6 gaps, all fixed (log entries 42-51). **Next: Task 2.4 — Custom AI agent. Not started.** |
+| **Current task** | **Task 2.3 — API reference → `docs/API_REFERENCE.md`: COMPLETE.** All 11 endpoints, with a curl example, a real sample response and an error table for each; errors, response formats and authentication notes in shared sections. Every example was run against a live server, and a script re-runs them all on a fresh one (11/11). A fresh-context review found no false claims and 6 gaps, all fixed (log entries 42-51). **Then the PATCH-null fix (entries 53-71):** fixed on `main` (`158eb0b`, pushed), merged into `Week-2` (`971a6cc`), and Tasks 2.1-2.3 updated to match after a fresh-context sweep against the brief. **Next: Task 2.4 — Custom AI agent. Not started.** |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 53 |
+| **Next entry number** | 72 |
 
 **Open decisions:**
 
@@ -40,11 +40,11 @@ work.** It is how a new session resumes without reading everything.
   `is not None`). The docstrings describe it; any spec or doc touching `collection_id` must too.
   A consequence (entry 50): `GET /prompts?collection_id=` ignores the empty value (`api.py:87`), so
   prompts stored with `""` cannot be listed by collection. Stated in the API reference's Known issues.
-- **`PATCH /prompts/{id}` with `{"title": null}` or `{"content": null}` returns 500** (entries 39-40).
-  `PromptPatch` accepts the null; building `Prompt(...)` in `patch_prompt` then raises an unhandled
-  `ValidationError`. Documented in the `patch_prompt` and `PromptPatch` docstrings, **not fixed**, by
-  my choice. Also stated in `docs/API_REFERENCE.md` (order of checks, PATCH section, Known issues);
-  a later fix must update both docstrings and those three places.
+- **`PATCH` rejects a null `title` or `content` with 422** (fixed in `158eb0b`, entries 53-71;
+  `reject_null` in `models.py`). It runs while the body is validated, **before** the 404 and 400
+  lookups, so `PATCH /prompts/nope` with `{"title": null}` is 422, not 404. Any doc that lists PATCH
+  errors or the order of checks must say so (README, `API_REFERENCE.md`, the `patch_prompt` and
+  `PromptPatch` docstrings do). `/openapi.json` still shows both fields as nullable.
 
 ---
 

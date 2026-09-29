@@ -22,8 +22,9 @@ later module.
   for good.
 - **Full and partial prompt updates.** `PUT` replaces a prompt in full: every field comes from the
   body, so an optional field that is left out is reset (leaving out `collection_id` unfiles the
-  prompt). `PATCH` changes only the fields the body carries: an explicit `null` clears a field, and
-  a missing key leaves it alone. Both keep `created_at` and refresh `updated_at`, except that a
+  prompt). `PATCH` changes only the fields the body carries: an explicit `null` clears the
+  description or unfiles the prompt, and a missing key leaves a field alone. A title or body cannot
+  be cleared, so `PATCH` refuses a `null` for either with `422`. Both keep `created_at` and refresh `updated_at`, except that a
   `PATCH` with an empty body changes nothing, not even the timestamp.
 - **Collections for grouping prompts.** Create a named collection with an optional description,
   then file a prompt in it by setting `collection_id` on create, `PUT` or `PATCH`. The id must name
@@ -192,7 +193,8 @@ sorts by creation date, newest first; it is not a client-controlled parameter.
 
 **Status codes.** A missing addressed resource is `404`. A body that names a collection which does not
 exist is `400`. A body that breaks a field constraint — an empty title, a title over 200 characters —
-is `422`, produced by validation before the handler runs.
+is `422`, produced by validation before the handler runs. `PATCH` also answers `422` to an explicit
+`null` title or content, before it looks up the prompt.
 
 ---
 
@@ -217,7 +219,7 @@ in-memory storage, so data created before an edit is gone after it.
 pytest tests/ -v
 ```
 
-All 17 tests in `tests/test_api.py` should pass. They drive the application through FastAPI's
+All 19 tests in `tests/test_api.py` should pass. They drive the application through FastAPI's
 `TestClient`, so **no server needs to be running**. An autouse fixture in `tests/conftest.py`
 empties storage before and after every test, so no test depends on data another test left behind.
 `conftest.py` also provides `client`, `sample_prompt_data` and `sample_collection_data` fixtures
