@@ -995,3 +995,297 @@ there. Task 2.3 starts only when I ask for it.
 **Why the next prompt changed**
 
 Task 2.2 is closed. The next prompt opens Task 2.3.
+
+
+### Entry 42
+
+**Prompt**
+
+> start task 2.3
+
+**What came back**
+
+Claude re-read Task 2.3 and criterion C2.2 in `brief.txt`: every endpoint (PATCH included), a curl or
+fetch example for each, sample responses, error codes and formats, and authentication notes. It
+proposed a first step, building the list of endpoints that actually exist, with three ways to do it,
+and stopped for my prompt.
+
+**Why the next prompt changed**
+
+Pending: the next prompt picks how to build the endpoint inventory.
+
+
+### Entry 43
+
+**Prompt**
+
+> go for C
+
+**What came back**
+
+Claude listed the routes two ways and compared them:
+- **FastAPI** (`app.openapi()` and `app.routes`): 11 application routes, plus the 4 that FastAPI adds
+  on its own (`/openapi.json`, `/docs`, `/docs/oauth2-redirect`, `/redoc`).
+- **Source** (the `@app.` decorators in `api.py`): the same 11, at `api.py:46`, `:62`, `:100`, `:119`,
+  `:149`, `:196`, `:250`, `:270`, `:284`, `:306`, `:335`.
+
+The two lists match. The inventory is `GET /health`; `GET` and `POST /prompts`; `GET`, `PUT`, `PATCH`
+and `DELETE /prompts/{prompt_id}`; `GET` and `POST /collections`; `GET` and `DELETE
+/collections/{collection_id}`. The OpenAPI schema declares only the 200/201/204/422 responses, so
+the error codes will have to come from reading the code, not from the schema.
+
+**Why the next prompt changed**
+
+The inventory is settled. The next prompt picks how to capture real requests and responses.
+
+
+### Entry 44
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Claude started the server (`python -m uvicorn app.api:app --port 8000`, from `backend/`) and ran all
+11 happy-path calls with curl in Git Bash, in order: create a collection, then a prompt filed in it,
+read, filter, PUT, PATCH, then delete both. The script and its full output are in the session
+scratchpad (`happy.sh`, `happy.out`), not the repo.
+
+Every call returned the expected status: 200 for reads, PUT and PATCH, 201 for both POSTs, and 204
+with an empty body for both DELETEs. Things seen in the real responses:
+- The timestamps have **no timezone suffix** (`"2026-09-29T11:40:48.551871"`).
+- **PUT and PATCH both move `updated_at`**, and `created_at` stays the same.
+- Both list endpoints return `{"<items>": [...], "total": n}`.
+
+**Why the next prompt changed**
+
+The happy paths are captured. The next prompt picks how to find and capture the error responses.
+
+
+### Entry 45
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Claude listed every `HTTPException` in `api.py` and every `Field` constraint in `models.py`, then
+triggered each error with curl against the running server (`errors.sh`, `errors.out` in the session
+scratchpad). 25 calls, and every status matched the code:
+
+| Status | When | Body |
+|---|---|---|
+| 404 | unknown prompt or collection id, on all 6 routes that take one | `{"detail": "Prompt not found"}` / `"Collection not found"` |
+| 400 | `collection_id` names no collection, on POST, PUT, PATCH; also PATCH with `""` | `{"detail": "Collection not found"}` |
+| 422 | missing field, empty or too-long string, wrong type, malformed JSON, no body | `{"detail": [{type, loc, msg, input, ctx?}]}` |
+| 500 | PATCH with `"title": null` or `"content": null` | plain text `Internal Server Error` |
+| 404 / 405 | unknown path / method not allowed | `{"detail": "Not Found"}` / `"Method Not Allowed"` |
+
+Findings: there are **three error body formats**: `detail` as a string, `detail` as a list, and the
+500's plain text, which is not JSON. When both the prompt and the collection are unknown, PUT
+returns **404, not 400**, because the prompt is looked up first (`api.py:173`).
+
+**Why the next prompt changed**
+
+The error catalogue is complete. The next prompt decides how the document is structured.
+
+
+### Entry 46
+
+**Prompt**
+
+> a
+
+**What came back**
+
+I chose the hybrid layout. Claude turned it into a concrete outline, checked against the source
+(in-memory storage at `storage.py:26-27`, CORS open to every origin at `api.py:36-37`):
+
+1. **Overview**: base URL, JSON only, storage kept in memory and lost on restart, timestamps
+   without a timezone suffix.
+2. **Authentication notes**: none; CORS allows every origin.
+3. **Error codes and response formats**: the three body formats, a status table, and the order of
+   checks (404 before 400).
+4. **Data models**: Prompt, Collection, and the two list wrappers.
+5. **Endpoints**: one section per endpoint (11), each with a request table, a curl example, a sample
+   response and its errors. PATCH's section states the null-title/content 500.
+6. **Known issues**: the PATCH 500 and the inconsistent handling of an empty `collection_id`.
+
+No file was written.
+
+**Why the next prompt changed**
+
+The structure is agreed. The next prompt decides how the document gets written.
+
+
+### Entry 47
+
+**Prompt**
+
+> Do you think Data models is required?
+
+**What came back**
+
+Claude said **no, the brief does not ask for it**: Task 2.3's checklist (`brief.txt:51-55`) is
+endpoints, request examples, sample responses, error codes and formats, and authentication notes.
+It set out the trade-off:
+- **Without it**, each prompt endpoint's body table must repeat the field constraints (lengths,
+  required fields) that explain its 422s, which means POST, PUT and PATCH all carry the same list.
+- **With it**, the constraints live in one place, and each endpoint links to it. That is one place to
+  update when the models change, so less risk of the docs drifting from the code (C2.2).
+
+Claude's recommendation was to keep it, but short: one table per model, plus a line in each
+endpoint pointing to it. The decision stayed with me, and step 5 had not started.
+
+**Why the next prompt changed**
+
+I questioned an outline item before any writing started. The next prompt settles it and picks how to
+write.
+
+
+### Entry 48
+
+**Prompt**
+
+> keep it short, go with B
+
+**What came back**
+
+**I kept Data models, short, and chose to write in two parts, reviewing in between.** Before writing,
+Claude checked three claims live: PUT to an unknown id with an invalid body gives **422, not 404**,
+so validation runs first; a client-sent `id` and `created_at` are ignored; a one-space title is
+accepted.
+
+Claude wrote sections 1-4 of `docs/API_REFERENCE.md`:
+- **Overview**: base URL, JSON, the interactive docs (noting the schema leaves out 400/404/500),
+  in-memory storage, UUID4 ids, timestamps without a timezone suffix.
+- **Authentication notes**: none; CORS open to every origin (`api.py:35-41`).
+- **Error codes and response formats**: the three body formats, a status table, and the order of
+  checks, **422 → 404 → 400**.
+- **Data models**: Prompt, Collection and the list wrappers, one table each.
+
+Sections 5 (Endpoints) and 6 (Known issues) were not written yet. Nothing was committed.
+
+**Why the next prompt changed**
+
+The shared sections are written. The next prompt is my review of them before the endpoint sections
+follow the same conventions.
+
+
+### Entry 49
+
+**Prompt**
+
+> go ahead with sections 5 and 6
+
+**What came back**
+
+I gave no changes to sections 1-4. Before writing, Claude checked five more behaviours live and in
+`utils.py`:
+- `search` matches title and description, ignoring case, but **not content** (`utils.py:63-64`).
+- An unknown `collection_id` filter returns an empty list.
+- `PATCH {}` leaves `updated_at` alone.
+- `PATCH {"collection_id": null}` unfiles the prompt.
+- A PATCH that fails with 500 leaves the stored prompt unchanged.
+
+Claude then appended to `docs/API_REFERENCE.md`:
+- **Endpoints**: a summary table of the 11, then one section each, with a curl example, the real
+  response from the step 2 run, and an error table. PATCH has a table of how a key's presence or
+  null value is handled. There is a note on running curl on Windows.
+- **Known issues**: the PATCH null 500, and the empty `collection_id` inconsistency, both cited to
+  `api.py`.
+
+The file is 315 lines, UTF-8 without BOM. Nothing was committed.
+
+**Why the next prompt changed**
+
+The document is fully drafted. The next prompt picks how to verify it against the code before
+committing.
+
+
+### Entry 50
+
+**Prompt**
+
+> go for C
+
+**What came back**
+
+**Part A: run the document's own examples.** Claude restarted the server with empty storage. The
+first start failed because it was launched from the repo root, not `backend/`, which is the
+directory the Overview names. A script (`check_doc.py`, session scratchpad) then pulled every curl
+command out of `docs/API_REFERENCE.md`, swapped in the ids the fresh server assigned, ran them in
+dependency order, and compared each status and body with the document (ids and timestamps
+excepted). **11/11 passed.**
+
+**Part B: fresh-context review.** A subagent with no memory of this session checked every claim
+against the source. It found **no false claims**, confirmed every `file.py:line` citation, and
+confirmed all Task 2.3 checklist items are covered. It reported:
+
+| # | Finding | Severity |
+|---|---|---|
+| 1 | `PATCH {"title": null, "collection_id": "<unknown>"}` returns **400, not 500**: the collection is checked (`api.py:232`) before the failing `Prompt(...)` (`api.py:237`). The order of checks stops at 400. | Misleading |
+| 5 | A prompt stored with `collection_id: ""` cannot be listed by collection: `?collection_id=` is ignored (`api.py:87`) and returns every prompt. Not in Known issues. | Omission |
+| 2 | "Body **or query**" fails validation: no query or path parameter can fail, as all are strings. | Nit |
+| 3 | A missing body gives `loc: ["body"]`, not `["body", "<field>"]`. | Nit |
+| 4 | The Prompt table says only a non-empty `collection_id` is checked; PATCH also checks `""`. | Nit |
+| 6 | Timestamps drop the fraction when microseconds are 0, so they are not fixed-width. | Nit |
+
+Claude reproduced findings 1 and 5 live: 400 and `total: 2` respectively. Nothing was edited.
+
+**Why the next prompt changed**
+
+The checks found gaps, not errors. The next prompt decides which findings to fix before the commit.
+
+
+### Entry 51
+
+**Prompt**
+
+> go with B
+
+**What came back**
+
+**I chose to fix all six review findings.** Claude first confirmed finding 6 in Python: a timestamp
+with 0 microseconds serialises as `"2026-09-29T11:40:48"`. It then edited `docs/API_REFERENCE.md`:
+1. **Order of checks** gains a 4th step, 500, with the example `{"title": null, "collection_id":
+   "nope"}` → 400. The status table and the PATCH error table say the 500 only comes once the
+   earlier checks pass.
+2. **Known issues** gains a third row: a prompt stored with `collection_id: ""` cannot be listed by
+   collection (`api.py:87`). The intro now says "All three".
+3. The 422 row says "the request body" and notes that query and path parameters never cause a 422.
+4. The 422 format gives `loc: ["body"]` for a missing body.
+5. The Prompt table says `""` is accepted by POST and PUT but rejected by PATCH.
+6. Timestamps: the fraction is dropped when the microseconds are 0.
+
+Re-checks: the document's curl examples 11/11; `pytest tests/` 17 passed. Nothing was committed.
+
+**Why the next prompt changed**
+
+The document is verified. The next prompt approves the CURRENT STATE update and the commit
+message.
+
+
+### Entry 52
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude updated CURRENT STATE in `CLAUDE.md`: Task 2.3 is complete and Task 2.4 is next, not started.
+In Known traps:
+- The README trap now also covers `API_REFERENCE.md`: a Module 3 endpoint needs its own section there.
+- The PATCH-500 trap lists the three places the reference states it.
+- The empty-`collection_id` trap gains the listing consequence.
+
+Claude committed `docs/API_REFERENCE.md`, this log and `CLAUDE.md` as "Add API reference checked
+against a live server", with the message I had approved. Task 2.3 is closed. Claude stopped there;
+Task 2.4 starts only when I ask for it.
+
+**Why the next prompt changed**
+
+Task 2.3 is closed. The next prompt opens Task 2.4.

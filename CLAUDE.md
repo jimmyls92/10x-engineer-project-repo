@@ -16,9 +16,9 @@ work.** It is how a new session resumes without reading everything.
 | | |
 |---|---|
 | **Current module** | **Module 2** — branch `Week-2`. Brief: `brief.txt`, from `Module_2_Project_Spec_Driven_Development.pdf`. |
-| **Current task** | **Task 2.2 — Docstrings across the codebase: COMPLETE.** Google-style docstrings on every function and class in `models.py`, `api.py`, `storage.py`, `utils.py`, each checked against the code; a fresh-context review found 3 issues, all handled (log entries 39-41). Commits `fa62caf`, `3c440ec`, `ed189c9`, `6f4e8eb`, and the review corrections. **Next: Task 2.3 — API reference → `docs/API_REFERENCE.md`. Not started.** |
+| **Current task** | **Task 2.3 — API reference → `docs/API_REFERENCE.md`: COMPLETE.** All 11 endpoints, with a curl example, a real sample response and an error table for each; errors, response formats and authentication notes in shared sections. Every example was run against a live server, and a script re-runs them all on a fresh one (11/11). A fresh-context review found no false claims and 6 gaps, all fixed (log entries 42-51). **Next: Task 2.4 — Custom AI agent. Not started.** |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 42 |
+| **Next entry number** | 53 |
 
 **Open decisions:**
 
@@ -26,8 +26,9 @@ work.** It is how a new session resumes without reading everything.
 
 **Known traps:**
 
-- **`README.md` lists every endpoint and feature.** Any endpoint added later (Module 3's feature) must
-  also go into its Features list and API endpoint summary, or C2.2 fails at Module 3.
+- **`README.md` and `docs/API_REFERENCE.md` list every endpoint.** Any endpoint added later (Module
+  3's feature) must also go into the README's Features list and API endpoint summary, and get its own
+  section in the API reference (curl example, sample response, errors), or C2.2 fails at Module 3.
 - **Two deprecation warnings in `models.py`** (seen in entry 22): the class-based `Config` blocks
   (`models.py:56`, `:75`) and `datetime.utcnow()` (`models.py:14`). No Module 2 task covers them;
   docstrings describe them as they are.
@@ -37,10 +38,13 @@ work.** It is how a new session resumes without reading everything.
 - **An empty-string `collection_id` is handled inconsistently** (entry 37). POST and PUT store `""`
   unchecked (`api.py:86`, `:122` test truthiness); PATCH looks it up and returns 400 (`api.py:172`,
   `is not None`). The docstrings describe it; any spec or doc touching `collection_id` must too.
+  A consequence (entry 50): `GET /prompts?collection_id=` ignores the empty value (`api.py:87`), so
+  prompts stored with `""` cannot be listed by collection. Stated in the API reference's Known issues.
 - **`PATCH /prompts/{id}` with `{"title": null}` or `{"content": null}` returns 500** (entries 39-40).
   `PromptPatch` accepts the null; building `Prompt(...)` in `patch_prompt` then raises an unhandled
   `ValidationError`. Documented in the `patch_prompt` and `PromptPatch` docstrings, **not fixed**, by
-  my choice. Task 2.3's API reference must state it, and a later fix must update both docstrings.
+  my choice. Also stated in `docs/API_REFERENCE.md` (order of checks, PATCH section, Known issues);
+  a later fix must update both docstrings and those three places.
 
 ---
 
