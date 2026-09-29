@@ -8,7 +8,7 @@ rejected with status 422.
 
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from uuid import uuid4
 
 
@@ -91,11 +91,10 @@ class PromptPatch(BaseModel):
     store a value that ``POST`` or ``PUT`` would have rejected.
 
     Attributes:
-        title: Optional. If sent as text, between 1 and 200 characters.
-            An explicit ``null`` is accepted by this model, although a
-            prompt cannot store it; ``PATCH`` then fails with status 500.
-        content: Optional. If sent as text, at least 1 character. An
-            explicit ``null`` is accepted here and fails the same way.
+        title: Optional. If sent, between 1 and 200 characters. An explicit
+            ``null`` is rejected with status 422, since a prompt cannot store it.
+        content: Optional. If sent, at least 1 character. An explicit ``null``
+            is rejected the same way.
         description: Optional. If sent, at most 500 characters, or ``null``
             to clear it.
         collection_id: Optional. If sent, a collection identifier, or
@@ -106,6 +105,17 @@ class PromptPatch(BaseModel):
     content: Optional[str] = Field(None, min_length=1)
     description: Optional[str] = Field(None, max_length=500)
     collection_id: Optional[str] = None
+
+    @field_validator("title", "content")
+    @classmethod
+    def reject_null(cls, value, info):
+        # Runs only for keys the body sent, so an omitted field is still left alone.
+        if value is None:
+            raise ValueError(
+                f"{info.field_name} cannot be null; send a value or omit the "
+                "field to keep the current one"
+            )
+        return value
 
 
 class Prompt(PromptBase):

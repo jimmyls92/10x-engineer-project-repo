@@ -197,6 +197,31 @@ class TestPrompts:
         response = client.patch("/prompts/nonexistent-id", json={"title": "New title"})
         assert response.status_code == 404
 
+    @pytest.mark.parametrize("field", ["title", "content"])
+    def test_patch_prompt_rejects_null_required_field(
+        self, client: TestClient, sample_prompt_data, field
+    ):
+        """Verify PATCH rejects a null title or content with 422, storing nothing.
+
+        A prompt cannot hold a null in either field, so the body must be refused
+        before the merge rather than failing inside it as a 500.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            field: The required field sent as null.
+        """
+        created = client.post("/prompts", json=sample_prompt_data).json()
+
+        response = client.patch(f"/prompts/{created['id']}", json={field: None})
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["body", field]
+        assert f"{field} cannot be null" in error["msg"]
+
+        # The rejected body left the stored prompt exactly as it was.
+        assert client.get(f"/prompts/{created['id']}").json() == created
+
 
 class TestCollections:
     """Tests for collection endpoints."""
