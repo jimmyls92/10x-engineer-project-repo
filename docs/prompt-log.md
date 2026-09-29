@@ -1794,4 +1794,451 @@ delete-test origin" and ran `git push origin Week-2`. The push output is in the 
 
 **Why the next prompt changed**
 
+Tasks 2.1-2.3 were committed and pushed, so the next prompt starts Task 2.4 in a fresh session.
+
+
+## Task 2.4 — Custom AI agent
+
+### Entry 76
+
+**Prompt**
+
+> go with task 2.4
+
+(Sent twice. After the first one, Claude read the Task 2.4 lines of `brief.txt` and then tried a shell
+command to read the end of this log. I rejected that command and sent the same prompt again.)
+
+**What came back**
+
+Claude read the Task 2.4 section and criterion C2.3 in `brief.txt:56-65`, `:154-170`. Following the
+protocol, `CLAUDE.md` is the agent file (in place of `.github/copilot-instructions.md`). It must hold
+the five sections the brief names, plus `docs/agent-effect-note.md` with a real before and after.
+C2.3 fails on generic advice, on no evidence of effect, and on rules the code itself breaks.
+
+Claude proposed five steps: audit the conventions, plan the before/after test, write the sections,
+run the test and write the note, then log, update and commit. For Step 1 it gave three options:
+**A** audit the code first, **B** write rules from general FastAPI practice, **C** design the test
+first. It recommended A, the only option that makes the rules specific and true to the code. The
+"before" sample can still be captured before `CLAUDE.md` changes.
+
+**Why the next prompt changed**
+
+I agreed with A, so the next prompt narrows Step 1 to auditing the source and tests.
+
+
+### Entry 77
+
+**Prompt**
+
+> Go with A — audit the source files and tests for conventions
+
+**What came back**
+
+Claude read `backend/app/api.py`, `models.py`, `storage.py`, `utils.py`, `backend/main.py`,
+`backend/tests/test_api.py` and `conftest.py`, and reported the conventions the code follows, each
+with a file and line, plus the places where the code is **inconsistent with itself**. A rule written
+over one of those places would be broken by the code, which is one of C2.3's Not Yet patterns. The
+full table is in the chat reply.
+
+**Why the next prompt changed**
+
+The audit was good enough. Before planning the test, I remembered that `CLAUDE.md` already holds
+rules, so the next prompt asks Claude to check them first. **Added a constraint**: the test must
+account for the existing file.
+
+
+### Entry 78
+
+**Prompt**
+
+> ok, lets do taht, but one thing first. I am afraid I already have some rules in my CLAUDE.md from
+> the beggining, take a look to make sure we carefully plan our test
+
+**What came back**
+
+Claude checked `CLAUDE.md` and looked for any other instruction source (no memory files, no
+`CLAUDE.local.md`). It found that `CLAUDE.md` already contains rules that bear on generated code,
+and that every Claude Code session and subagent in this repo loads it. So there is no clean "before"
+unless the test controls for it. The details are in the chat reply.
+
+**Why the next prompt changed**
+
+The check changed the plan, so the next prompt asks for Step 2 options. **Added a constraint**: the
+existing coding rules may be erased, but only if that is needed.
+
+
+### Entry 79
+
+**Prompt**
+
+> yes, lets look for options and, only if needed, we could arase the existing coding rules to ease
+> the production of the note
+
+**What came back**
+
+Claude gave three options for Step 2, the controlled before/after: **A** keep the current
+`CLAUDE.md` as the baseline and change only the new sections; **B** use no agent file at all as the
+baseline; **C** erase the existing coding rules first, as I suggested. It recommended A, which
+isolates the new sections without erasing anything. The options table is in the chat reply.
+
+**Why the next prompt changed**
+
+I chose A, so no existing rule is erased. The next prompt approves it.
+
+
+### Entry 80
+
+**Prompt**
+
+> go for A
+
+**What came back**
+
+Claude recorded the method: the same task prompt is sent to fresh `claude -p` runs in throwaway
+worktrees, two runs per side, and the only difference between sides is the five new sections.
+Because the baseline worktree can be checked out at the commit before the sections land, the
+"before" runs need not happen first. Claude then set up the next decision, the test task itself,
+with three options. It recommended a new endpoint `GET /collections/{collection_id}/prompts` with
+its tests.
+
+**Why the next prompt changed**
+
+I agreed with the recommendation. The next prompt picks it.
+
+
+### Entry 81
+
+**Prompt**
+
+> go for A
+
+**What came back**
+
+Claude recorded the test task: `GET /collections/{collection_id}/prompts` with its tests. The next
+step is the exact prompt both runs receive, and **I write it**, so Claude listed what it must handle
+instead of drafting it. The baseline `CLAUDE.md` would make a run stop and ask (Rule 0b), refuse
+work outside the task in CURRENT STATE (Rule 0), and write log entries or commits (Rules 1, 5). Claude
+also gave two options for capturing the output: the run edits files and we keep the `git diff` of
+`backend/`, or the run prints the code only. It recommended the diff.
+
+**Why the next prompt changed**
+
+I picked the capture method first. The task prompt itself comes next.
+
+
+### Entry 82
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Claude recorded the capture method: each run edits files in its worktree, and we keep
+`git diff -- backend/`. It asked for the task prompt, which I have not sent yet.
+
+**Why the next prompt changed**
+
+Rather than write the task prompt myself, I asked Claude to propose one.
+
+
+### Entry 83
+
+**Prompt**
+
+> Propose one prompt following the rules
+
+**What came back**
+
+Claude drafted the task prompt, and said that doing so skips the part where I phrase it myself. The
+draft asks for the endpoint and its tests by behaviour only. It states that the work is a standalone
+exercise, and forbids stopping to ask, log entries, `CLAUDE.md` edits and commits. It also asks the
+run to execute the test suite. Claude left undefined what an unknown collection returns, since that
+is a choice the new error-handling rules should decide. The draft is in the chat reply.
+
+**Why the next prompt changed**
+
+The draft met every point on the checklist, so I approved it as written.
+
+
+### Entry 84
+
+**Prompt**
+
+> aprove
+
+**What came back**
+
+Claude recorded the approved task prompt. Both runs receive it verbatim:
+
+```
+This is a standalone exercise, separate from the course tasks in CURRENT STATE.
+Write the code directly, without proposing steps or asking for permission.
+Do not add entries to docs/prompt-log.md, do not edit CLAUDE.md, and do not commit.
+
+Add an endpoint to the PromptLab API, GET /collections/{collection_id}/prompts,
+that returns the prompts filed in the given collection. Add tests for it in
+backend/tests/test_api.py, then run the suite from backend/ with pytest tests/ -v.
+```
+
+Claude then opened Step 3, writing the five sections. It proposed putting them in a new section of
+`CLAUDE.md`, headed with the brief's own words. The first decision it raised was how to handle the
+four places where the code disagrees with itself (entry 77). Its options: **A** state the preferred
+convention and name the older lines as known exceptions; **B** leave those topics out; **C** fix the
+code first. It recommended A.
+
+**Why the next prompt changed**
+
+I agreed with the recommendation, and the next prompt tells Claude to write the sections on that basis.
+
+
+### Entry 85
+
+**Prompt**
+
+> go for A
+
+**What came back**
+
+Claude wrote a new section in `CLAUDE.md`, **PromptLab coding standards**, before *Verification
+command*. It has the brief's five headings: *Coding standards specific to this project*, *Preferred
+patterns and conventions*, *File naming conventions*, *Error handling approach* and *Testing
+requirements*. It opens with a note that `CLAUDE.md` stands in for `.github/copilot-instructions.md`.
+Every rule cites the lines it rests on. The inconsistencies from entry 77 are listed as **Known
+exceptions**, as chosen in A.
+
+While re-checking its citations, Claude caught one wrong range of its own before reporting (test
+docstrings, corrected to `test_api.py:16-103`, `:139`, `:229-255`). It also found that several line
+numbers in the existing **Known traps** are stale: they predate the Task 2.2 docstrings. Claude
+reported them without changing them.
+
+**Why the next prompt changed**
+
+The stale Known traps made me doubt that line citations belong in an agent file at all, so the next
+prompt questions them.
+
+
+### Entry 86
+
+**Prompt**
+
+> why you cite the lines where the rules lies on? do you think this is needed? I think its noise and
+> it will be deprecated at some point
+
+**What came back**
+
+Claude explained why it had added the citations: to prove each rule was taken from the code (Rule 2)
+and to let the assessor check that no rule contradicts the code (C2.3). It agreed with my point,
+though. The stale Known traps show that line numbers go out of date with any edit, and a wrong line
+number misleads the agent. It gave three options: **A** replace line numbers with symbol names
+(`patch_prompt`, `PromptPatch`); **B** remove all references; **C** keep them. It recommended A.
+Nothing was edited.
+
+**Why the next prompt changed**
+
+I chose B over the recommendation, so that the file does not have to be maintained as the code moves.
+**Added a constraint**: no references in the agent sections.
+
+
+### Entry 87
+
+**Prompt**
+
+> I would remove the references (B)
+
+**What came back**
+
+Claude rewrote the **PromptLab coding standards** section of `CLAUDE.md` without any `file:line`
+citation, and checked the diff: the section is purely additive and contains no line numbers. The
+**Known exceptions** now describe the code in words ("one provided test accepts either 404 or 500")
+instead of naming tests or lines. Names that are part of a rule itself stay, such as
+`get_current_time()`, `exclude_unset` and the example test name in the naming convention. The
+Known traps in CURRENT STATE were left unchanged, since that question is still open.
+
+**Why the next prompt changed**
+
+The section was right. The next prompt settles the open Known traps question and moves on to Step 4.
+
+
+### Entry 88
+
+**Prompt**
+
+> update current state lines and fo for step 4
+
+**What came back**
+
+Two steps in one prompt, as I asked. **(1)** Claude updated the stale line numbers in CURRENT
+STATE's Known traps to the current code: `models.py:158`, `:207`, `:37`; `api.py:184`, `:235`;
+`api.py:140`, `:178`, `:229`. It also marked Task 2.4 as in progress and set the next entry number.
+**(2)** For Step 4, Claude confirmed that `claude` 2.1.284 is installed and that there is no
+user-level `CLAUDE.md`, which would otherwise reach both sides. It saved the task prompt from entry
+84 to a file and created four detached worktrees at `ea2182a` in its scratchpad. In the two "after"
+ones it added **only** the new section; `git diff --stat` shows `CLAUDE.md | 107 +` and nothing else.
+That means the Known traps edit in (1) cannot leak into the comparison. It then launched the four
+`claude -p` runs in parallel, each started in its own worktree with edits and shell commands allowed,
+saving each run's output and its `git diff -- backend/`.
+
+**Why the next prompt changed**
+
+The runs finished. I rejected Claude's attempt to read the background task's own output file, and
+told it to continue.
+
+
+### Entry 89
+
+**Prompt**
+
+> continue
+
+**What came back**
+
+Claude read the four run reports and diffs, saved in its scratchpad as `run-*.txt` and
+`diff-*.patch`. All four runs passed the suite (23 or 24 tests), and all four added
+`list_collection_prompts` returning a `PromptList`, newest first, with **404 for an unknown
+collection**. The comparison, rule by rule:
+
+| Rule in the new section | before-1 | before-2 | after-1 | after-2 |
+|---|---|---|---|---|
+| Timestamps compared with `datetime.fromisoformat`, never `time.sleep` | neither | **`time.sleep(0.01)`** | fromisoformat | fromisoformat |
+| Assert one exact status (the DELETE in the setup) | not checked | not checked | **`== 204`** | **`== 204`** |
+| Tests in `TestCollections`, named `test_<verb>_<resource>_<behaviour>` | yes | **new class `TestCollectionPrompts`, `test_empty_collection`** | yes | yes |
+| Optional value checked with `is not None` / `is None` | truthiness | truthiness | **`is None`** | truthiness |
+| Why-comment above a surprising decision | no | no | no | **yes** |
+| 404 for an unknown id in the path | yes | yes | yes | yes |
+
+Claude pointed out two things that go against the result. The **404 choice did not change**:
+both baselines already copied it from the existing path-lookup endpoints, so the error-handling
+section shows no effect in this test. And **after-1 introduced a formatting slip**, a missing space
+in `@app.post("/collections",response_model=...)`, that the baseline runs did not.
+
+**Why the next prompt changed**
+
+The results were mixed. Rather than pick one example, the next prompt proposes reporting all of them
+and marking which were consistent.
+
+
+### Entry 90
+
+**Prompt**
+
+> I think we could report the whole table and then underline what things where consistent and which
+> where not
+
+**What came back**
+
+Claude agreed that the full table, with the null results and the regression kept in, is the honest
+report. It noted one gap: C2.3 asks for "one concrete instance ... Show the before and after", and a
+table summarises rather than shows code. It gave three options: **A** the table only; **B** the table
+plus one worked instance with the real code from both sides; **C** one instance only. It recommended
+B, and suggested the timestamp check (before-2's `time.sleep` against after's `fromisoformat`) as the
+instance. Nothing was written.
+
+**Why the next prompt changed**
+
+B covers both the honest table and the brief's literal "show the before and after", so I approved it.
+
+
+### Entry 91
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude wrote `docs/agent-effect-note.md`. It opens with the `CLAUDE.md` substitution, then gives the
+method (the prompt verbatim, four `claude -p` runs at `ea2182a`, only the new section differing), then
+the whole comparison table with a result per rule: three **consistent**, two **not consistent**, two
+**no effect**. The two points against the section follow: the 404 choice didn't change, and after-1
+added a formatting slip. Last comes the worked instance, the timestamp check: before-2's
+`time.sleep(0.01)` test, and the `datetime.fromisoformat` checks from after-1 and after-2, quoted
+from the diffs. While checking the quotes, Claude corrected one cell of its own: before-1's main test
+lacks the `_<behaviour>` suffix.
+
+The raw run outputs and diffs are still only in Claude's session scratchpad, which is not kept.
+Claude gave two options: **A** commit them under `docs/agent-effect-runs/`; **B** leave them out. It
+recommended A.
+
+**Why the next prompt changed**
+
+I wanted the note's claims to be checkable, so I chose A.
+
+
+### Entry 92
+
+**Prompt**
+
+> go for A
+
+**What came back**
+
+Claude copied the four run reports and four diffs into `docs/agent-effect-runs/`. PowerShell had
+saved them as UTF-16, so Claude converted them to UTF-8 with LF line endings and left the content
+unchanged. It checked that every patch applies to the current `backend/` (`git apply --check`: 4 of
+4). It also found three arrows in `run-after-1.txt` that the Windows console had garbled while
+capturing, and left them as captured rather than editing the evidence. The note now links the folder
+and states both facts.
+
+**Why the next prompt changed**
+
+The evidence was saved, so I let Claude start the wrap-up with 5a, removing the worktrees.
+
+
+### Entry 93
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Before deleting anything, Claude checked each of the four worktrees. All four were still at
+`ea2182a` with no commits. The only changes were `backend/app/api.py` and
+`backend/tests/test_api.py`, plus the added section in `CLAUDE.md` in the two "after" worktrees. No
+run had touched the prompt log. Every change was already saved in `docs/agent-effect-runs/`, so
+Claude removed the four worktrees (`git worktree remove --force`, then `prune`). `git worktree list`
+now shows only the main one.
+
+**Why the next prompt changed**
+
+The cleanup was right, so the next prompt approves 5b.
+
+
+### Entry 94
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude marked Task 2.4 **COMPLETE** in CURRENT STATE. The entry records where the agent file lives,
+how the before/after was run, and the result: 3 rules changed the output consistently, 2 did not,
+2 had no effect, plus one formatting slip. It also names the worked instance, points to the evidence
+folder, and gives the next task, 2.5, as not started. The next entry number is set to 95.
+
+Claude ran the suite (19 passed) and proposed four commits, in order: the standards section, the
+Known traps line numbers, the note with its runs, and the log with CURRENT STATE. It showed each
+message and stopped.
+
+**Why the next prompt changed**
+
+The messages and the split were fine, so the next prompt approves them.
+
+
+### Entry 95
+
+**Prompt**
+
+> approve
+
+**What came back**
+
+Claude wrote this entry first, so that it goes into the log commit. It then made the four commits in
+the approved order. The first two stage only their own part of `CLAUDE.md`, so each commit holds one
+change. The hashes are in the chat reply.
+
+**Why the next prompt changed**
+
 *Pending.*
