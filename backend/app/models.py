@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from uuid import uuid4
 
 
@@ -39,13 +39,25 @@ class PromptPatch(BaseModel):
     testing for ``None`` -- that keeps an explicit ``null`` (clear the field)
     distinct from an absent key (leave the field alone). The validation
     constraints are repeated from ``PromptBase`` so a partial update cannot
-    store a value that ``POST`` or ``PUT`` would have rejected.
+    store a value that ``POST`` or ``PUT`` would have rejected. ``title`` and
+    ``content`` cannot be cleared, so an explicit ``null`` on either is refused.
     """
 
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     content: Optional[str] = Field(None, min_length=1)
     description: Optional[str] = Field(None, max_length=500)
     collection_id: Optional[str] = None
+
+    @field_validator("title", "content")
+    @classmethod
+    def reject_null(cls, value, info):
+        # Runs only for keys the body sent, so an omitted field is still left alone.
+        if value is None:
+            raise ValueError(
+                f"{info.field_name} cannot be null; send a value or omit the "
+                "field to keep the current one"
+            )
+        return value
 
 
 class Prompt(PromptBase):
