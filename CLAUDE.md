@@ -16,9 +16,9 @@ work.** It is how a new session resumes without reading everything.
 | | |
 |---|---|
 | **Current module** | **Module 2** — branch `Week-2`. Brief: `brief.txt`, from `Module_2_Project_Spec_Driven_Development.pdf`. |
-| **Current task** | **Task 2.2 — Docstrings across the codebase: IN PROGRESS.** Step 1 done: Google style, fields under `Attributes:`, inner `Config` classes documented too (entry 21). Step 2 (`models.py`) done and committed (entry 25). Step 3 (`storage.py`) done and committed (entry 31). Step 4 (`utils.py`) done and committed (entry 35). Step 5 (`api.py`) done and committed (entry 38). Next: step 6, final check across all 4 files, not started. Task 2.1 is complete (commits `431d394`, `3a83725`, `67a7698`). |
+| **Current task** | **Task 2.2 — Docstrings across the codebase: COMPLETE.** Google-style docstrings on every function and class in `models.py`, `api.py`, `storage.py`, `utils.py`, each checked against the code; a fresh-context review found 3 issues, all handled (log entries 39-41). Commits `fa62caf`, `3c440ec`, `ed189c9`, `6f4e8eb`, and the review corrections. **Next: Task 2.3 — API reference → `docs/API_REFERENCE.md`. Not started.** |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 39 |
+| **Next entry number** | 42 |
 
 **Open decisions:**
 
@@ -37,6 +37,10 @@ work.** It is how a new session resumes without reading everything.
 - **An empty-string `collection_id` is handled inconsistently** (entry 37). POST and PUT store `""`
   unchecked (`api.py:86`, `:122` test truthiness); PATCH looks it up and returns 400 (`api.py:172`,
   `is not None`). The docstrings describe it; any spec or doc touching `collection_id` must too.
+- **`PATCH /prompts/{id}` with `{"title": null}` or `{"content": null}` returns 500** (entries 39-40).
+  `PromptPatch` accepts the null; building `Prompt(...)` in `patch_prompt` then raises an unhandled
+  `ValidationError`. Documented in the `patch_prompt` and `PromptPatch` docstrings, **not fixed**, by
+  my choice. Task 2.3's API reference must state it, and a later fix must update both docstrings.
 
 ---
 

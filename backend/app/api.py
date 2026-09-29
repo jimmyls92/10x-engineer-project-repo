@@ -206,8 +206,9 @@ def patch_prompt(prompt_id: str, prompt_data: PromptPatch):
     Args:
         prompt_id: Identifier of the prompt to update.
         prompt_data: The partial update body. Every field is optional, but a
-            field that is present must satisfy the same constraints as it does
-            on create.
+            field sent as text must satisfy the same constraints as it does
+            on create. An explicit null title or content is not rejected by
+            the body model; see Raises.
 
     Returns:
         The stored prompt as it stands after the merge.
@@ -216,6 +217,9 @@ def patch_prompt(prompt_id: str, prompt_data: PromptPatch):
         HTTPException: With status 404 if no prompt has that identifier, or
             status 400 if collection_id is present and not null but names no
             existing collection.
+        pydantic.ValidationError: If the body sets title or content to null.
+            The merged prompt cannot hold a null there, and the error is not
+            handled, so the client receives status 500.
     """
     existing = storage.get_prompt(prompt_id)
     if not existing:

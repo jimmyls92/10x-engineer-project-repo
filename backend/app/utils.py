@@ -66,9 +66,10 @@ def search_prompts(prompts: List[Prompt], query: str) -> List[Prompt]:
 
 
 def validate_prompt_content(content: str) -> bool:
-    """Check that prompt text has at least 10 characters besides spaces.
+    """Check that prompt text is at least 10 characters once trimmed.
 
-    Leading and trailing whitespace is ignored when counting. Nothing in
+    Leading and trailing whitespace is ignored when counting; spaces inside
+    the text still count, so ``"a b c d e f"`` passes. Nothing in
     the application calls this function: the API accepts any ``content``
     of at least 1 character (``PromptBase.content``), so a prompt this
     function rejects can still be stored.

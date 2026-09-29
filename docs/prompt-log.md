@@ -920,3 +920,78 @@ closed. Step 6, the final check across the four files, comes next.
 **Why the next prompt changed**
 
 The output was good enough. The next prompt opens step 6.
+
+### Entry 39
+
+**Prompt**
+
+> go with B
+
+**What came back**
+
+Claude ran the brief's own check, `python -m pydoc backend.app.models` from the repo root (exit 0;
+it shows the module docstring and 8 `Attributes:` sections), and `pytest tests/ -v` (17 passed).
+
+It then launched a read-only subagent that had not seen this conversation. The subagent reviewed
+every docstring against the code in four categories: inaccurate, restates name, missing section,
+style. Its first run ended without sending a report, and it was asked again. It reported 3
+findings: 0 restated names and 0 style violations. Claude reproduced all 3 before presenting them:
+1. The `PromptPatch` Attributes (`models.py:94-95`) say title and content, "if sent", meet the
+   length limits, but an explicit `null` passes the model.
+2. The `validate_prompt_content` summary (`utils.py:69`) says "besides spaces", but only leading and
+   trailing whitespace is stripped, so `"a b c d e f"` returns True.
+3. `PATCH /prompts/{id}` with `{"title": null}` or `{"content": null}` returns **500**. The null
+   passes `PromptPatch`, then fails when `Prompt(...)` is built inside the endpoint (`api.py:233`).
+   The docstring's `Raises:` does not mention it. `{"description": null}` correctly gives 200.
+
+Finding 3 is a code bug, not only a docstring gap. Claude asked how to handle it.
+
+**Why the next prompt changed**
+
+The review found a real bug, and deciding how to handle it goes beyond the docstring task.
+
+### Entry 40
+
+**Prompt**
+
+> Fix the docstring for 1 and 2, regarding 3 go for B
+
+**What came back**
+
+**I chose to document the PATCH 500, not fix it.** That keeps the task docs-only, against Claude's
+recommendation to fix it.
+
+Claude made three docstring edits:
+1. `models.py` `PromptPatch` Attributes: title and content constraints apply "if sent as text", and
+   an explicit `null` is accepted by the model and makes `PATCH` fail with 500.
+2. `utils.py` `validate_prompt_content` summary: now "at least 10 characters once trimmed", and the
+   body says inner spaces still count (`"a b c d e f"` passes).
+3. `api.py` `patch_prompt`: Args now says an explicit null title or content is not rejected, and
+   `Raises:` adds `pydantic.ValidationError` for that case, received by the client as status 500.
+
+The 500 was added to Known traps in `CLAUDE.md`, with a note that Task 2.3's API reference must
+state it. No code changed.
+
+Checks: doctest passes; `pytest tests/` gives 17 passed; no new line longer than 80 characters.
+
+**Why the next prompt changed**
+
+The review's findings are handled. The next prompt reviews the commit, which closes Task 2.2.
+
+### Entry 41
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude marked Task 2.2 complete in `CLAUDE.md` CURRENT STATE and committed it, together with the
+three docstring corrections and this log, as "Correct docstrings flagged by the final review", with
+the message I had approved. Task 2.2 is closed: every function and class in `models.py`, `api.py`,
+`storage.py` and `utils.py` has a Google-style docstring checked against the code. Claude stopped
+there. Task 2.3 starts only when I ask for it.
+
+**Why the next prompt changed**
+
+Task 2.2 is closed. The next prompt opens Task 2.3.
