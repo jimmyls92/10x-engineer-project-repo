@@ -1,0 +1,19 @@
+I added `GET /collections/{collection_id}/prompts` and four tests for it. The suite passes: **23 passed**, 4 of them new. The 54 warnings come from the dependencies and the known deprecations in `models.py`, nothing I added.
+
+**The endpoint** (`list_collection_prompts` in `backend/app/api.py`, under the Collection Endpoints banner):
+
+- It returns the same `{prompts, total}` shape as `GET /prompts`, newest first.
+- **An unknown collection gives 404** (`"Collection not found"`). This is different from `GET /prompts?collection_id=<unknown>`, which returns an empty list with 200. The project's rule is that an id in the path must exist, while a filter in the query string that matches nothing is not an error.
+- **An existing collection with no prompts** gives 200 and an empty list.
+- I also updated the `get_collection` docstring, which used to point readers to `?collection_id=`; it now points to the new route.
+
+**Tests** (in `TestCollections`, `backend/tests/test_api.py`):
+
+| Test | Checks |
+|---|---|
+| `test_list_collection_prompts_success` | Only this collection's prompts come back, newest first; prompts in another collection and unfiled prompts are left out |
+| `test_list_collection_prompts_empty` | An existing collection with no prompts ÔåÆ 200 and an empty list |
+| `test_list_collection_prompts_not_found` | An unknown id ÔåÆ 404 with the right error message |
+| `test_list_collection_prompts_after_delete` | After the collection is deleted ÔåÆ 404 |
+
+As you asked, I left `CLAUDE.md` and the prompt log alone and committed nothing. The docs still need updating: `CLAUDE.md` says every new endpoint must also go into `README.md` (the Features list and the endpoint table) and get its own section in `docs/API_REFERENCE.md`. I didn't make those changes because the API reference examples are meant to be checked against a live server. Say if you want me to do that too.

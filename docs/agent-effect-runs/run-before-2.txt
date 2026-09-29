@@ -1,0 +1,21 @@
+I've added `GET /collections/{collection_id}/prompts` and five tests for it. The full suite passes: **24 passed, 0 failed**. The warnings are the ones that were already there (Pydantic `Config`, `utcnow()`, httpx). Nothing was committed, and `CLAUDE.md` and the prompt log are unchanged.
+
+**The endpoint** (`backend/app/api.py`, just after `get_collection`):
+- It returns a `PromptList` (`{"prompts": [...], "total": n}`), sorted newest first like `GET /prompts`.
+- **An unknown collection gives 404 `"Collection not found"`.** This is a deliberate difference from `GET /prompts?collection_id=<id>`, which returns an empty list for an unknown id. With the new endpoint, an empty list always means the collection exists and has no prompts.
+- It reuses `storage.get_prompts_by_collection` and `sort_prompts_by_date`, so there is no new storage code.
+- I also changed the `get_collection` docstring to point to the new endpoint instead of the query-string filter.
+
+**Tests** (new `TestCollectionPrompts` class in `backend/tests/test_api.py`):
+
+| Test | Checks |
+|---|---|
+| `test_lists_only_prompts_in_collection` | Prompts in another collection or in none are left out |
+| `test_sorted_newest_first` | The order is newest first |
+| `test_empty_collection` | An existing collection with no prompts gives 200 and `{"prompts": [], "total": 0}` |
+| `test_collection_not_found` | An unknown id gives 404 with the expected `detail` |
+| `test_deleted_collection_not_found` | A collection that had prompts gives 404 once it is deleted |
+
+**Also worth knowing:**
+- **`pytest` isn't on PATH in this shell**, so I ran `python -m pytest tests/ -v`.
+- **The README and `docs/API_REFERENCE.md` don't mention the new endpoint yet.** A known trap in `CLAUDE.md` says every new endpoint needs to go into both. That was outside what you asked for, so I didn't edit them. If this endpoint stays, it needs a README entry and its own section in the API reference with a curl example, a sample response and its errors.

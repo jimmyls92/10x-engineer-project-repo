@@ -1,0 +1,18 @@
+I added `GET /collections/{collection_id}/prompts` and four tests for it. The suite passes: **23 passed** (the 19 existing tests plus the 4 new ones). `pytest` wasn't on PATH here, so I ran it as `python -m pytest tests/ -v`.
+
+**The endpoint** (`backend/app/api.py`, `list_collection_prompts`, under the Collection banner):
+- **It returns the same shape as `GET /prompts`**: a list of prompts plus a `total` count, sorted newest first.
+- **An unknown collection id returns 404** `{"detail": "Collection not found"}`. That's deliberate: `GET /prompts?collection_id=` returns an empty list for an unknown id, but here the id is in the path, so the project's rules make it a 404. A comment above the route says why.
+- **An existing collection with no prompts returns 200** with an empty list.
+- I also changed the `get_collection` docstring, which pointed readers to `GET /prompts?collection_id=` for a collection's prompts. It now points to the new route.
+
+**The tests** (`backend/tests/test_api.py`, in `TestCollections`):
+
+| Test | What it checks |
+|---|---|
+| `test_list_collection_prompts_success` | Only this collection's prompts come back, newest first, with the right `total`; prompts in another collection or in none are left out |
+| `test_list_collection_prompts_empty` | An empty collection returns 200 with `{"prompts": [], "total": 0}` |
+| `test_list_collection_prompts_not_found` | An unknown id returns 404 with the exact error message |
+| `test_list_collection_prompts_after_collection_deleted` | After the collection is deleted, the route returns 404 |
+
+**Not done:** your known-traps list says every new endpoint must also go into `README.md` (the Features list and endpoint summary) and get its own section in `docs/API_REFERENCE.md`. I didn't touch either, since you asked for code and tests only. If this endpoint stays, both documents now miss it. As you asked, I didn't commit, log anything, or edit `CLAUDE.md`.

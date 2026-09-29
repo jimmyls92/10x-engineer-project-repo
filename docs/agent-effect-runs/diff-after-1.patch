@@ -1,0 +1,148 @@
+diff --git a/backend/app/api.py b/backend/app/api.py
+index 9cf9946..9d5bb61 100644
+--- a/backend/app/api.py
++++ b/backend/app/api.py
+@@ -283,7 +283,7 @@ def get_collection(collection_id: str):
+     """Return a single collection by its identifier.
+ 
+     The collection's prompts are not included; list them with
+-    ``GET /prompts?collection_id=<id>``.
++    ``GET /collections/{collection_id}/prompts``.
+ 
+     Args:
+         collection_id: Identifier of the collection to return.
+@@ -300,7 +300,33 @@ def get_collection(collection_id: str):
+     return collection
+ 
+ 
+-@app.post("/collections", response_model=Collection, status_code=201)
++@app.get("/collections/{collection_id}/prompts", response_model=PromptList)
++def list_collection_prompts(collection_id: str):
++    """List the prompts filed in one collection, newest first.
++
++    Unlike ``GET /prompts?collection_id=<id>``, which gives an empty list for
++    an unknown id in its query parameter, the collection here is named in the
++    path, so it must exist. An existing collection with no prompts gives an
++    empty list.
++
++    Args:
++        collection_id: Identifier of the collection whose prompts to list.
++
++    Returns:
++        A ``PromptList`` holding the collection's prompts and their count.
++
++    Raises:
++        HTTPException: With status 404 if no collection has that identifier.
++    """
++    if storage.get_collection(collection_id) is None:
++        raise HTTPException(status_code=404, detail="Collection not found")
++
++    prompts = storage.get_prompts_by_collection(collection_id)
++    prompts = sort_prompts_by_date(prompts, descending=True)
++    return PromptList(prompts=prompts, total=len(prompts))
++
++
++@app.post("/collections",response_model=Collection, status_code=201)
+ def create_collection(collection_data: CollectionCreate):
+     """Create a collection from the request body and store it.
+ 
+diff --git a/backend/tests/test_api.py b/backend/tests/test_api.py
+index d41266f..820172a 100644
+--- a/backend/tests/test_api.py
++++ b/backend/tests/test_api.py
+@@ -245,6 +245,95 @@ class TestCollections:
+         response = client.get("/collections/nonexistent-id")
+         assert response.status_code == 404
+     
++    def test_list_collection_prompts_success(
++        self, client: TestClient, sample_collection_data, sample_prompt_data
++    ):
++        """Verify the endpoint returns only the collection's prompts, newest first.
++
++        A prompt in another collection and an unfiled prompt are created too,
++        so the test fails if the endpoint returns more than the one collection.
++
++        Args:
++            client: FastAPI test client fixture.
++            sample_collection_data: Valid collection payload fixture.
++            sample_prompt_data: Valid prompt payload fixture.
++        """
++        collection_id = client.post(
++            "/collections", json=sample_collection_data
++        ).json()["id"]
++        other_id = client.post(
++            "/collections", json={**sample_collection_data, "name": "Other"}
++        ).json()["id"]
++
++        first = client.post(
++            "/prompts",
++            json={**sample_prompt_data, "title": "First", "collection_id": collection_id},
++        ).json()
++        second = client.post(
++            "/prompts",
++            json={**sample_prompt_data, "title": "Second", "collection_id": collection_id},
++        ).json()
++        client.post("/prompts", json={**sample_prompt_data, "collection_id": other_id})
++        client.post("/prompts", json=sample_prompt_data)
++
++        response = client.get(f"/collections/{collection_id}/prompts")
++        assert response.status_code == 200
++        data = response.json()
++
++        assert data["total"] == 2
++        assert [p["id"] for p in data["prompts"]] == [second["id"], first["id"]]
++        created = [datetime.fromisoformat(p["created_at"]) for p in data["prompts"]]
++        assert created[0] > created[1]
++
++    def test_list_collection_prompts_empty(
++        self, client: TestClient, sample_collection_data, sample_prompt_data
++    ):
++        """Verify an existing collection with no prompts gives an empty list, not 404.
++
++        Args:
++            client: FastAPI test client fixture.
++            sample_collection_data: Valid collection payload fixture.
++            sample_prompt_data: Valid prompt payload fixture.
++        """
++        collection_id = client.post(
++            "/collections", json=sample_collection_data
++        ).json()["id"]
++        client.post("/prompts", json=sample_prompt_data)
++
++        response = client.get(f"/collections/{collection_id}/prompts")
++        assert response.status_code == 200
++        assert response.json() == {"prompts": [], "total": 0}
++
++    def test_list_collection_prompts_not_found(self, client: TestClient):
++        """Verify an unknown collection id in the path is a 404.
++
++        Args:
++            client: FastAPI test client fixture.
++        """
++        response = client.get("/collections/nonexistent-id/prompts")
++        assert response.status_code == 404
++        assert response.json() == {"detail": "Collection not found"}
++
++    def test_list_collection_prompts_after_delete(
++        self, client: TestClient, sample_collection_data, sample_prompt_data
++    ):
++        """Verify a deleted collection's prompts can no longer be listed through it.
++
++        Args:
++            client: FastAPI test client fixture.
++            sample_collection_data: Valid collection payload fixture.
++            sample_prompt_data: Valid prompt payload fixture.
++        """
++        collection_id = client.post(
++            "/collections", json=sample_collection_data
++        ).json()["id"]
++        client.post("/prompts", json={**sample_prompt_data, "collection_id": collection_id})
++
++        assert client.delete(f"/collections/{collection_id}").status_code == 204
++
++        response = client.get(f"/collections/{collection_id}/prompts")
++        assert response.status_code == 404
++
+     def test_delete_collection_with_prompts(self, client: TestClient, sample_collection_data, sample_prompt_data):
+         """Test deleting a collection that has prompts.
+ 

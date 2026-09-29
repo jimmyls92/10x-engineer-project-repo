@@ -1,0 +1,19 @@
+I added `GET /collections/{collection_id}/prompts` and four tests for it. The full suite passes: **23 passed**, 4 of them new. Nothing is committed and I didn't touch the prompt log or `CLAUDE.md`.
+
+**The endpoint** (`backend/app/api.py`, right after `get_collection`):
+- **Returns** the collection's prompts newest first, in the same `{"prompts": [...], "total": n}` shape as `GET /prompts`.
+- **Returns 404** `{"detail": "Collection not found"}` if the collection doesn't exist. `GET /prompts?collection_id=<id>` returns an empty list for an unknown id instead. With the 404, an empty list here always means an existing collection that has no prompts.
+
+**The tests** (`backend/tests/test_api.py`, class `TestCollections`):
+
+| Test | What it checks |
+|---|---|
+| `test_list_collection_prompts` | Only this collection's prompts come back, newest first; prompts in another collection and unfiled prompts are left out |
+| `test_list_collection_prompts_empty` | An existing collection with no prompts gives 200 and an empty list |
+| `test_list_collection_prompts_not_found` | An unknown id gives 404 with the right message |
+| `test_list_collection_prompts_after_collection_deleted` | After a collection is deleted, its URL gives 404 |
+
+**Things to know:**
+- **`pytest` isn't on your PATH here**, so I ran `python -m pytest tests/ -v` from `backend/` instead.
+- **The docs don't mention the new endpoint yet.** A known trap in `CLAUDE.md` says every new endpoint must also go into the README's Features list and endpoint summary, and get its own section in `docs/API_REFERENCE.md`. Otherwise C2.2 fails at Module 3. I didn't update them because you asked only for the code and tests.
+- **The `get_collection` docstring** (`api.py:285`) still tells readers to use `GET /prompts?collection_id=<id>`. It could point to the new endpoint instead.
