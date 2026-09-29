@@ -1714,4 +1714,84 @@ pushed, and the `main` worktree folder is still there.
 
 **Why the next prompt changed**
 
+The fix is closed. The next prompt cleans up and asks about one of the older issues.
+
+
+### Entry 72
+
+**Prompt**
+
+> remove worktree and why is it a problem that the test accepts 404 and 500 and where is this "error" comming from?
+
+**What came back**
+
+Claude removed the `main` worktree (`git worktree remove --force`; the only untracked files in it were
+`__pycache__`). `git worktree list` now shows only `Week-2`.
+
+About `test_api.py:79` (`assert get_response.status_code in [404, 500]` in `test_delete_prompt`):
+- **Where it comes from.** The course's starter code, commit `ca8696d` "init". There the line read
+  `in [404, 500]  # 404 after fix`, under "Note: This might fail due to Bug #1". Bug #1 was
+  `GET /prompts/{id}` returning 500 for a missing prompt, so the test was left loose on purpose until
+  it was fixed. Module 1 fixed Bug #1. Commit `be9300a` "Delete stale bug scaffolding from comments"
+  then removed the comment but deliberately kept the assertion ("no assertion or test logic changed").
+- **Why it is a problem.** The loose check has outlived its reason. If `GET` on a deleted prompt
+  regressed to a 500, this test would still pass. `test_get_prompt_not_found` checks only an id that
+  never existed, not one that was deleted.
+- **Scope.** It is a provided test, not a Task 2.1-2.3 deliverable. Tightening it to `== 404` still
+  passes today. Claude did not change it.
+
+**Why the next prompt changed**
+
+I wanted to confirm the test's origin before deciding whether to touch it.
+
+
+### Entry 73
+
+**Prompt**
+
+> where is this test coming from? If it comes from the original code, then its fine
+
+**What came back**
+
+Claude confirmed that `test_delete_prompt`, `in [404, 500]` assertion included, is in `ca8696d`
+"init", the course's provided starter code. We never wrote it; `be9300a` only removed its comment.
+Per my rule the test stays as it is and is not added to Known traps. The log and CLAUDE.md edits since
+`ee571d3` are still uncommitted.
+
+**Why the next prompt changed**
+
+The origin settled it, so the next prompt closes up: commit the log and push.
+
+
+### Entry 74
+
+**Prompt**
+
+> commit the log and push Week-2
+
+**What came back**
+
+CLAUDE.md rule 5 needs approval of the message itself, so Claude proposed one before committing:
+stage `docs/prompt-log.md` and `CLAUDE.md` (next entry number 75), commit, then push `Week-2`. It
+showed the message and stopped.
+
+**Why the next prompt changed**
+
+The message was fine, so the next prompt approves it.
+
+
+### Entry 75
+
+**Prompt**
+
+> yes, commit and push
+
+**What came back**
+
+Claude wrote this entry before committing, so that it goes into the same commit. It then committed
+`docs/prompt-log.md` and `CLAUDE.md` (next entry number 76) as "Log the worktree cleanup and
+delete-test origin" and ran `git push origin Week-2`. The push output is in the chat reply, not here.
+
+**Why the next prompt changed**
+
 *Pending.*

@@ -18,7 +18,7 @@ work.** It is how a new session resumes without reading everything.
 | **Current module** | **Module 2** — branch `Week-2`. Brief: `brief.txt`, from `Module_2_Project_Spec_Driven_Development.pdf`. |
 | **Current task** | **Task 2.3 — API reference → `docs/API_REFERENCE.md`: COMPLETE.** All 11 endpoints, with a curl example, a real sample response and an error table for each; errors, response formats and authentication notes in shared sections. Every example was run against a live server, and a script re-runs them all on a fresh one (11/11). A fresh-context review found no false claims and 6 gaps, all fixed (log entries 42-51). **Then the PATCH-null fix (entries 53-71):** fixed on `main` (`158eb0b`, pushed), merged into `Week-2` (`971a6cc`), and Tasks 2.1-2.3 updated to match after a fresh-context sweep against the brief. **Next: Task 2.4 — Custom AI agent. Not started.** |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 72 |
+| **Next entry number** | 76 |
 
 **Open decisions:**
 
