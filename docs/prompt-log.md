@@ -755,3 +755,93 @@ Step 4, `utils.py`, comes next.
 **Why the next prompt changed**
 
 The output was good enough. The next prompt opens step 4.
+
+### Entry 32
+
+**Prompt**
+
+> why do we need examples, the assigment does not say anything about that and the same with de google-style docstrings methodology, right?
+
+**What came back**
+
+Claude corrected the premise, citing the source. The brief does ask for examples:
+`brief.txt:47` reads "backend/app/utils.py — all utility functions, with examples where helpful".
+It asks only for `utils.py`, and only "where helpful". On the Google side, the style guide requires
+`Args:`, `Returns:` and `Raises:` where they apply, and treats examples as optional (its module
+template has a "Typical usage example"). So the brief sets the requirement and Google style supplies
+the format. Claude asked again for the step 4 approach and the scope of the examples.
+
+**Why the next prompt changed**
+
+This was a clarifying question built on a premise the brief contradicts. Both decisions are still
+open.
+
+### Entry 33
+
+**Prompt**
+
+> A and 1
+
+**What came back**
+
+Step 4 will list the facts first, with examples only in the two text functions. Claude traced every
+call to `utils.py` and ran each function to confirm its behaviour:
+- `search_prompts` matches title and description, ignoring case, and not the prompt body (this
+  agrees with `README.md:36-37`); an empty query matches everything, but `api.py:55` never passes
+  one;
+- `filter_prompts_by_collection` is an exact match, and `None` returns the unfiled prompts;
+- `validate_prompt_content` and `extract_variables` are called nowhere in the app or the tests;
+- the rule in `validate_prompt_content` (at least 10 characters after stripping) is stricter than
+  `PromptBase.content` (`min_length=1`);
+- `extract_variables` keeps duplicates in order of appearance, skips `{{ name }}` and
+  `{{first-name}}`, and takes `x` from `{{{x}}}`.
+
+Claude asked whether the docstrings should say that the two text functions are unused.
+
+**Why the next prompt changed**
+
+The facts are listed but not yet confirmed. The next prompt checks them and settles the unused
+functions.
+
+### Entry 34
+
+**Prompt**
+
+> yes for everything
+
+**What came back**
+
+I confirmed the `utils.py` fact list and agreed that the docstrings should say the two text helpers
+are unused. Claude wrote Google-style docstrings for all of `backend/app/utils.py`:
+- a new module docstring, stating that the list helpers serve `GET /prompts` and the text helpers
+  are unused;
+- new docstrings for `filter_prompts_by_collection` and `search_prompts`;
+- `validate_prompt_content` and `extract_variables` rewritten from free-form text into `Args:`,
+  `Returns:` and `Examples:`;
+- `sort_prompts_by_date` kept as it was.
+
+The `validate_prompt_content` docstring says the API accepts content that this function would reject.
+
+Checks: `python -m doctest -v app/utils.py` ran 6 examples, 6 passed; `pytest tests/` gives 17
+passed; every docstring line is 80 characters or fewer (the two longer lines, `utils.py:13` and
+`:27`, are existing signatures).
+
+**Why the next prompt changed**
+
+`utils.py` is written and verified. The next prompt reviews the diff and decides on the commit.
+
+### Entry 35
+
+**Prompt**
+
+> approve
+
+**What came back**
+
+Claude committed `backend/app/utils.py`, this log and `CLAUDE.md` CURRENT STATE as "Document
+utils.py in Google style", with the message I had approved. Step 4 is closed. Step 5, `api.py`,
+comes next.
+
+**Why the next prompt changed**
+
+The output was good enough. The next prompt opens step 5.
