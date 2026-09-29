@@ -16,9 +16,9 @@ work.** It is how a new session resumes without reading everything.
 | | |
 |---|---|
 | **Current module** | **Module 2** — branch `Week-2`. Brief: `brief.txt`, from `Module_2_Project_Spec_Driven_Development.pdf`. |
-| **Current task** | **Task 2.2 — Docstrings across the codebase: IN PROGRESS.** Step 1 done: Google style, fields under `Attributes:`, inner `Config` classes documented too (entry 21). Step 2 (`models.py`) done and committed (entry 25). Next: step 3, `storage.py`, not started. Task 2.1 is complete (commits `431d394`, `3a83725`, `67a7698`). |
+| **Current task** | **Task 2.2 — Docstrings across the codebase: IN PROGRESS.** Step 1 done: Google style, fields under `Attributes:`, inner `Config` classes documented too (entry 21). Step 2 (`models.py`) done and committed (entry 25). Step 3 (`storage.py`) done and committed (entry 31). Next: step 4, `utils.py`, not started. Task 2.1 is complete (commits `431d394`, `3a83725`, `67a7698`). |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 26 |
+| **Next entry number** | 32 |
 
 **Open decisions:**
 
@@ -31,6 +31,9 @@ work.** It is how a new session resumes without reading everything.
 - **Two deprecation warnings in `models.py`** (seen in entry 22): the class-based `Config` blocks
   (`models.py:56`, `:75`) and `datetime.utcnow()` (`models.py:14`). No Module 2 task covers them;
   docstrings describe them as they are.
+- **`Storage.update_prompt` does not check that `prompt.id` equals `prompt_id`** (entry 30,
+  `storage.py:66`). Unreachable today, since PUT and PATCH copy `existing.id` (`api.py:128`, `:178`);
+  any new code that replaces a prompt must do the same.
 
 ---
 

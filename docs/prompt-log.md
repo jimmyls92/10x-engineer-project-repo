@@ -628,3 +628,130 @@ models.py in Google style", with the message I had approved. Step 2 is closed. S
 **Why the next prompt changed**
 
 The output was good enough. The next prompt opens step 3.
+
+### Entry 26
+
+**Prompt**
+
+> I dont know about private attributes, why google style treat them differently than public ones?
+
+**What came back**
+
+Claude explained why. The Google style guide lists public attributes under `Attributes:` because a
+docstring is the contract for callers. By Python convention (PEP 8), a leading `_` marks a name as
+internal: not for callers to use, and free to change without notice. Listing `_prompts` and
+`_collections` under `Attributes:` would present them as part of the interface. Claude gave three
+options (omit them, list them anyway, or describe how the data is kept in the extended description
+without naming the private fields) and recommended the third.
+
+**Why the next prompt changed**
+
+This was a clarifying question. The template decision and the step 3 option are still open.
+
+### Entry 27
+
+**Prompt**
+
+> yes, go for C
+
+**What came back**
+
+Claude took "C" as the answer to the question just asked, about private attributes. The `Storage`
+docstring will describe how data is kept in its extended description and will not list `_prompts`
+or `_collections` under `Attributes:`. Both open questions had an option C, so Claude asked which
+option I want for how step 3 is carried out, rather than assuming, and wrote nothing.
+
+**Why the next prompt changed**
+
+The prompt was ambiguous across two open questions. The next prompt picks the step 3 option.
+
+### Entry 28
+
+**Prompt**
+
+> go with A, list the facts first
+
+**What came back**
+
+Claude traced every call to `storage` in `api.py` and `tests/conftest.py`, and ran the class to
+confirm five behaviours instead of inferring them:
+- `create_prompt` silently overwrites a prompt that has the same id;
+- `update_prompt` stores the new prompt under `prompt_id` even when the prompt's own `id` differs,
+  so the key and the id can disagree (`api.py` always passes matching ids, so the API cannot reach
+  this);
+- `get_all_*` returns a new list, but it holds the stored objects themselves, so mutating one
+  changes storage;
+- `get_prompts_by_collection(None)` returns the unfiled prompts;
+- no method raises; a missing record gives `None` or `False`.
+
+Claude presented the facts as a table and asked whether the key/id mismatch should be stated in the
+docstring.
+
+**Why the next prompt changed**
+
+The facts are listed but not yet confirmed. The next prompt checks them and settles the mismatch.
+
+### Entry 29
+
+**Prompt**
+
+> Looks fine. REgarding update_prompt, i dont know what you mean with the check, what else can we check beyong the id exists? I mean the prompt is going to change, so...
+
+**What came back**
+
+I confirmed the `storage.py` fact list. Claude then explained the mismatch. `update_prompt` receives
+two ids, the `prompt_id` argument and the `id` inside the new `Prompt` object. Title, content and
+the other fields are meant to change, but the id is the one field that must not. If the two ids
+differ, the record is stored under one id while it says it has another, so a lookup by the id it
+reports returns 404. Claude illustrated this with the run from entry 28, and asked again whether
+the docstring should state it.
+
+**Why the next prompt changed**
+
+The facts are confirmed. The mismatch decision is still open, now that it has been explained.
+
+### Entry 30
+
+**Prompt**
+
+> go with the recommended, state it and add to known traps
+
+**What came back**
+
+Claude wrote Google-style docstrings for all of `backend/app/storage.py`: the module (now naming the
+shared `storage` instance, and saying data is lost when the process stops), the `Storage` class, and
+all 12 methods. Following entry 27, the class docstring describes how data is kept without listing
+`_prompts` or `_collections`. The `update_prompt` docstring says the caller must pass a prompt whose
+`id` equals `prompt_id`, that this is not checked, and what happens if the two differ. The mismatch
+was added to Known traps in `CLAUDE.md`.
+
+One claim was corrected before committing. The first draft said the API turns every `None` or
+`False` into a 404, but a missing collection on create or update gives 400 (`api.py:89`). The
+class docstring now says the API decides which error status to send.
+
+Checks: every docstring line is 80 characters or fewer (the one longer line, `storage.py:174`, is
+existing code); `pydoc app.storage`, run from `backend/`, shows 10 `Returns:` sections; `pytest
+tests/` gives 17 passed. The diff also touches whitespace-only blank lines; `git diff -w` shows 1
+real deletion, the old first line of the module docstring. Run from the repo root, `python -m pydoc
+backend.app.storage` fails with `No module named 'app'`, because the module imports `app.models`.
+That is existing behaviour, and the brief's pydoc check targets `models` only.
+
+**Why the next prompt changed**
+
+`storage.py` is written and verified. The next prompt reviews the diff and decides on the commit.
+
+### Entry 31
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude committed `backend/app/storage.py`, this log and `CLAUDE.md` (CURRENT STATE and the new Known
+trap) as "Document storage.py in Google style", with the message I had approved. Step 3 is closed.
+Step 4, `utils.py`, comes next.
+
+**Why the next prompt changed**
+
+The output was good enough. The next prompt opens step 4.
