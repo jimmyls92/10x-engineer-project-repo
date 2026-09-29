@@ -16,9 +16,9 @@ work.** It is how a new session resumes without reading everything.
 | | |
 |---|---|
 | **Current module** | **Module 2** — branch `Week-2`. Brief: `brief.txt`, from `Module_2_Project_Spec_Driven_Development.pdf`. |
-| **Current task** | **Task 2.1 — Comprehensive README: COMPLETE.** `README.md` holds the brief's seven headings only; every setup step passed on a clean clone (log entry 15). Commits `431d394`, `3a83725`, `67a7698`. **Next: Task 2.2 — Docstrings across the codebase. Not started.** |
+| **Current task** | **Task 2.2 — Docstrings across the codebase: IN PROGRESS.** Step 1 done: Google style, fields under `Attributes:`, inner `Config` classes documented too (entry 21). Step 2 (`models.py`) done and committed (entry 25). Next: step 3, `storage.py`, not started. Task 2.1 is complete (commits `431d394`, `3a83725`, `67a7698`). |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 19 |
+| **Next entry number** | 26 |
 
 **Open decisions:**
 
@@ -28,6 +28,9 @@ work.** It is how a new session resumes without reading everything.
 
 - **`README.md` lists every endpoint and feature.** Any endpoint added later (Module 3's feature) must
   also go into its Features list and API endpoint summary, or C2.2 fails at Module 3.
+- **Two deprecation warnings in `models.py`** (seen in entry 22): the class-based `Config` blocks
+  (`models.py:56`, `:75`) and `datetime.utcnow()` (`models.py:14`). No Module 2 task covers them;
+  docstrings describe them as they are.
 
 ---
 

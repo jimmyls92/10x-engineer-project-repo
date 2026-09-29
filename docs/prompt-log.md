@@ -485,3 +485,146 @@ entry in the same commit, and stopped. Task 2.2 starts only when I ask for it.
 **Why the next prompt changed**
 
 Task 2.1 is closed. The next prompt opens Task 2.2.
+
+---
+
+## Task 2.2 — Docstrings across the codebase
+
+### Entry 19
+
+**Prompt**
+
+> go with task 2.2
+
+**What came back**
+
+Claude re-read Task 2.2 in `brief.txt` (lines 42-49) and criterion C2.2, and listed the 45 functions
+and classes across `models.py`, `api.py`, `storage.py` and `utils.py`. It marked Task 2.2 in progress
+in `CLAUDE.md` CURRENT STATE, broke the task into steps, and proposed step 1: agree the docstring
+standard before writing any, with options for how Pydantic fields are documented.
+
+**Why the next prompt changed**
+
+Nothing is written yet. The next prompt picks the standard.
+
+### Entry 20
+
+**Prompt**
+
+> also is important to follow Google-style docstring standards
+
+**What came back**
+
+**This prompt added a constraint:** the docstrings must follow the Google Python Style Guide in
+full, and not only use its section names. Claude pointed out that this rules out option B, since
+`Field(description=...)` is not a docstring. It laid out the Google-style rules as they would apply
+to this codebase, raised one open point (whether the inner `class Config` blocks in `models.py`
+count as classes that need docstrings), and asked me to confirm the template.
+
+**Why the next prompt changed**
+
+The constraint narrows the choice, but no option has been picked yet. The next prompt confirms the
+template.
+
+### Entry 21
+
+**Prompt**
+
+> go with A and include the Config blocks
+
+**What came back**
+
+Step 1 is settled. The docstrings follow Google style, with model fields under `Attributes:` in the
+class docstring and no `Field(description=...)`, and the inner `class Config` blocks
+(`models.py:56`, `models.py:75`) get a docstring each. Claude read `models.py` (13 classes, 2
+functions) and proposed step 2, documenting `models.py`, with three ways to go about it.
+
+**Why the next prompt changed**
+
+The standard is agreed. The next prompt picks how to write `models.py`.
+
+### Entry 22
+
+**Prompt**
+
+> go with A, list the facts first
+
+**What came back**
+
+Claude went through each model in `models.py` and traced where it is used in `api.py`. It ran a
+short check against the models to confirm four behaviours instead of inferring them:
+- a whitespace-only title passes `min_length=1`;
+- `created_at` and `updated_at` differ at creation, because they come from two separate factory calls;
+- timestamps are naive, with `tzinfo` set to `None`;
+- unknown keys such as `id` in a create body are silently dropped.
+
+The same run showed two deprecation warnings: the class-based `Config`, and `datetime.utcnow()`.
+Claude recorded both under Known traps rather than acting on them. It presented the facts as a table
+for me to check, and asked whether behaviours a client might not expect belong in the docstrings.
+
+**Why the next prompt changed**
+
+The facts are listed but not yet confirmed. The next prompt checks them and settles what goes in.
+
+### Entry 23
+
+**Prompt**
+
+> remember me what are the deprecation warnings and where are we showing this known traps? Because it should not be on the readme file
+
+**What came back**
+
+Claude explained the two warnings. Pydantic emits `PydanticDeprecatedSince20` for the class-based
+`Config` blocks (`models.py:56`, `:75`) and suggests `ConfigDict` instead. Python emits
+`DeprecationWarning` for `datetime.utcnow()` (`models.py:14`) and suggests
+`datetime.now(datetime.UTC)`. Both are warnings only: the code still runs and the tests are
+unaffected. Claude confirmed that Known traps lives only in `CLAUDE.md` CURRENT STATE, which is
+the agent's own working notes, and that `README.md` has not been touched in this task.
+
+**Why the next prompt changed**
+
+This was a clarifying question. The fact list and the decision on surprising behaviours are still
+open.
+
+### Entry 24
+
+**Prompt**
+
+> 1 - yes; 2- Only do it if its according with google style docstrings
+
+**What came back**
+
+**This prompt added a constraint:** a behaviour a client might not expect goes into a docstring only
+where Google style has a place for it. Claude pointed to that place. The Google style guide says a
+docstring should give enough to use the code without reading it, and places behaviour in the
+extended description and in each `Attributes:` line. So the surprising behaviours went there, with
+no non-standard sections.
+
+Claude wrote Google-style docstrings for all of `backend/app/models.py`: the module, the 2
+functions, all 13 classes including both `Config` blocks, and an `Attributes:` section added to
+`PromptPatch`. The four `pass` bodies became docstring-only bodies. One fact was corrected before
+writing. The list order is "most recently created first", not "newest", because
+`utils.py:18` sorts on `created_at`.
+
+Checks: no line longer than 80 characters; `python -m pydoc backend.app.models` shows 8
+`Attributes:` sections; `pytest tests/` gives 17 passed.
+
+**Why the next prompt changed**
+
+`models.py` is written and verified. The next prompt reviews the diff and decides on the commit.
+
+### Entry 25
+
+**Prompt**
+
+> go ahead, commit it
+
+**What came back**
+
+Claude committed `backend/app/models.py`, this log and `CLAUDE.md` CURRENT STATE as "Document
+models.py in Google style", with the message I had approved. Step 2 is closed. Step 3,
+`storage.py`, comes next.
+
+**Why the next prompt changed**
+
+The output was good enough. The next prompt opens step 3.
