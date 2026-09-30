@@ -118,7 +118,12 @@ turn, however good it is.
 
 Break every task into small steps — typically 3 to 6. Before each step:
 
-1. **Explain the decision**: what this step should achieve, and why it comes now rather than later.
+1. **State the decision as one question, in bold**, then say why it must be settled now and what
+   depends on it.
+   - **Every option must be an answer to that question.** An option that answers a different
+     question does not belong in the table.
+   - **One question per step.** If a second question comes up, name it as the next step; do not
+     attach it.
 2. **Lay out the options** — typically 2–3 — and what follows from each.
 3. **Give a recommendation**, and say why.
 4. **Stop. Wait for their prompt.** They write it — you do not draft it for them. Choosing the option
