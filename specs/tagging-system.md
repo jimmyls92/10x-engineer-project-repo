@@ -415,7 +415,7 @@ raised only for a body whose tags are valid.
 | **E-6** | A tag that differs only in case or spacing, e.g. `"AI"` or `" ai"` | 422. The server never lowercases or trims a tag; the client sends it in its stored form. |
 | **E-7** | Empty, repeated or over-long `tag` values in the query | An empty value is ignored, alone or among others (AC-3.6); a repeated value counts once (AC-3.9); a value over 32 characters is 422, since it could never match a stored tag. |
 | **E-8** | `DELETE /collections/{collection_id}` | Its prompts are unfiled with `model_copy(update={"collection_id": None})` (`api.py:355`), which keeps their tags. `GET /tags` is unchanged. |
-| **E-9** | A tag-only edit, once the prompt versions feature (`specs/prompt-versions.md`) exists | Saves no version, since tags are not content; it still refreshes `updated_at` (AC-1.3). A test for it belongs to whichever of the two features is built second. |
+| **E-9** | A tag-only edit, once the prompt versions feature (`specs/prompt-versions.md`) exists | Saves no version, since tags are not content; it still refreshes `updated_at` (AC-1.3). Mirrors versions E-15; the test, `test_patch_prompt_tags_saves_no_version`, is written by whichever of the two features is built second. |
 | **E-10** | `GET /tags` with any stored data, or none | Always 200; with no tag in use, `{"tags": [], "total": 0}` (AC-4.1, AC-4.5). |
 
 ---
@@ -458,3 +458,4 @@ one per AC or per parametrised group of ACs:
 | `test_list_tags_string_order` | AC-4.6 |
 | `test_update_prompt_unknown_collection_keeps_tags` | E-5 |
 | `test_delete_collection_keeps_tags` | E-8 |
+| `test_patch_prompt_tags_saves_no_version`: a prompt with 1 version; `PATCH` with `{"tags": ["ai"]}` gives 200; the versions list still has `total` 1, and `updated_at` is later than before. **Written only by whichever of versions and tagging is built second.** | E-9 |

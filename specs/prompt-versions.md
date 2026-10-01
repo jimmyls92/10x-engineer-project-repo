@@ -401,6 +401,7 @@ No new endpoint returns 400: neither takes a body.
 | **E-12** | The version's timestamps | Naive UTC, serialised like every other timestamp in the API, for example `"2026-09-30T09:58:11.270045"`. Tests compare them with `datetime.fromisoformat`, or as strings, since they are copies of values already returned (FR-1, FR-2). |
 | **E-13** | The server restarts | All prompts and their histories are lost (NFR-2). |
 | **E-14** | Prompts stored with an empty-string `collection_id` | No effect on versions. `collection_id` is not versioned (see *Known traps* in `CLAUDE.md` for the existing behaviour). |
+| **E-15** | A tag-only edit, once the tagging feature (`specs/tagging-system.md`) exists | No version (FR-3): tags are not content. `updated_at` is still refreshed. Mirrors tagging E-9; the test is written by whichever of the two features is built second. |
 
 ---
 
@@ -436,3 +437,4 @@ In `backend/tests/test_api.py`, in a new class `TestPromptVersions`, named
 | `test_list_prompt_versions_order_and_limit` (parametrised over AC-4.1 to AC-4.4) | AC-4.1 to AC-4.4 |
 | `test_list_prompt_versions_invalid_query` (parametrised: `limit=0`, `order=up`, `order=`) | AC-4.5, AC-4.6, AC-4.8 |
 | `test_patch_prompt_restore_saves_new_version` | AC-5.1 |
+| `test_patch_prompt_tags_saves_no_version`: a prompt with 1 version; `PATCH` with `{"tags": ["ai"]}` gives 200; the versions list still has `total` 1, and `updated_at` is later than before. **Written only by whichever of versions and tagging is built second.** | E-15 |
