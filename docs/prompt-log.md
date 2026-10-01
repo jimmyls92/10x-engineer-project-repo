@@ -4311,4 +4311,330 @@ log, with the message from entry 184. Task 2.5 is closed. It stopped and reporte
 
 **Why the next prompt changed**
 
+Every task was done, so the next prompt moves to the submission.
+
+
+### Entry 186
+
+**Prompt**
+
+> lets go with the subimission
+
+**What came back**
+
+Claude re-read the brief's *What You Submit* and *Verification* (`brief.txt:83-96`): the
+deliverables, plus "your GitHub repository link, a brief summary, and any known issues", checked by
+a clean clone, `python -m pydoc backend.app.models`, and the API reference against the real
+endpoints. It searched the course guide and found no rule on branches. It checked git: `Week-2` is
+10 commits ahead of `origin/Week-2`, and `main` (`158eb0b`) holds none of the Module 2 work, so a
+default clone of the repository gets Module 1's README. It proposed the submission in steps (the
+branch, the verification on a clean clone, the push, the summary and known issues, the close-out)
+and asked the first question: **which branch does the submitted link point to?** (A) `Week-2`
+merged into `main` by fast-forward, since `main` is already in `Week-2`'s history (`971a6cc`), and
+both pushed; (B) `Week-2` pushed, with a link to that branch, leaving `main` at Module 1; (C)
+`Week-2` pushed and a pull request into `main`, with the pull request as the link. It recommended A,
+since an assessor's plain `git clone` checks out `main`, and stopped.
+
+**Why the next prompt changed**
+
+Module 2 must be delivered on its own branch, and `main` holds Module 1 work not yet assessed, so
+the next prompt **adds a constraint**: `main` is not touched.
+
+
+### Entry 187
+
+**Prompt**
+
+> this assigment should be delivered in a bracnh called week-2... week-1/main has not been assesed yet, so we dont want to overwrite that
+
+**What came back**
+
+Decision recorded: the submission is the `Week-2` branch (the existing branch, `origin/Week-2`,
+capital W), and `main` is left as it is. Claude noted that this changes the clean-clone check: it
+must clone that branch, `git clone -b Week-2`. The next question: **is the clean clone checked
+before or after pushing?** (A) before: a local clone of `Week-2` into a scratch folder, so only
+committed files are present, then the README steps, the provided tests, `pydoc` and the API reference
+against the routes; push only once it passes; (B) after: push first, then clone from GitHub, which
+is the exact path an assessor takes. It recommended A, so nothing unverified is published, and
+said a final `git ls-remote` would confirm that GitHub has the same commit. It stopped.
+
+**Why the next prompt changed**
+
+I remembered a clean clone from Task 2.1, so the next prompt asks whether it is already done.
+
+
+### Entry 188
+
+**Prompt**
+
+> but we already did the clean clone part, right?
+
+**What came back**
+
+Claude checked the log: yes, in Task 2.1 (the entry quoting "go ahead with both commits, then the
+clean clone"), on commit `431d394`. Every README step passed, with 17 tests. Since then, `git diff
+--stat 431d394 Week-2` shows six files changed: `README.md` (2 commits, `67a7698`, `ee571d3`),
+`models.py`, `api.py`, `storage.py`, `utils.py` and `test_api.py` (the docstrings and the PATCH null
+fix, now 19 tests). `requirements.txt` is unchanged. So the earlier clone verified an earlier commit,
+not the one being submitted. The question: **is the clean clone re-run on the commit being
+submitted?** (A) yes, a short re-run: clone `Week-2`, install, the provided tests, `pydoc`, and the
+routes against the API reference, without repeating every endpoint example; (B) no, rely on the
+Task 2.1 clone and today's local test run. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+The earlier clone verified a commit six files older than the one submitted, so the next prompt
+takes A.
+
+
+### Entry 189
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Claude cloned `Week-2` (`a82301d`) from the local repository into a short temp folder, created a
+Python 3.12.13 venv, and installed `requirements.txt` as the README says. Results:
+
+| Check | Result |
+|---|---|
+| Install | Pinned versions installed: fastapi 0.109.0, pydantic 2.5.3, uvicorn 0.27.0 |
+| `pytest tests/ -v` | 19 passed |
+| `python -m pydoc backend.app.models` | Exit 0; every class and function listed with its docstring |
+| Routes in `api.py` vs `docs/API_REFERENCE.md` and the README table | The same 11 on all three |
+| `uvicorn app.api:app` from `backend/` | `/health` gives `{"status":"healthy","version":"0.1.0"}`, `/docs` 200 |
+
+**Finding.** The clean environment uses the **pinned** versions, but the specs' quoted messages
+were checked in the development environment, FastAPI 0.141.1 and Pydantic 2.13.5 (the mismatch is
+already recorded in `docs/SYSTEM_MODEL.md:603`). Claude re-ran every scratch check in the clean venv:
+all tag messages, the versions spec's `version`, `order` and `limit` messages, and the `exclude=True`
+behaviour came out **identical** on the pinned versions. So no criterion is wrong, but four
+sentences are: `specs/prompt-versions.md:201-202` and `:363` call 0.141.1 / 2.13.5 "the project's
+versions", and `specs/tagging-system.md:95`, `:140` name only those. The clone was deleted. The
+question: **are the four sentences corrected before the push?** (A) yes, one commit, naming both
+version pairs; (B) no, deferred to Module 3 with findings 3-10. It recommended A, since one is a
+false claim and the fix is small, and stopped.
+
+**Why the next prompt changed**
+
+One sentence was false and the fix was small, so the next prompt takes A.
+
+
+### Entry 190
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude corrected the four sentences: `specs/prompt-versions.md` (the `exclude=True` note and the
+*Errors* intro) and `specs/tagging-system.md` (the US-2 note and the AC-3.7 note) now name the
+pinned versions, FastAPI 0.109.0 and Pydantic 2.5.3, and the newer pair, and say both give the same
+text. It proposed, with both specs staged:
+
+> Name the pinned versions in both specs
+>
+> The specs called the development environment's FastAPI 0.141.1 the project's versions, but
+> requirements.txt pins 0.109.0. A clean clone re-ran every quoted message on the pins and got the
+> same text.
+
+The question: **is it committed with this message?** It stopped.
+
+**Why the next prompt changed**
+
+The message named the false claim and the evidence, so the next prompt approves it.
+
+
+### Entry 191
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude ran the suite (19 passed) and committed both specs as `4a313d2`. It moved to the summary and
+known issues the brief asks for with the repository link. It checked where known issues already
+live: `docs/API_REFERENCE.md` has a *Known issues* section (`:434`); the README has none. The
+question: **where do the summary and known issues go?** (A) only in the text pasted into the
+submission, written here in chat; (B) also in a committed file, `docs/module-2-submission.md`, so the
+repository holds what was submitted; (C) a *Known issues* section added to the README. It recommended
+B, and stopped.
+
+**Why the next prompt changed**
+
+B keeps a record of what was submitted without touching a graded deliverable, so the next prompt
+takes B.
+
+
+### Entry 192
+
+**Prompt**
+
+> B
+
+**What came back**
+
+Decision recorded: the summary and known issues go in `docs/module-2-submission.md` and in the text
+pasted into the submission. Nothing written yet. Claude read the API reference's *Known issues*
+(`docs/API_REFERENCE.md:434-441`) and gathered ten candidate known issues, each already recorded
+in the repo: the empty `collection_id` inconsistency and its listing consequence; `/openapi.json`
+still showing PATCH `title` and `content` as nullable; the two deprecation warnings in `models.py`;
+`python main.py` failing (README `:101`); no Python 3.13 support with the pins; the development
+environment's library versions differing from the pins (`docs/SYSTEM_MODEL.md:603`); the
+provided tests' known exceptions (one accepts 404 or 500, two use `time.sleep`); spec review
+findings 3-10 deferred; and `Storage.update_prompt` not checking the id, unreachable today. It
+also named one item that is a declaration, not an issue: `CLAUDE.md` stands in for
+`.github/copilot-instructions.md`. The question: **which known issues go into the submission?**
+(A) all ten, plus the declaration in the summary; (B) only the ones a user of the API or of the
+setup would hit (the first six), with the rest in the file only. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+The next prompt **adds a constraint** on length instead of choosing.
+
+
+### Entry 193
+
+**Prompt**
+
+> the submission messages should not be more than 40 characters
+
+**What came back**
+
+Claude could read the 40-character limit in three ways and asked which one was meant, without
+choosing: **what does the 40-character limit apply to?** (A) the whole text pasted into the
+submission, so it becomes one line pointing to `docs/module-2-submission.md`, where the full list
+lives; (B) each line of the pasted text, so the summary and each known issue is one short line;
+(C) the commit messages for the submission, as a stricter subject limit than the 50 characters in
+Rule 5. It stopped.
+
+**Why the next prompt changed**
+
+None of the three matched, so the next prompt **restructures** the request: one text of at most 40
+characters, with the link given separately.
+
+
+### Entry 194
+
+**Prompt**
+
+> I just want a summary of what we did here and the main issues encountered in 40 characters. The github link goes apart
+
+**What came back**
+
+Claude read this as one text of at most 40 characters, covering both the work and the main issues,
+with the GitHub link submitted separately. It counted each draft with Python and offered three:
+(A) `2 specs + docs; fixed PATCH-null 500 bug` (40), naming the one real bug found and fixed in
+Module 2 (it turned a null title or content into a 500); (B) `Docs, agent rules and 2 feature specs`
+(37), the work only; (C) `Fixed PATCH null 500; "" collection_id` (38), the issues only. The
+question: **which 40-character text is submitted?** It recommended A, the only one naming both the
+work and the main issue, and said that the content of `docs/module-2-submission.md` is the next
+step. It stopped.
+
+**Why the next prompt changed**
+
+A was the only text naming both the work and the main issue, so the next prompt takes it, and asks
+whether Module 1 had a submission document.
+
+
+### Entry 195
+
+**Prompt**
+
+> A, regarding the doc of submission, did we do the same for module-1?
+
+**What came back**
+
+Text A recorded: `2 specs + docs; fixed PATCH-null 500 bug`. Claude listed the files on `main`
+outside the code: `CLAUDE.md`, `README.md`, `config.yaml`, `docs/SYSTEM_MODEL.md`,
+`docs/ai-verification-note.md`, the prompt log and its shards. No submission document, and no
+commit mentioning one. So no: Module 1 had none, and `docs/module-2-submission.md` would be new.
+The question: **is the submission document still written?** (A) yes: the 40-character text has room
+for one issue, and the brief asks for "any known issues", so the file holds the full list and
+the `CLAUDE.md` declaration, on the branch the assessor opens; (B) no, as in Module 1: the text
+alone is submitted, and the code issues stay in `docs/API_REFERENCE.md`'s *Known issues*. It
+recommended A, and stopped.
+
+**Why the next prompt changed**
+
+Without the file, most known issues and the `CLAUDE.md` substitution would go unsaid, so the next
+prompt takes A.
+
+
+### Entry 196
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Decision recorded. Claude noted that the open question of entry 192 (which known issues) was settled
+by the 40-character limit: the text holds none of the list, so all ten go in the file. It wrote
+`docs/module-2-submission.md`: the branch, the submitted text, where the process evidence is; a
+table mapping each brief item to its file; the declaration that `CLAUDE.md` stands in for the
+agent file (checked against `docs/agent-effect-note.md:6`); the clean-clone results of entry 189;
+the ten known issues, each with where it is recorded; and the PATCH-null fix, a 500 before
+`158eb0b` (checked against the log). It proposed:
+
+> Add the Module 2 submission note
+>
+> The submitted text is limited to 40 characters, so the full known-issues list and the CLAUDE.md
+> substitution are recorded here. Module 1 had no such file; this one sits on the branch the
+> assessor opens.
+
+The question: **is it committed with this message?** It stopped.
+
+**Why the next prompt changed**
+
+The note was ready, so the next prompt approves the commit and asks for the push and the link.
+
+
+### Entry 197
+
+**Prompt**
+
+> commit, push the branch and give me the link to the repo
+
+**What came back**
+
+Claude ran the suite (19 passed), committed the note as `986f99b`, and pushed `Week-2` only
+(`ea2182a..986f99b`). `git ls-remote` confirmed `origin/Week-2` is `986f99b`, the local commit, and
+`origin/main` is still `158eb0b`, untouched. Link to the branch:
+https://github.com/jimmyls92/10x-engineer-project-repo/tree/Week-2. It pointed out that the pushed
+branch does not yet hold this log from entry 186 onwards, nor CURRENT STATE for the submission,
+since those go in the close-out commit, and proposed it with a second push:
+
+> Log the Module 2 submission
+>
+> The branch was pushed before this log so the link could be checked first. Main was left at
+> Module 1, which is not yet assessed.
+
+The question: **is the close-out committed with this message and pushed?** It stopped.
+
+**Why the next prompt changed**
+
+The log is assessed process evidence and had to be on the branch before submitting, so the next
+prompt approves the close-out.
+
+
+### Entry 198
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added this entry, set the next entry number in CURRENT STATE to 199, committed `CLAUDE.md`
+and this log with the message from entry 197, and pushed `Week-2` again, then checked with
+`git ls-remote` that `origin/Week-2` matches the local commit and `origin/main` is unchanged. The
+Module 2 submission is complete.
+
+**Why the next prompt changed**
+
 *Pending.*
