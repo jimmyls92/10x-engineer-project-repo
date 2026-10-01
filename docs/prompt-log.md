@@ -2241,4 +2241,2074 @@ change. The hashes are in the chat reply.
 
 **Why the next prompt changed**
 
+Task 2.4 was committed, so the next prompt (after a `/clear`) starts Task 2.5.
+
+
+### Entry 96
+
+**Prompt**
+
+> go for task 2.5
+
+**What came back**
+
+Claude re-read Task 2.5 and criterion C2.1 in `brief.txt`: two specs, `specs/prompt-versions.md` and
+`specs/tagging-system.md`, each with the brief's five sections, and every endpoint with at least one
+acceptance criterion a test can be written from. It proposed the task in steps (order of the specs,
+the design decisions for each, writing each, a fresh-context review, then close-out) and set out the
+first decision: which spec to work through first. It recommended starting with prompt versions, and
+stopped.
+
+**Why the next prompt changed**
+
+The recommendation made sense, so the next prompt takes it.
+
+
+### Entry 97
+
+**Prompt**
+
+> go with A, prompt versions first
+
+**What came back**
+
+Claude looked at what already defines the feature. `brief.txt` names only the file. The course guide
+(`1785592752-AIE500_Course_and_Project_Guide.pdf`, p. 2) says only "Track version history". So the
+behaviour is ours to decide. In the code, PUT and PATCH replace the stored prompt in place
+(`api.py:184`, `:235`), so no earlier state survives today. Claude set out the first design decision:
+what creates a version. The options were automatic snapshots on every client edit, explicit snapshots
+the client asks for, and versions as the only store of content. It recommended automatic snapshots,
+and stopped.
+
+**Why the next prompt changed**
+
+Before choosing A, I wanted to know how the history would be read, so the next prompt asks.
+
+
+### Entry 98
+
+**Prompt**
+
+> if we go for A, the idea is that GET could use version as a parameter?
+
+**What came back**
+
+Claude said that is one possible way to read the history, but it belongs to the endpoints step, not to
+this one. Option A decides only when a version is created. It does not fix how versions are read.
+Claude gave the two usual shapes to compare at that step: a query parameter on the existing
+`GET /prompts/{prompt_id}`, or a separate `/prompts/{prompt_id}/versions` resource. It asked whether
+to settle 2a on A and move on to what a version contains.
+
+**Why the next prompt changed**
+
+The answer showed that choosing A does not fix how versions are read, so the next prompt settles 2a.
+
+
+### Entry 99
+
+**Prompt**
+
+> yes go 2a for A
+
+**What came back**
+
+2a is settled: a version is saved automatically on every client edit (PUT, and any PATCH that changes
+something), and history cannot be written directly. Claude split 2b, "what a version contains", into
+smaller decisions and set out the first one: which fields a version keeps. The options were every
+client field (`title`, `content`, `description`, `collection_id`, `models.py:58-61`), only `title`
+and `content`, or only `content`. It pointed out a consequence of 2a: with a partial snapshot, a PATCH
+that changes only `collection_id` would still save a version, and that version would be identical to
+the previous one. It recommended keeping every client field, and stopped.
+
+**Why the next prompt changed**
+
+The recommendation followed from the 2a trigger, so the next prompt takes it.
+
+
+### Entry 100
+
+**Prompt**
+
+> go with A, every client field
+
+**What came back**
+
+2b(i) is settled: a version keeps all four client fields. Claude set out 2b(ii): whether the current
+state counts as a version, and how versions are identified. The options were: (A) creation is
+version 1 and every edit appends the new state, so the latest version is the current state; (B)
+history holds only past states, so an edit saves the state it replaces and a never-edited prompt has
+no versions; (C) identify versions by a generated id and order them by time, instead of by number.
+It noted a consequence for A. Deleting a collection unfiles its prompts with `model_copy`
+(`api.py:355`), which 2a does not version. After that, the latest version would no longer match the
+current prompt. It recommended A with integer numbers from 1, stating that exception explicitly, and
+stopped.
+
+**Why the next prompt changed**
+
+I did not follow the consequence for option A, so the next prompt asks for it to be explained.
+
+
+### Entry 101
+
+**Prompt**
+
+> can you please explain the consequence of A, i do not quite catch it
+
+**What came back**
+
+Claude walked through a concrete sequence. A prompt is created in collection X, which saves version
+1 with `collection_id` X. It is edited, which saves version 2, still with X. Then collection X is
+deleted. `delete_collection` clears the prompt's `collection_id` with `model_copy`
+(`api.py:353-356`), which is not a client edit, so under 2a no version is saved. The current prompt
+now has `collection_id` null, while its latest version, 2, still says X. So "the latest version is
+the current state" stops being true. Claude gave the two ways out: state the gap in the spec, or
+make that unfiling save a version too, which bends 2a. It asked whether this was clear, and stopped.
+
+**Why the next prompt changed**
+
+The walkthrough made the gap clear. It also made me ask whether `collection_id` belongs in a version
+at all, so the next prompt questions 2b(i).
+
+
+### Entry 102
+
+**Prompt**
+
+> why yhe version should have the collection_id? We could solve it by not saving this information there, right?
+
+**What came back**
+
+Claude said yes, but only together with a change to the 2a trigger. If versions drop
+`collection_id` and 2a stays "every client edit", a PATCH that only moves the prompt to another
+collection still saves a version. That version is identical to the previous one: the duplicate
+problem from 2b(i). The idea holds if the trigger narrows to "a client edit that changes a versioned
+field". Claude laid out three options. (A) Keep `collection_id` and state the gap. (B) Drop it and
+narrow the trigger, which treats a collection as organization rather than content. (C) Drop it and
+keep the trigger, which gives duplicates. It recommended B. This reopens 2b(i) and restates 2a, so
+it is a **restructuring** of decisions already taken. Claude stopped.
+
+**Why the next prompt changed**
+
+I was not sure what "all four" fields were, and whether `collection_id` was among them, so the next
+prompt asks.
+
+
+### Entry 103
+
+**Prompt**
+
+> which are the four fields? you include collention there?
+
+**What came back**
+
+Claude listed the four client fields of `PromptBase` (`models.py:58-61`): `title`, `content`,
+`description` and `collection_id`. So yes, "all four" in the 2b(i) decision included `collection_id`,
+and that is why the gap after a collection is deleted appeared. The server fields (`id`,
+`created_at`, `updated_at`, `models.py:154-156`) are not among them. Option B from entry 102 keeps
+the first three and drops `collection_id`. Claude asked for the choice between A, B and C, and
+stopped.
+
+**Why the next prompt changed**
+
+The list confirmed `collection_id` was in the version. Instead of picking a row, I wanted the
+question framed as what a version belongs to, so the next prompt **restructures** it.
+
+
+### Entry 104
+
+**Prompt**
+
+> the question here is that if a version is related with the prompt or with the collection or with both and what are the benefits and drownbacks, wouldnt you say?
+
+**What came back**
+
+Claude agreed that this is the right question, and that the A/B table was answering it indirectly.
+It compared three answers. (1) **Prompt only**: a version is the history of what the prompt says, and
+where it is filed is left out (option B). (2) **Both**: a version also records the collection at
+that moment (option A). This gives the gap after a collection is deleted, and versions can point to
+collections that no longer exist (`delete_collection`, `api.py:350`). (3) **Collection**: versioning a
+collection's contents, which is a different feature. Collections have no edit endpoint today (only
+GET, POST and DELETE, `api.py:267-333`), so the only thing that changes about a collection is which
+prompts are in it. Claude recommended prompt only, and stopped.
+
+**Why the next prompt changed**
+
+Framing it as "what a version belongs to" settled the question. The next prompt picks the prompt only,
+and asks which of the remaining fields should save a version.
+
+
+### Entry 105
+
+**Prompt**
+
+> go with 1, the prompt only. But next, the questions is: what if we change the title, the description? This will update the version?
+
+**What came back**
+
+Decision recorded: a version belongs to the prompt only, and `collection_id` is not part of it. That
+revises 2a and 2b(i). Claude clarified the wording first. A version is never updated: an edit saves a
+**new** version, and earlier ones stay as they were. Then it set out which fields should save a new
+version when they change: (A) any of `title`, `content` and `description`; (B) all three are stored,
+but only a `content` change saves a version; (C) only `content` is versioned, and title and
+description are labels like the collection. It pointed out that B leaves renames unrecorded while
+still storing titles, which is confusing. It recommended C, as the direct reading of "what the prompt
+says", and stopped.
+
+**Why the next prompt changed**
+
+The recommendation applied the same reasoning as the collection decision, so the next prompt takes
+C. It also asks what a title change then does, to check the consequence.
+
+
+### Entry 106
+
+**Prompt**
+
+> go with C, content only. Then if we modify the title, what would happen to that prompt and their versions?
+
+**What came back**
+
+Decision recorded: only `content` is versioned, and only a change to `content` saves a version.
+Claude traced a title-only edit through the code. The prompt changes as it does today: the title is
+replaced, and `updated_at` is refreshed by PUT always (`api.py:190`) and by PATCH whenever the body
+carries a field (`api.py:241`). No version is saved, and existing versions are untouched. Two
+consequences for the spec: the prompt's `updated_at` can be later than its latest version's time,
+and a version cannot show what the title was at that point. Claude also raised a question it said
+would be settled at the edge-cases step: PUT always resends `content`, so the spec must say whether
+"changes" means the value differs or merely that the key was sent. It asked to move on to 2b(ii),
+and stopped.
+
+**Why the next prompt changed**
+
+I did not follow the question left for later, and I wanted to set the spec's format. The next prompt
+asks for both, and **adds a constraint**: requirements must be written as business, functional and
+non-functional requirements.
+
+
+### Entry 107
+
+**Prompt**
+
+> I do not get your question for later, could you please elaborate? On the other hand this spect should be written in the form of Business requiremnts, functional requirements and non functional requirements (if any)
+
+**What came back**
+
+**The question for later.** Claude used an example. A prompt's content is "Hello". A client sends
+`PUT` with a new title and the same content "Hello", because PUT must carry every required field.
+If "content changes" means *the key was sent*, this saves a version identical to the previous one.
+If it means *the value differs*, nothing is saved. A PATCH that resends the same content gives the
+same choice. Claude left the choice for the edge-cases step.
+
+**The format.** Claude pointed out a conflict. The brief requires five named sections
+(`brief.txt:69-77`), and CLAUDE.md's *Section naming* rule says to use the brief's own words, since
+that is how an assessor checks C2.1. It gave three options. (A) Keep the brief's five headings at
+the top level and place the requirements inside them. (B) Make BR/FR/NFR the top level with the
+brief's headings nested under them. (C) Use BR/FR/NFR only. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+With the example, the edge case was clear, so the next prompt decides it. It also **adds two
+constraints**: how versions are stored, and how they are requested. The format question was not
+answered in that prompt.
+
+
+### Entry 108
+
+**Prompt**
+
+> regarding the question for later, as the versioning refers only to the content, no version should be saved. On the other hand, the versioning must be stored in a dict and can be requested using the curreng title of the prompt
+
+**What came back**
+
+Two decisions recorded. A version is saved only when the new `content` **differs** from the current
+value: resending the same content saves nothing. Versions are stored in a dict, which matches how
+storage keeps prompts and collections today (`storage.py:26-27`). What the dict is keyed by is left
+for the data-model step.
+
+Claude raised three problems with requesting versions by the current title, each checked in the
+code. (1) **Titles are not unique.** Nothing in `PromptBase` (`models.py:58`) or `create_prompt`
+prevents two prompts with the same title. (2) **Titles change.** A rename would break any saved
+link to the history. (3) Every existing endpoint addresses a resource by `<resource>_id` in the
+path, and the project's standards assign 404 to an unknown id in the path. It gave three options.
+(A) Request by title and make titles unique: a new 409 error in POST, PUT and PATCH, and a change to
+behaviour that works today. (B) Title as a query filter that returns the histories of every prompt
+with that title: no uniqueness needed, and an empty result is a 200, as for other filters.
+(C) Request by `prompt_id`, and find the id by title with the existing `GET /prompts?search=`
+(`api.py:62-97`). It recommended C, re-asked the format question from entry 107, and stopped.
+
+**Why the next prompt changed**
+
+The three problems made requesting by title a poor fit, so the next prompt takes C. It answers the
+format question and asks how a client obtains the `prompt_id`.
+
+
+### Entry 109
+
+**Prompt**
+
+> go for A regarding entry 107. And ok for C, but is there any way to get the prompt_id?
+
+**What came back**
+
+Two decisions recorded. **Format A**: the brief's five headings at the top level, with business
+requirements under *Overview and goals*, numbered functional requirements under the stories,
+endpoints and errors, and non-functional requirements in a section of their own. **Option C**:
+versions are requested by `prompt_id` in the path.
+
+Claude listed the ways a client already gets a `prompt_id`, all existing endpoints. `POST /prompts`
+returns the new prompt with its `id` (201). `GET /prompts` lists every prompt with its `id`.
+`GET /prompts?search=<text>` keeps prompts whose title or description contains the text, ignoring
+case (`api.py:62-97`, `search_prompts` in `utils.py`). Because it matches contained text, it can
+return several prompts, and the client picks one. So no new endpoint is needed to find the id.
+Claude proposed returning to 2b(ii), numbering, and stopped.
+
+**Why the next prompt changed**
+
+The existing endpoints already give the id, so nothing was missing, and the next prompt moves on to
+2b(ii).
+
+
+### Entry 110
+
+**Prompt**
+
+> go with 2b(ii)
+
+**What came back**
+
+Claude set out 2b(ii) again, updated for content-only versions. (A) Creation saves version 1, and each
+content change appends the new content as the next number. (B) Only past states: a content change
+saves the content it replaces, so a never-edited prompt has no history and the current content has
+no number. (C) Versions get generated ids, ordered by time. Claude pointed out that the gap from entry
+100 no longer applies. Deleting a collection changes only `collection_id` (`api.py:355`), and a
+rename does not touch content, so under A the latest version's content always equals the prompt's
+current content. It recommended A, with integers from 1 counted per prompt, and stopped.
+
+**Why the next prompt changed**
+
+With the gap gone, A had no remaining drawback that mattered, so the next prompt takes it.
+
+
+### Entry 111
+
+**Prompt**
+
+> go for A
+
+**What came back**
+
+Decision recorded: creation saves version 1, each content change appends the next number, and numbers
+are integers from 1 counted per prompt. Claude set out 2b(iii), what a version carries besides its
+content. The options were: (A) `version` number, `content` and `created_at`; (B) number and content
+only; (C) as A plus `prompt_id`, so that a version returned on its own says which prompt it belongs
+to. It noted a detail for A and C. The two default factories on `Prompt` run separately
+(`models.py:142-145`), so version 1's time and the prompt's `created_at` would differ by microseconds
+unless the spec says v1 copies the prompt's `created_at`. It recommended C, with version 1 copying the
+prompt's `created_at` and later versions copying the `updated_at` of the edit that saved them, and
+stopped.
+
+**Why the next prompt changed**
+
+The options assumed a version is a separate record. I had a different model in mind, so the next
+prompt **restructures** the question: versions as an attribute of the prompt.
+
+
+### Entry 112
+
+**Prompt**
+
+> but do you plan for version to be an object? my idea was to be an attribute (maybe a dict with version:content). And all the attributes would remain the same (with content pointing to the last version of the dict version:content)... what do you think?
+
+**What came back**
+
+Claude said yes, it had assumed a separate record, and that the attribute idea is sound. It fits
+"stored in a dict" and "belongs to the prompt only" directly. Deleting a prompt removes its history
+with no extra code, and `delete_collection`'s `model_copy` (`api.py:355`) carries the attribute
+along unchanged. It listed what the idea brings with it, each checked in the code:
+(1) PUT and PATCH build a new `Prompt` (`api.py:183-191`, `:234-242`), so they must copy
+`existing.versions` the way they copy `existing.id`, or the history is lost.
+(2) `Prompt` is the `response_model` of GET, POST, PUT and PATCH, so every prompt response, and every
+item in `GET /prompts`, would carry the whole history. That changes documented response shapes.
+(3) JSON object keys are strings, so `{1: ...}` goes out as `{"1": ...}`.
+(4) `version: content` has no timestamps, which settles 2b(iii) on B unless the value holds more
+than the content.
+It gave three options: (A) the attribute, shown in every prompt response; (B) the attribute, kept out
+of the existing responses and shown only by the versions endpoint; (C) separate storage, as first
+assumed. It recommended B, asked whether each version should keep a timestamp, and stopped.
+
+**Why the next prompt changed**
+
+The options table did not say what question it was answering, so the next prompt asks.
+
+
+### Entry 113
+
+**Prompt**
+
+> what is the question in the options you are proposing?
+
+**What came back**
+
+Claude admitted the table lacked a stated question and restated it. **Question 1:** now that
+`versions` is an attribute of `Prompt`, do the existing prompt responses (GET, POST, PUT, PATCH and
+each item of `GET /prompts`) show it, or does only a new versions endpoint? A is "shown everywhere",
+B is "shown only by the versions endpoint". C is not an answer to this question but the alternative
+of not using an attribute at all, and Claude dropped it, since the attribute idea was already
+accepted as sound. **Question 2**, separate: does each version keep the time it was saved, or only
+its content? It asked for both answers, and stopped.
+
+**Why the next prompt changed**
+
+The restatement was clear, but I wanted to stop the same thing happening again, so the next prompt
+asks what to add to `CLAUDE.md`. The two questions stay open.
+
+
+### Entry 114
+
+**Prompt**
+
+> What could we add to CLAUDE.md to avoid again this situation (making me to make a choice when there was not explicit question and reason for that decision?)
+
+**What came back**
+
+Claude traced the gap to Rule 0b. Its steps ask to "explain the decision" and "lay out the
+options" (`CLAUDE.md`, Rule 0b, steps 1-2), but nothing requires the decision to be written as a
+question, or stops a table from mixing options that answer different questions. Entry 112 did both:
+option C answered another question, and the timestamp question was attached at the end. It offered
+three places for the fix: (A) extend Rule 0b's steps; (B) add a new rule next to it; (C) a memory
+note outside the repo, which the log and history would not show. It recommended A, and drafted the
+wording: every decision opens with the question in bold as one sentence, followed by why it has to be
+decided now; every option must answer that question; two questions mean two steps. Nothing was
+edited. The two questions from entry 113 stay open.
+
+**Why the next prompt changed**
+
+The draft covered both failures from entry 112, so the next prompt approves it and asks to go on.
+
+
+### Entry 115
+
+**Prompt**
+
+> good, update CLAUDE.md, and continue with the decision
+
+**What came back**
+
+Claude replaced step 1 of Rule 0b in `CLAUDE.md` with the approved wording: state the decision as
+one bold question, say why it must be settled now, require every option to answer that question,
+and allow one question per step. It did not commit, and proposed a commit message for the change on
+its own.
+
+Applying the new rule straight away, Claude took only the first of the two open questions:
+**should the existing prompt responses show the `versions` attribute, or only a new versions
+endpoint?** Two options, each an answer to that question: (A) every prompt response, and every item
+of `GET /prompts`, includes `versions`; (B) existing responses stay as today and only the versions
+endpoint shows it. It recommended B, named the timestamp question as the next step, and stopped.
+
+**Why the next prompt changed**
+
+The commit message was fine and B kept the documented shapes intact, so the next prompt approves both.
+
+
+### Entry 116
+
+**Prompt**
+
+> approve the commit, and go with B
+
+**What came back**
+
+Claude ran the suite (19 passed) and committed `CLAUDE.md` alone as `e6df915` with the approved
+message. Decision recorded: existing prompt responses do not show `versions`, and only a new versions
+endpoint does. Claude then set out the next question: **what does each entry of the `versions` dict
+hold?** The options were: (A) the content only, `{1: "Hello"}`, which is the original idea; (B) the
+content and the time it was saved, `{1: {"content": ..., "created_at": ...}}`, with v1 copying the
+prompt's `created_at` and later versions copying the `updated_at` of the edit that saved them. It
+recommended B, and stopped.
+
+**Why the next prompt changed**
+
+A history without dates would be of little use, so the next prompt takes B.
+
+
+### Entry 117
+
+**Prompt**
+
+> go with B, content and time
+
+**What came back**
+
+Decision recorded: each entry of `versions` holds `content` and `created_at`. v1 copies the prompt's
+`created_at`, and later versions copy the `updated_at` of the edit that saved them. That closes step
+2b, the data model. Claude summarised the decisions so far and moved to step 2c with one question:
+**which endpoints does the feature add?** The options were: (A) one list endpoint,
+`GET /prompts/{prompt_id}/versions`; (B) that plus one version,
+`GET /prompts/{prompt_id}/versions/{version}`; (C) B plus a restore endpoint that sets the content back
+to an earlier version. It pointed out that restoring already works without a new endpoint: read the
+old version, then `PATCH` its content, which saves a new version under the rules already decided. It
+recommended B, and stopped.
+
+**Why the next prompt changed**
+
+Restore was already possible through PATCH, so the next prompt takes B without it.
+
+
+### Entry 118
+
+**Prompt**
+
+> go with B, list and one version
+
+**What came back**
+
+Decision recorded: two read-only endpoints, `GET /prompts/{prompt_id}/versions` and
+`GET /prompts/{prompt_id}/versions/{version}`. Claude moved to step 2d, the response shapes, one
+question at a time. The first: **what does the list endpoint return?** (A) The project's list
+convention, `{"versions": [...], "total": n}` as in `PromptList` (`models.py:220`), with each item an
+object that carries its own `version` number; the dict is converted to a list on the way out.
+(B) The same wrapper around the dict as stored, `{"versions": {"1": {...}}, "total": n}`, with the
+keys turned into strings by JSON. (C) The bare dict with no wrapper. It recommended A, named the
+order of the list as the next question, and stopped.
+
+**Why the next prompt changed**
+
+Instead of choosing a shape, I restated how I expect versions to be requested, so the next prompt
+does that.
+
+
+### Entry 119
+
+**Prompt**
+
+> For me you could either ask for a specific version or for the whole historic
+
+**What came back**
+
+Claude said this matches decision 2c: the two endpoints are exactly "the whole history"
+(`GET /prompts/{prompt_id}/versions`) and "a specific version"
+(`GET /prompts/{prompt_id}/versions/{version}`). It checked one possible other reading: a single
+endpoint where an optional `?version=` picks one version. That would reopen 2c, so it asked which
+the prompt meant. It then restated that the open question, 2d(i), concerns only **what the
+whole-history call returns**, and repeated the options. It stopped.
+
+**Why the next prompt changed**
+
+The two endpoints were what I meant, so the next prompt only picks the shape.
+
+
+### Entry 120
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Claude read "A" as shape A, with the two endpoints kept as decided, and said so. Decision recorded:
+the list endpoint returns `{"versions": [...], "total": n}`, each item holding `version`, `content`
+and `created_at`. The single-version endpoint returns one such item. Next question, 2d(ii): **in
+what order does the list come back?** (A) Oldest first, by ascending version number, so the last
+item is the current content. (B) Newest first, which follows the prompt list's rule
+(`sort_prompts_by_date`, `api.py:95`). It recommended A: the order is the numbering, so
+`versions[i]` is version `i + 1`. It stopped.
+
+**Why the next prompt changed**
+
+Rather than fix one order, I wanted the client to choose it. The next prompt **adds a constraint**:
+two query parameters, one for order and one for how much history comes back.
+
+
+### Entry 121
+
+**Prompt**
+
+> you can choose the order an the amount of historical (another two parameters)
+
+**What came back**
+
+Decision recorded: the list endpoint takes two query parameters, one for the order and one for the
+amount. Following the one-question rule, Claude took only the first: **how is the order parameter
+defined: its name, its values and its default?** (A) `order=asc|desc`, default `asc`.
+(B) `order=asc|desc`, default `desc`. (C) A boolean `descending`, mirroring
+`sort_prompts_by_date(prompts, descending=True)` (`api.py:95`). With any of them, an invalid value is
+a 422, since the project's standards give 422 to a query parameter that breaks a constraint. It
+recommended A, named the amount parameter as the next question, and stopped.
+
+**Why the next prompt changed**
+
+The recommendation read clearly and matched the numbering, so the next prompt takes it.
+
+
+### Entry 122
+
+**Prompt**
+
+> go with A, order default asc
+
+**What came back**
+
+Decision recorded: `order`, with the values `asc` and `desc`, default `asc`. An invalid value gives
+422. Next question, 2d(iii): **how is the amount parameter defined?** (A) `limit`, optional, and
+when omitted the whole history is returned. It must be at least 1, is applied after ordering, and
+keeps the first N items, so `order=desc&limit=3` gives the three newest. (B) `limit` with a default,
+for example 10, and a maximum. (C) `last=N`, which always keeps the N most recent, whatever the order.
+It recommended A: one rule (order, then cut) covers both ends. It named the meaning of `total` under a
+limit as the next question, and stopped.
+
+**Why the next prompt changed**
+
+One rule for both ends was the simplest, so the next prompt takes A.
+
+
+### Entry 123
+
+**Prompt**
+
+> go with A, limit optional
+
+**What came back**
+
+Decision recorded: `limit` is optional, and when omitted the whole history comes back. It must be at
+least 1 (`limit=0` gives 422) and is applied after `order`, keeping the first N. A limit larger than
+the history returns everything. Next question, 2d(iv): **under a limit, what does `total` count?**
+(A) The items returned, as `PromptList` does today (`total=len(prompts)`, `api.py:97`). (B) All of
+the prompt's versions, before the limit, which also equals the current version number. Claude noted
+that `CLAUDE.md` says `total` is "counted after filtering". A limit is a cut, not a filter, so B does
+not break that rule, but the spec must say so. It recommended B: under A a client can never tell
+that more versions exist. It stopped.
+
+**Why the next prompt changed**
+
+I did not see where `total` came from or how it differs from `limit`, so the next prompt asks for
+the context.
+
+
+### Entry 124
+
+**Prompt**
+
+> Im missing context, how is total related to the list version and why is any different from limit?
+
+**What came back**
+
+Claude supplied the missing context. `total` comes from decision 2d(i): the list endpoint follows the
+project's list convention, a `versions` array plus a `total` number, as `GET /prompts` returns
+`{"prompts": [...], "total": n}` (`PromptList`, `models.py:220`). `limit` is **sent** by the client
+and says at most how many items it wants; `total` is **returned** by the server. They differ in
+direction, and also in value when the history is shorter than the limit. A table for a prompt with
+5 versions showed, for no limit, `limit=2` and `limit=10`, the number of items returned and the value
+of `total` under options A and B. It asked whether that was clear, and stopped.
+
+**Why the next prompt changed**
+
+The table made the difference clear, so the next prompt picks B.
+
+
+### Entry 125
+
+**Prompt**
+
+> B
+
+**What came back**
+
+Decision recorded: `total` counts all of the prompt's versions, whatever the limit, and so equals the
+current version number. The spec must state that a limit is a cut, not a filter. That closes the
+response shapes. Claude moved to step 2e, errors and edge cases, one question at a time. The first:
+**what does `GET /prompts/{prompt_id}/versions/{version}` return when `version` names no version?**
+Options: (A) 422 when `version` is not an integer or is below 1, since that breaks a constraint on
+the parameter, and 404 "Version not found" when it is 1 or more but past the history; (B) 422 only
+for a non-integer, and 404 for any integer that names nothing, 0 included; (C) 400 for any number
+out of range. It noted a consequence of A: validation runs before the lookup, so
+`/prompts/nope/versions/0` is 422, not 404, the same ordering as the PATCH-null fix. It recommended A,
+as the direct application of the status table in `CLAUDE.md`, and stopped.
+
+**Why the next prompt changed**
+
+A followed the project's status table directly, so the next prompt takes it.
+
+
+### Entry 126
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Decision recorded: a `version` that is not an integer or is below 1 gives 422, and one that is 1 or
+more but past the history gives 404 "Version not found". Claude said the remaining edge cases need no
+new choice: each follows from a decision already taken or from a rule in `CLAUDE.md`. It listed them
+for confirmation, under one question: **do these derived rules hold, or should any change?** They
+were: an unknown `prompt_id` gives 404 "Prompt not found" on both endpoints, checked before the
+version; a deleted prompt's history goes with it; an invalid `order` or a `limit` below 1 gives
+422; a PATCH without `content`, or with the same content, and a PUT with the same content, save no
+version; a PUT or PATCH that changes content and other fields saves exactly one version; an edit
+rejected with 404 or 400 saves none; a `versions` key sent in a request body is dropped; deleting a
+collection leaves versions untouched. It named non-functional requirements as the next question, and
+stopped.
+
+**Why the next prompt changed**
+
+Each rule followed from something already decided, so the next prompt confirms all eight.
+
+
+### Entry 127
+
+**Prompt**
+
+> I confirm
+
+**What came back**
+
+All eight derived edge cases confirmed. Claude set out step 2f: **which non-functional requirements
+does the spec state?** Candidates: (1) backward compatibility, meaning existing endpoints keep their
+responses and statuses and the provided tests still pass; (2) storage stays in memory, so history is
+lost on restart, as prompts are today (`storage.py:26`); (3) the implementation follows the
+*PromptLab coding standards* in `CLAUDE.md`; (4) `README.md` and `docs/API_REFERENCE.md` gain the
+two endpoints (the Known trap for C2.2); (5) a performance target. The options were: (A) none;
+(B) 1-4, each of which can be checked; (C) 1-5. It recommended B. A performance number could not be
+measured or tested in this project, which would make it a criterion like "handles input correctly".
+It stopped.
+
+**Why the next prompt changed**
+
+A number I could not test would weaken the spec, so the next prompt takes B.
+
+
+### Entry 128
+
+**Prompt**
+
+> B
+
+**What came back**
+
+Decision recorded: four non-functional requirements (backward compatibility, in-memory storage, the
+coding standards, and the docs gaining the endpoints), with no performance target. That completes
+the design of step 2. Claude moved to step 3, writing `specs/prompt-versions.md`, and asked first
+**how the spec should be written**. (A) The whole draft in one pass, then reviewed together.
+(B) One section at a time, each approved before the next. (C) An outline of numbered requirements
+first, then the prose. It recommended A, since every decision is already made and logged, and
+the user stories and acceptance criteria are a write-up of those decisions. It did not write
+anything, and stopped.
+
+**Why the next prompt changed**
+
+Every decision was already made, so the next prompt takes A: one full draft, then a review.
+
+
+### Entry 129
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Claude first checked in a scratch FastAPI app, with the project's versions (FastAPI 0.141.1,
+Pydantic 2.13.5), the behaviour the spec would quote. `Field(exclude=True)` keeps `versions` out of
+the response body and out of `/openapi.json`, and `model_copy` keeps it. It also checked the exact
+422 `loc` and `msg` for `version` `0`, `-1`, `abc` and `1.5`, for `limit` `0`, `2.5` and empty, and
+for `order` `up`, `DESC` and empty. A `version` of `1.0` is accepted as 1.
+
+It then wrote `specs/prompt-versions.md` in the format from entry 109: the brief's five headings,
+business requirements under *Overview and goals*, FR-1 to FR-12 in the sections they govern,
+five user stories with 27 acceptance criteria, each written as an exact request and response, 14
+edge cases, NFR-1 to NFR-4, and a list of the tests to write. It flagged one choice made while
+writing that was not a logged decision: each `PromptVersion` entry also carries its own `version`
+number, although that number is the dict key. This mirrors `self._prompts`, which is keyed by id
+while each `Prompt` carries its `id`. Nothing was committed. Claude asked for a review, and stopped.
+
+**Why the next prompt changed**
+
+I did not follow the flagged choice about the version number, so the next prompt asks for it again,
+with an example.
+
+
+### Entry 130
+
+**Prompt**
+
+> explain this decision better, use a simple example
+
+**What came back**
+
+Claude compared the two shapes for a prompt with two versions. Without the number in the entry:
+`{1: {"content": "Hi", "created_at": ...}, 2: {"content": "Hello", ...}}`. With it:
+`{1: {"version": 1, "content": "Hi", ...}, 2: {"version": 2, "content": "Hello", ...}}`. Both
+endpoints must answer with the number in the body (decision 2d(i): each item carries its own
+`version`). So without it, the code has to rebuild every entry with its key on the way out. With
+it, the stored entry is returned as it is. It showed the same pattern in the existing storage:
+`self._prompts` is `{"abc": Prompt(id="abc", ...)}`, with the id both as key and inside the record
+(`storage.py:26`, `models.py:154`). The cost: the number is stored twice, and the two could
+disagree if code writes them differently. It recommended keeping the number in the entry, and
+stopped.
+
+**Why the next prompt changed**
+
+The example showed that the number saves rebuilding every response and follows the storage pattern,
+so the next prompt keeps it.
+
+
+### Entry 131
+
+**Prompt**
+
+> keep the number in the entry
+
+**What came back**
+
+Decision recorded. Claude had said that invariant I-1 guards against the key and the field
+disagreeing, but I-1 only required the numbers to run 1 to *n*. So it extended I-1 in
+`specs/prompt-versions.md`: each entry's `version` field must also equal its key. It proposed a
+commit for the spec on its own, with the log to follow when the task closes, and asked whether there
+were other review comments before step 4, the tagging spec. It stopped.
+
+**Why the next prompt changed**
+
+Reading the draft, I noticed user stories we had never discussed, so the next prompt asks why they
+are already there. The commit is on hold.
+
+
+### Entry 132
+
+**Prompt**
+
+> wait why we have already the user stories here?
+
+**What came back**
+
+Claude explained that the brief requires them (section 2, *User stories with acceptance criteria*),
+and that they came from choosing option A in entry 128: write the whole draft in one pass. It had
+justified A by saying the stories were only a write-up of the decisions. Claude said that was only
+partly true. Every acceptance criterion applies a logged decision (entries 97-128), but the
+choice of five stories, their wording, and the specific example requests were Claude's and were
+never worked through. Rule 0b says a deliverable must not be the first place content appears. It
+mapped each story to the decisions behind it, and gave three options: (A) review the stories one at
+a time now; (B) accept them and rely on the step-5 fresh-context review; (C) delete them and build
+them together. It recommended A, since the criteria become the Module 3 tests. The commit stays on
+hold. It stopped.
+
+**Why the next prompt changed**
+
+I wanted to check every criterion myself before it becomes a test, so the next prompt takes A.
+
+
+### Entry 133
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Claude started the review with US-1, "see how a prompt's wording evolved", under one question:
+**does US-1 stand as written, or should any of it change?** It restated the story and its five
+criteria in plain terms. AC-1.1: creation gives version 1, stamped with the prompt's `created_at`.
+AC-1.2: a content PATCH gives version 2, stamped with that PATCH's `updated_at`. AC-1.3: a content
+PUT gives version 3, and the list is ordered 1, 2, 3. AC-1.4 and AC-1.5: neither the single prompt
+nor the prompt list shows `versions`. It pointed to the two things most worth checking: the exact
+timestamps in AC-1.1 and AC-1.2, and that AC-1.3 uses PUT while AC-1.2 uses PATCH, so both write paths
+are covered. It stopped.
+
+**Why the next prompt changed**
+
+US-1 matched the decisions, so the next prompt keeps it.
+
+
+### Entry 134
+
+**Prompt**
+
+> Keep
+
+**What came back**
+
+US-1 kept as written. Claude moved to US-2, "read one version", under one question: **does US-2
+stand as written, or should any of it change?** The six criteria in plain terms: AC-2.1 reads
+version 2 and gets the same object as the list's second item; AC-2.2 shows that the latest version
+equals the current content; AC-2.3 asks for version 4 of 3 and gets 404 "Version not found"; AC-2.4
+and AC-2.5 send `0` and `abc` and get 422, with the exact `loc` and `msg`; AC-2.6 asks for a version
+of an unknown prompt and gets 404 "Prompt not found". It pointed out that AC-2.4 and AC-2.5 quote
+FastAPI's own messages, checked in entry 129, so a FastAPI upgrade could change them. It stopped.
+
+**Why the next prompt changed**
+
+Asserting the exact message is what the brief's own example does, so the next prompt keeps US-2.
+
+
+### Entry 135
+
+**Prompt**
+
+> keep
+
+**What came back**
+
+US-2 kept as written. Claude moved to US-3, "only real content changes create history", the story
+with the most criteria (eight), under one question: **does US-3 stand as written, or should any of
+it change?** It grouped the criteria. No version is saved by a title-only PATCH (3.1), a PUT that
+resends the same content (3.2), a PATCH that resends the same content (3.3) or an empty PATCH (3.8).
+Exactly one version for a PATCH changing three fields (3.4). None for a rejected edit, 400 (3.5).
+The versions are left identical by deleting the collection (3.6). A trailing space counts as a change (3.7). It pointed out
+that AC-3.1 also asserts `updated_at` moves, which is existing behaviour (`api.py:241`), included so
+the test shows the prompt changed while the history did not. It stopped.
+
+**Why the next prompt changed**
+
+The eight criteria covered every derived rule from entry 126, so the next prompt keeps US-3.
+
+
+### Entry 136
+
+**Prompt**
+
+> keep
+
+**What came back**
+
+US-3 kept as written. Claude moved to US-4, "choose the order and the amount", under one question:
+**does US-4 stand as written, or should any of it change?** On a prompt with 5 versions: `desc`
+gives `[5, 4, 3, 2, 1]` (4.1), `limit=2` gives `[1, 2]` (4.2), both together give `[5, 4]` (4.3),
+`limit=10` gives all 5 (4.4), with `total` 5 in all four. `limit=0` (4.5) and `order=up` (4.6) give
+422 with exact `loc` and `msg`, and an unknown prompt gives 404 (4.7). It pointed out two cases in the
+errors table but not in the story: an empty `?order=`, which gives 422, unlike the existing filters,
+which ignore an empty value (`api.py:70-71`); and a non-integer `limit`. It offered to add a
+criterion for the empty value, and stopped.
+
+**Why the next prompt changed**
+
+The empty `?order=` breaks what a client of `GET /prompts` would expect, so the next prompt
+**adds a constraint**: a criterion that tests it.
+
+
+### Entry 137
+
+**Prompt**
+
+> keep and add 4.8
+
+**What came back**
+
+US-4 kept, and AC-4.8 added to `specs/prompt-versions.md`: `?order=` with an empty value returns 422
+with `loc` `["query", "order"]` and the message "Input should be 'asc' or 'desc'", noting the
+difference from `GET /prompts`. `order=` was also added to the parametrised
+`test_list_prompt_versions_invalid_query` in *Tests to write*. The spec now has 28 criteria. Claude
+moved to the last story, US-5, "go back to an earlier wording", under one question: **does US-5
+stand as written, or should any of it change?** Its single criterion, AC-5.1: read v1 of a prompt
+with 3 versions, PATCH that content back, and get 4 versions, with v4's content equal to v1's and
+versions 1-3 unchanged. It pointed out that US-5 is the only story built on an existing endpoint,
+so it tests the decision of entry 117 (no restore endpoint) rather than new code. It stopped.
+
+**Why the next prompt changed**
+
+US-5 matched the entry 117 decision, and every story had now been reviewed, so the next prompt keeps
+it and approves the commit.
+
+
+### Entry 138
+
+**Prompt**
+
+> keep, and approve the commit
+
+**What came back**
+
+US-5 kept, which completes the review of the stories. Claude ran the suite (19 passed) and committed
+`specs/prompt-versions.md` alone as `2076902`, with the message approved in entry 131. The log stays
+uncommitted until the task closes.
+
+Claude moved to step 4, the tagging spec. The course guide says only "Tag prompts for organization"
+(p. 2). The brief's one example hints at the shape: "Returns 422 ... when tag is longer than 32
+characters" (`brief.txt:79`). The first question: **what is a tag?** (A) A text label stored on the
+prompt, as a list of strings, set through the existing POST, PUT and PATCH. (B) A resource of its own,
+like collections, with an id and endpoints, which prompts reference by id. It noted that under the
+versioning spec a tag is a label, so tags are not versioned either way (entries 104-106). It
+recommended A, since B would repeat collections under another name, and stopped.
+
+**Why the next prompt changed**
+
+I cleared the session before answering, so the next prompt asks to go on with the tagging spec
+without choosing A or B.
+
+
+### Entry 139
+
+**Prompt**
+
+> go with the tagging spec
+
+**What came back**
+
+After the `/clear`, Claude re-read the brief and the end of this log. The prompt did not answer the
+open question from entry 138, so it made no choice and wrote nothing to `specs/`. It restated step 4's
+first question: **what is a tag?** (A) a text label stored on the prompt as a list of strings, set
+through the existing POST, PUT and PATCH; (B) a resource of its own, like collections, with an id and
+endpoints, referenced by id. It recommended A again and stopped. It also noted that CURRENT STATE in
+`CLAUDE.md` is stale: it still says Task 2.5 is not started and gives 95 as the next entry number.
+
+**Why the next prompt changed**
+
+A matches the brief's 32-character example and avoids building collections a second time, so the
+next prompt takes A.
+
+
+### Entry 140
+
+**Prompt**
+
+> go for A
+
+**What came back**
+
+Decision recorded: a tag is a text label, and a prompt stores its tags as a list of strings, set
+through the existing POST, PUT and PATCH. Nothing written to `specs/` yet. Claude moved to the next
+question: **what makes a single tag valid?** It laid out three options, from the existing `Field`
+constraints (`models.py:58`, `:180`) and the brief's 32-character example: (A) length only, 1 to 32
+characters, anything else allowed; (B) length plus a restricted set of characters (lowercase
+letters, digits and hyphens, no spaces); (C) length only, but the server trims and lowercases each
+tag before storing it. It recommended B, and stopped.
+
+**Why the next prompt changed**
+
+B rejects bad input with 422 instead of changing it silently, as the rest of the code does, so the
+next prompt takes B.
+
+
+### Entry 141
+
+**Prompt**
+
+> B
+
+**What came back**
+
+Decision recorded: a tag is 1 to 32 characters, using only lowercase letters, digits and hyphens;
+anything else is a 422. Nothing written to `specs/` yet. Claude noted one detail of B left for a
+later step: where a hyphen may appear (leading, trailing, doubled). It moved to the next question:
+**what happens when a request sends the same tag twice?** (A) 422, rejected like any other invalid
+input; (B) the server keeps the first and drops the repeats; (C) stored as sent, repeats included.
+It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+A applies the same "reject, don't fix" rule as the single-tag decision, so the next prompt takes A.
+
+
+### Entry 142
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Decision recorded: a request whose tag list repeats a tag is rejected with 422, so a stored list
+never holds a duplicate. Nothing written to `specs/` yet. Claude moved to the next question: **how
+many tags can one prompt have?** (A) no limit; (B) at most 10, with 11 or more a 422; (C) at most 20.
+It recommended B, and stopped.
+
+**Why the next prompt changed**
+
+Ten is enough to organise a prompt and gives exact boundary tests, so the next prompt takes B.
+
+
+### Entry 143
+
+**Prompt**
+
+> B
+
+**What came back**
+
+Decision recorded: a prompt has at most 10 tags; 11 or more is a 422. Nothing written to `specs/`
+yet. Claude returned to the detail left open in entry 141: **where may a hyphen appear in a tag?**
+(A) anywhere, so `-ai`, `ai-` and `a--b` are valid; (B) not first or last, but doubles allowed;
+(C) only between two letters or digits, so no leading, trailing or doubled hyphen (the slug pattern
+`^[a-z0-9]+(-[a-z0-9]+)*$`). It recommended C, and stopped.
+
+**Why the next prompt changed**
+
+C rules out a lone `-` and near-duplicates like `a--b`, so the next prompt takes C.
+
+
+### Entry 144
+
+**Prompt**
+
+> C
+
+**What came back**
+
+Decision recorded: a tag must match `^[a-z0-9]+(-[a-z0-9]+)*$`, so a hyphen only sits between two
+letters or digits. With entries 141-144, the `tags` field is fully defined. Nothing written to
+`specs/` yet. Claude moved to the write paths, and read `api.py:149-244` first. The question:
+**what does a POST or PUT store when the body leaves `tags` out?** (A) an empty list on both, so a
+PUT without `tags` clears them, as it already unfiles a prompt when `collection_id` is left out
+(`api.py:153-155`); (B) an empty list on POST, but PUT keeps the stored tags; (C) `tags` required on
+both. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+A keeps PUT a full replacement and leaves the provided tests passing, so the next prompt takes A.
+
+
+### Entry 145
+
+**Prompt**
+
+> go for A
+
+**What came back**
+
+Decision recorded: `tags` is optional and defaults to `[]`, so a POST without it stores no tags and
+a PUT without it clears them; a PATCH without it keeps them (`api.py:225`). Nothing written to
+`specs/` yet. Claude moved to the next question: **what happens when a request sends
+`"tags": null`?** (A) 422 on POST, PUT and PATCH, as PATCH already does for a null `title` or
+`content` (`models.py:110`); (B) null means "clear", the same as `[]`, as a null `collection_id`
+unfiles a prompt (`api.py:227-229`); (C) null is read as the default, so it clears on PUT and PATCH
+and stores `[]` on POST. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+`[]` already means "no tags", so null is not needed, and the next prompt takes A.
+
+
+### Entry 146
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Decision recorded: `"tags": null` is a 422 on POST, PUT and PATCH, so a stored `tags` is always a
+list. Nothing written to `specs/` yet. Claude moved to the next question: **in what order are a
+prompt's tags stored and returned?** (A) in the order the request sent them; (B) sorted
+alphabetically by the server. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+A keeps the rule that the server validates and never rewrites, so the next prompt takes A.
+
+
+### Entry 147
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Decision recorded: tags are stored and returned in the order sent. This closes the data model.
+Nothing written to `specs/` yet. Claude moved to the endpoints: **beyond setting tags through POST,
+PUT and PATCH, what does the API add for tags?** (A) a `tag` filter on `GET /prompts` only; (B) the
+filter plus `GET /tags`, which lists the tags in use; (C) the filter plus endpoints to add and remove
+one tag (`POST /prompts/{prompt_id}/tags`, `DELETE /prompts/{prompt_id}/tags/{tag}`). It left how the
+filter matches for the next step, recommended B, and stopped.
+
+**Why the next prompt changed**
+
+B covers finding prompts by tag and discovering which tags exist, without repeating PATCH, so the
+next prompt takes B.
+
+
+### Entry 148
+
+**Prompt**
+
+> B
+
+**What came back**
+
+Decision recorded: the API adds a `tag` filter on `GET /prompts` and a new `GET /tags`; tags are
+set only through POST, PUT and PATCH. Nothing written to `specs/` yet. Claude read `list_prompts`
+(`api.py:62-97`): its two filters take one value each and combine with AND. The question: **how
+does the `tag` filter on `GET /prompts` match?** (A) one `tag` value, exact match; (B) `tag` may be
+repeated, and a prompt must carry every tag given (AND); (C) `tag` may be repeated, and a prompt
+must carry at least one (OR). It recommended B, and stopped.
+
+**Why the next prompt changed**
+
+AND narrows the way the endpoint's other filters already combine, so the next prompt takes B.
+
+
+### Entry 149
+
+**Prompt**
+
+> B
+
+**What came back**
+
+Decision recorded: `tag` may be repeated on `GET /prompts`, and a prompt must carry every tag given;
+`tag` combines with `collection_id` and `search` by AND. Nothing written to `specs/` yet. Claude
+moved to the next question: **what does `GET /prompts` do with a `tag` value that breaks the tag
+rules, such as `?tag=Python`, or with an empty `?tag=`?** (A) 422 for both, the value checked
+against the tag pattern; (B) 200 with an empty list for both, a filter that matches nothing;
+(C) the empty value ignored, as the other filters ignore it (`api.py:70-71`), and an invalid value
+a 422. It recalled that entry 136 flagged an empty value giving 422 as a surprise for clients of
+`GET /prompts`, recommended C, and stopped.
+
+**Why the next prompt changed**
+
+C refuses values that can never match and keeps an empty value behaving like the other filters,
+so the next prompt takes C.
+
+
+### Entry 150
+
+**Prompt**
+
+> C
+
+**What came back**
+
+Decision recorded: on `GET /prompts`, a `tag` value that breaks the tag pattern is a 422, and an
+empty `tag` value is ignored, including one among others (`?tag=ai&tag=` filters by `ai` alone).
+Nothing written to `specs/` yet. Claude moved to `GET /tags`: **what does each item in the
+`GET /tags` list hold?** (A) the tag as a plain string, `{"tags": ["ai", ...], "total": 2}`;
+(B) an object with the tag and the number of prompts carrying it,
+`{"tags": [{"name": "ai", "prompt_count": 3}, ...], "total": 2}`. It left the order of the list for
+the next step, recommended B, and stopped.
+
+**Why the next prompt changed**
+
+The count shows which tags are worth filtering by and gives exact numbers to test, so the next
+prompt takes B.
+
+
+### Entry 151
+
+**Prompt**
+
+> B
+
+**What came back**
+
+Decision recorded: each `GET /tags` item is `{"name": <tag>, "prompt_count": <n>}`, in a
+`{"tags": [...], "total": <n>}` response. Nothing written to `specs/` yet. Claude moved to the next
+question: **in what order does `GET /tags` return its items?** (A) alphabetically by name;
+(B) by `prompt_count`, highest first, ties broken by name; (C) in the order the tags were first
+used. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+Alphabetical order is fully predictable from the data and needs no tie rule, so the next prompt
+takes A.
+
+
+### Entry 152
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Decision recorded: `GET /tags` returns its items sorted alphabetically by name. Nothing written to
+`specs/` yet. Claude moved to the next question: **does `GET /tags` take any query parameters?**
+(A) none, it always covers every prompt; (B) a `collection_id` filter, counting only the prompts in
+that collection. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+A client can already list a collection's prompts, and B would carry the `collection_id` quirk into a
+new endpoint, so the next prompt takes A.
+
+
+### Entry 153
+
+**Prompt**
+
+> a
+
+**What came back**
+
+Decision recorded: `GET /tags` takes no query parameters. This closes the endpoint decisions
+(entries 140-153). Nothing written to `specs/` yet. Claude listed four rules that follow from
+earlier decisions and the existing code rather than needing a choice: a tag-only edit refreshes
+`updated_at` and saves no version (entries 104-106); a tag disappears from `GET /tags` once no
+prompt carries it; `GET /tags` on an empty store returns `{"tags": [], "total": 0}`; and checks run
+422, then 404, then 400. Recalling entry 132, where the stories first appeared in a one-pass draft,
+it asked: **how should the user stories be built?** (A) agree the list of stories, one line each,
+before any drafting; (B) draft the whole spec, then review it story by story, as for the versions
+spec. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+I wanted to choose the stories before any criterion is written, so the next prompt takes A.
+
+
+### Entry 154
+
+**Prompt**
+
+> a
+
+**What came back**
+
+Decision recorded: the stories are agreed as a one-line list before any drafting. Nothing written
+to `specs/` yet. Claude read the story format of `specs/prompt-versions.md` (`:90-103`: a story
+sentence, the requirements it implements, a Given/When/Then table) and proposed four stories, each
+mapped to the decisions behind it: US-1, tag a prompt when creating or editing it (entries 145,
+147); US-2, invalid tags are refused (141-146); US-3, find prompts by tag (149-150); US-4, see which
+tags exist and how often (151-153). The question: **which stories does the tagging spec need?**
+(A) these four, with the tag-only edit and its effect on versions stated under edge cases; (B) the
+four plus a US-5 for the link with versions. It recommended A, since the versions criterion only
+applies once that feature exists, and stopped.
+
+**Why the next prompt changed**
+
+Four stories cover every decision, and each can be tested in whichever module tags are built, so
+the next prompt takes A.
+
+
+### Entry 155
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Decision recorded: the spec has four stories, US-1 to US-4, and the effect on versions goes under
+*Edge cases* as a conditional rule. Nothing written to `specs/` yet. Claude moved to how the
+acceptance criteria get written: **are the criteria agreed in chat before they go into the file, or
+written into a draft and reviewed after?** (A) one story at a time: Claude shows that story's
+criteria in chat, and they go into the file once approved; (B) Claude writes the whole spec, then it
+is reviewed story by story. It recommended A, since the stories were agreed first for the same
+reason, and stopped.
+
+**Why the next prompt changed**
+
+Agreeing each story's criteria before they are written keeps the spec a write-up of shared work, so
+the next prompt takes A.
+
+
+### Entry 156
+
+**Prompt**
+
+> a
+
+**What came back**
+
+Decision recorded: criteria are shown in chat one story at a time and written to the file once
+approved. Nothing written to `specs/` yet. Claude read `conftest.py` for the fixture payloads and
+showed US-1, "tag a prompt when creating or editing it", with eight criteria: POST with tags keeps
+their order (1.1); POST without `tags` stores `[]` (1.2); PATCH with `tags` replaces them and moves
+`updated_at` (1.3); PATCH without `tags` keeps them (1.4); PATCH with `[]` clears them (1.5); PUT
+without `tags` clears them (1.6); PUT with tags keeps their order (1.7); `GET /prompts` shows each
+prompt's tags (1.8). Each change is re-read with GET. The question: **does US-1 stand as written,
+or should any of it change?** It stopped.
+
+**Why the next prompt changed**
+
+"No prompt" as the starting state was unclear to me, and I was not sure a tag-only edit should move
+`updated_at`, so the next prompt asks about both.
+
+
+### Entry 157
+
+**Prompt**
+
+> I dont get 1.1 and 1.2, what u mean by no prompt (I woould understand if we would say "any prompt"). Regarding 1.3 I dont know if I would prefer "updated_at" only to be modified when the prompt itself is updated...what do you think, what are the cons and pros?
+
+**What came back**
+
+On 1.1 and 1.2, Claude explained that "No prompt" meant an empty store, copied from AC-1.1 of the
+versions spec, but that a POST does not depend on what is already stored, so the Given adds nothing.
+It proposed "Any" for both. On 1.3 it made the open point the step's question: **does a tag-only
+edit refresh `updated_at`?** (A) yes, as every PATCH that carries a field does today, including
+`description` and `collection_id` (`api.py:241`); (B) no, `updated_at` moves only when `title`,
+`content` or `description` change. It gave the pros and cons of each: A keeps one rule and lets a
+client see that the record changed, but `updated_at` no longer says when the wording changed;
+B keeps that meaning, but tags would then behave unlike `collection_id`, a PATCH that sends tags
+with other fields would need its own rule, and the project's convention treats a client edit as
+moving `updated_at`. It noted that the versions spec already records when the content changed. It
+recommended A, and stopped.
+
+**Why the next prompt changed**
+
+The versions spec already records when the wording changed, and B would make tags an exception, so
+the next prompt takes A.
+
+
+### Entry 158
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Decision recorded: a tag-only edit refreshes `updated_at`, like any PATCH that carries a field, so
+AC-1.3 stands. With the Given of AC-1.1 and AC-1.2 changed to "Any", US-1 has no open points.
+Nothing written to `specs/` yet. Claude asked: **does US-1, amended this way, go into the file?**
+It stopped.
+
+**Why the next prompt changed**
+
+US-1 had no open points left, so the next prompt approves writing it.
+
+
+### Entry 159
+
+**Prompt**
+
+> ok
+
+**What came back**
+
+Claude created `specs/tagging-system.md` with a header table, the heading *User stories with
+acceptance criteria*, and US-1 with its eight criteria as agreed in entries 156-158. The other
+sections are not written yet. It moved to US-2, "invalid tags are refused". To quote exact
+messages, it ran a scratch Pydantic 2.13.5 model with the agreed rules (outside the repo) and read
+each `loc` and `msg`. It showed eight criteria in chat: a 32-character tag (2.1) and 10 tags (2.2)
+accepted; each rejected tag shape a 422 at `["body", "tags", 0]` (2.3, parametrised: `Python`,
+`code review`, `-ai`, `ai-`, `a--b`, `""`, 33 characters); a repeated tag (2.4), 11 tags (2.5) and
+`null` (2.6) each a 422 at `["body", "tags"]`; PUT and PATCH refusing an invalid tag and leaving the
+stored tags unchanged (2.7); and `PATCH /prompts/nope` with an invalid tag giving 422, not 404
+(2.8). It flagged that the message for a repeated tag is its own wording, not Pydantic's. The
+question: **does US-2 stand as written, or should any of it change?** It stopped.
+
+**Why the next prompt changed**
+
+The message for 11 tags did not tell a client how to fix the request, so the next prompt **adds a
+constraint**: the message must say so.
+
+
+### Entry 160
+
+**Prompt**
+
+> 2.5 should add "delete a tag before including another" in the error message. The rest is ok
+
+**What came back**
+
+AC-2.1 to 2.4 and 2.6 to 2.8 approved. Claude explained what the change implies: Pydantic's own
+`max_length` message cannot be extended, so the count must be checked in a `field_validator` that
+raises `ValueError`, and the model must not also declare `max_length` on the list, or the built-in
+message would fire first. It checked this with a scratch model (outside the repo): the message comes
+back as `Value error, <text>` at `["body", "tags"]`. It proposed the text "a prompt can have at
+most 10 tags; delete a tag before including another", noting that on a POST or PUT "delete" means
+removing one from the request, since nothing is stored yet. The question: **is that the exact
+message for AC-2.5?** It stopped.
+
+**Why the next prompt changed**
+
+The proposed text kept my wording and told the client how to fix the request, so the next prompt
+accepts it.
+
+
+### Entry 161
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added US-2 to `specs/tagging-system.md` with its eight criteria and the agreed AC-2.5
+message, and a table of the values and messages for the parametrised AC-2.3. It moved to US-3,
+"find prompts by tag". To quote the query errors, it ran a scratch FastAPI 0.141.1 app (outside the
+repo) with a repeatable `tag` parameter. An empty value must be ignored, not rejected, so the query
+pattern also accepts the empty string, `^([a-z0-9]+(-[a-z0-9]+)*)?$`, and that is the pattern the
+422 message quotes. Over three prompts tagged `["ai", "code-review"]`, `["ai"]` and `["python"]`,
+it showed nine criteria: one tag (3.1), two tags with AND (3.2), an unused valid tag giving an empty
+list (3.3), `tag` with `collection_id` (3.4) and with `search` (3.5), an empty value ignored, alone
+or among others (3.6), an invalid value a 422 at `["query", "tag", <index>]` (3.7), no `tag` giving
+every prompt (3.8), and a tag repeated in the query read as once (3.9). It flagged 3.9 as a new
+rule not decided before, since a repeated tag in the body is a 422, and the pattern in 3.7's
+message. The question: **does US-3 stand as written, or should any of it change?** It stopped.
+
+**Why the next prompt changed**
+
+3.9 was acceptable, but I could not follow 3.7, so the next prompt asks for it to be explained.
+
+
+### Entry 162
+
+**Prompt**
+
+> keep, and 3.9 is fine. And i dont get 3.7, could you clarify?
+
+**What came back**
+
+AC-3.1 to 3.6, 3.8 and 3.9 approved. Claude explained 3.7 in two parts. The `loc` names which
+value failed: `?tag=Python` fails at index 0, and in `?tag=ai&tag=Python` the bad value is the
+second, index 1, which shows that every value is checked, not only the first. The pattern in the
+message differs from the body's because the query must let an empty value through, so it can be
+ignored as AC-3.6 requires; the trailing `?` makes the whole tag optional. It gave the exact
+response it had seen from the scratch app, and asked: **does AC-3.7 stand as written?** It stopped.
+
+**Why the next prompt changed**
+
+The explanation made 3.7 clear, so the next prompt keeps it.
+
+
+### Entry 163
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added US-3 to `specs/tagging-system.md` with its nine criteria and a note on the query
+pattern. It moved to US-4, "see which tags exist and how often", and showed six criteria for
+`GET /tags`: an empty store (4.1); two prompts tagged `["python", "ai"]` and `["code-review", "ai"]`,
+giving `ai` 2, `code-review` 1, `python` 1, in alphabetical order rather than order of first use
+(4.2); deleting a prompt drops its count and removes a tag no prompt carries (4.3); a PATCH to `[]`
+does the same (4.4); prompts without tags give an empty list (4.5); and the order of `a-b`, `a1`,
+`ab` (4.6). It flagged that "alphabetical" must mean Python's string order, where `-` sorts before
+digits and digits before letters, and that 4.6 pins it down. The question: **does US-4 stand as
+written, or should any of it change?** It stopped.
+
+**Why the next prompt changed**
+
+US-4 covered every `GET /tags` decision, so the next prompt keeps it.
+
+
+### Entry 164
+
+**Prompt**
+
+> good
+
+**What came back**
+
+Claude added US-4 to `specs/tagging-system.md`, which completes the user stories (31 criteria). Four
+sections remain: *Overview and goals*, *Data model changes needed*, *API endpoints with request and
+response shapes*, and *Error conditions and edge cases*. The data model section still holds choices
+never discussed, such as where the validators live and what the new models are called. The
+question: **are the remaining sections drafted all in one pass, or one at a time?** (A) one at a
+time, starting with the data model; (B) all four, then reviewed. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+Only the data model still had open choices, so the next prompt takes A.
+
+
+### Entry 165
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Decision recorded: the remaining sections are drafted one at a time, starting with *Data model
+changes needed*. Claude read `models.py:1-140`. It explained that AC-2.3 quotes Pydantic's own
+per-tag messages, so the per-tag rules must be a Pydantic item type, `Tag = Annotated[str,
+Field(...)]`, whatever else is chosen; only the list rules (count, duplicates) are open. It checked
+a scratch model (outside the repo) and found one consequence for later: on PATCH, `tags` must be
+`Optional` so it can be left out, so a `null` there is caught by `reject_null` (`models.py:110`)
+with "Value error, tags cannot be null; …", not POST's "Input should be a valid list". It held that
+for the errors section. The question: **how are the list rules shared between `PromptBase` and
+`PromptPatch`?** (A) one module-level function, `check_tag_list`, called from a `field_validator`
+in each model; (B) the checks written out in both models, as `PromptPatch` repeats the base
+constraints today (`models.py:91-92`); (C) one `TagList` type carrying an `AfterValidator`, used by
+both. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+A writes the list rules once with an idiom the code already uses, so the next prompt takes A.
+
+
+### Entry 166
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Decision recorded: the list rules live in one module-level function, `check_tag_list`, called from a
+`field_validator` on `tags` in `PromptBase` and in `PromptPatch`. Nothing written to `specs/` yet.
+Claude moved to naming the three new types: the per-tag type, the per-value type of the query
+filter, and the two `GET /tags` response models. The question: **what are the new types called?**
+(A) `TagName`, `TagNameQuery`, `Tag` for an item and `TagList`; (B) `Tag`, `TagQuery`,
+`TagSummary` for an item and `TagList`. Both keep `TagList` beside `PromptList` and
+`CollectionList`. It recommended B, since in this code a model named `X` is a stored record, and a
+tag is not one (entry 140), and stopped.
+
+**Why the next prompt changed**
+
+B avoids a model name that suggests tags are a stored resource, so the next prompt takes B.
+
+
+### Entry 167
+
+**Prompt**
+
+> B
+
+**What came back**
+
+Decision recorded: the new types are `Tag`, `TagQuery`, `TagSummary` and `TagList`. Nothing written
+to `specs/` yet. Claude read the function list of `utils.py` and the imports of `storage.py`: the
+existing filters, `filter_prompts_by_collection` and `search_prompts`, are pure helpers in
+`utils.py` (`:27`, `:45`), and storage has no filtering of its own. The question: **where does the
+code that filters by tag and counts tags live?** (A) both in `utils.py`, as `filter_prompts_by_tags`
+and `count_tags`; (B) filtering in `utils.py`, counting as a new storage method; (C) both inline in
+the endpoints in `api.py`. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+A puts the new helpers beside the existing filters and leaves storage unchanged, so the next prompt
+takes A.
+
+
+### Entry 168
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Decision recorded: `filter_prompts_by_tags` and `count_tags` are pure helpers in `utils.py`, and
+`storage.py` is unchanged. Nothing written to `specs/` yet. With no data-model choices left, Claude
+listed what the section would say, each item from a logged decision: the `Tag` and `TagQuery`
+types, `check_tag_list`, the new `tags` field on `PromptBase` and `PromptPatch` (with `reject_null`
+extended to it), the `TagSummary` and `TagList` models, the two helpers, and the lines of `api.py`
+that must carry `tags` through PUT and PATCH (`:183-191`, `:234-242`). The question: **does the
+data model section go into the file as listed?** It stopped.
+
+**Why the next prompt changed**
+
+Every item traced back to a logged decision, so the next prompt approves writing it.
+
+
+### Entry 169
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added *Data model changes needed* to `specs/tagging-system.md`, as listed in entry 168:
+`Tag`, `TagQuery`, `check_tag_list` (count checked before duplicates), the `tags` field on
+`PromptBase` and `PromptPatch`, `TagSummary`, `TagList`, the two helpers, and the changes to
+`api.py`, each tied to the criteria it serves. It flagged two placements it wrote without asking:
+`TagSummary` and `TagList` under a new `Tag Models` banner in `models.py`, and `TagQuery` in
+`models.py` rather than `api.py`. It moved to *API endpoints with request and response
+shapes*. One choice there was never made: the handler for `GET /tags` follows the `<verb>_<resource>`
+convention as `list_tags`, but it needs a banner. The question: **under which banner of `api.py`
+does `GET /tags` go?** (A) a new `# ============== Tag Endpoints ==============`, after the
+collection endpoints; (B) under `Prompt Endpoints`, since tags are a field of the prompt. It
+recommended A, and stopped.
+
+**Why the next prompt changed**
+
+A follows the URL, as the existing banners do, and matches the models layout, so the next prompt
+takes A, which also accepts the two placements.
+
+
+### Entry 170
+
+**Prompt**
+
+> a
+
+**What came back**
+
+Decision recorded: `list_tags` goes under a new `Tag Endpoints` banner after the collection
+endpoints. Claude listed what the endpoints section would say, all from logged decisions: for
+`GET /prompts`, the new parameter `tag: List[TagQuery] = Query(default=[])`, with empty values
+dropped and then `filter_prompts_by_tags` applied after the search and before the sort; for
+`GET /tags`, no parameters, status 200, a `TagList` built by `count_tags`, with a sample body; and
+for POST, PUT, PATCH and GET of a prompt, the request and response shapes gaining `tags`, with a
+sample. The question: **does the endpoints section go into the file as listed?** It stopped.
+
+**Why the next prompt changed**
+
+The list matched the decisions, so the next prompt approves writing it.
+
+
+### Entry 171
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude read the endpoints section of `specs/prompt-versions.md` (`:238-339`) for its format and
+added *API endpoints with request and response shapes* to `specs/tagging-system.md`: `GET /tags`
+with a curl request and a sample 200 body, `GET /prompts` with the `tag` parameter, the order of
+steps and a sample, and a table of the existing endpoints that carry `tags`, each linked to its
+criteria, with a POST example. It moved to the last spec section before the overview, *Error
+conditions and edge cases*, and raised the finding held since entry 165: `"tags": null` gives
+"Input should be a valid list" on POST and PUT but "Value error, tags cannot be null; …" on PATCH.
+The question: **does the spec accept the two messages, or make them the same?** (A) accept them,
+and add a PATCH criterion with its own message; (B) make POST and PUT give the PATCH message too,
+with a validator on `PromptBase`. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+The same split already exists for `title`, so the next prompt takes A.
+
+
+### Entry 172
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Decision recorded. Claude confirmed the precedent against the real app: `POST /prompts` with a null
+`title` gives 422, "Input should be a valid string". It added AC-2.9 to US-2: a PATCH with
+`{"tags": null}` gives 422 at `["body", "tags"]` with the `reject_null` message, and the stored tags
+are unchanged (32 criteria now). It listed what *Error conditions and edge cases* would say: an
+errors table per endpoint, and ten edge cases, all from logged decisions or checked behaviour: the
+two null messages; the count message winning over duplicates; a bad tag reported before the list
+rules; 422 before 404 and before 400; a valid PUT or PATCH with an unknown `collection_id` storing
+nothing; no normalisation (`AI` refused, not lowercased); empty and repeated query values; deleting
+a collection leaving tags alone; and, if prompt versions exist, a tag-only edit saving no version.
+The question: **does the errors and edge cases section go into the file as listed?** It stopped.
+
+**Why the next prompt changed**
+
+Every case came from a decision or a checked behaviour, so the next prompt approves writing it.
+
+
+### Entry 173
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude checked E-8 first: `delete_collection` unfiles prompts with `model_copy` (`api.py:355`),
+which keeps their tags. It added *Error conditions and edge cases* to `specs/tagging-system.md`: an
+errors table with `loc` and exact message per case, each linked to its criterion, and edge cases
+E-1 to E-10. One section remains, *Overview and goals*, which goes first in the file. Its content
+has not been discussed: the goals, and above all the non-goals. The question: **what does the spec
+declare out of scope?** Claude proposed five non-goals: renaming a tag across all prompts; tag
+endpoints that write (add or remove one tag); OR matching; case-insensitive matching or
+normalisation; and a `collection_id` filter on `GET /tags`. It asked the user to keep, cut or add,
+and stopped.
+
+**Why the next prompt changed**
+
+I did not remember a non-goals section in the versions spec, so the next prompt asks why this one
+needs it.
+
+
+### Entry 174
+
+**Prompt**
+
+> but we didnt add this section on the previous spec, why add it here?
+
+**What came back**
+
+Claude checked `specs/prompt-versions.md` and found that it does have one: *Non-goals (out of
+scope)* (`:46-55`), six rows, inside *Overview and goals*, beside *Overview*, *Business
+requirements*, *Goals* and *Glossary* (`:16-64`). So adding it here keeps the two specs alike. It
+also noted that the versions spec has two more sections the tagging spec lacks, *Non-functional
+requirements* and *Tests to write* (`:394`, `:403`), and named matching them as the step after this
+one. It restated the question: **what does the spec declare out of scope?**, with the same five
+proposed non-goals, and stopped.
+
+**Why the next prompt changed**
+
+The versions spec did have non-goals, and the five proposed matched our decisions, so the next
+prompt accepts them.
+
+
+### Entry 175
+
+**Prompt**
+
+> its ok
+
+**What came back**
+
+Claude added *Overview and goals* at the top of `specs/tagging-system.md`, mirroring the versions
+spec: an overview (a prompt can be filed in only one collection today, `models.py:61`), five
+business requirements, BR-1 to BR-4 one per story and BR-5 on old clients, four goals, the five
+non-goals as NG-1 to NG-5, and a glossary of three terms. It said these were written up from the
+stories and decisions without being discussed one by one. It also completed the header (code
+touched, numbering). It moved to the next step named in entry 174: the versions spec has
+*Non-functional requirements* and *Tests to write*, which this spec lacks. The question: **does the
+tagging spec get those two sections too?** (A) both; (B) only *Tests to write*; (C) neither, since
+the brief does not require them. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+Both sections keep the specs parallel and record the documentation duty, so the next prompt takes
+both.
+
+
+### Entry 176
+
+**Prompt**
+
+> both
+
+**What came back**
+
+Claude read the two sections in `specs/prompt-versions.md` (`:394-425`) and added both to
+`specs/tagging-system.md`: NFR-1 to NFR-4 (backward compatibility, in-memory storage, coding
+standards, documentation of `GET /tags` and the `tag` filter in the README and API reference), and
+*Tests to write*, a new class `TestTags` with tests mapped to all 32 criteria plus E-5, E-7 and
+E-8. Every section the brief requires is now written. It proposed committing the spec alone, before
+a fresh-context review, so that the review's fixes show as separate commits, with this message:
+
+> Add tagging system feature spec
+>
+> Tags are labels on the prompt, not a resource, so the spec adds no tag storage and only a
+> read-only GET /tags. Every criterion was agreed in chat before it was written, unlike the
+> one-pass draft of the versions spec.
+
+The question: **is the spec committed now with this message?** The log stays uncommitted until the
+task closes. It stopped.
+
+**Why the next prompt changed**
+
+The message stated the decision that leaves no trace in the diff, so the next prompt approves it.
+
+
+### Entry 177
+
+**Prompt**
+
+> commit
+
+**What came back**
+
+Claude ran the suite (19 passed) and committed `specs/tagging-system.md` alone as `94ebdd1`, with
+the message from entry 176. The log stays uncommitted. It moved to the fresh-context review. The
+question: **what does the review cover?** (A) both specs, checked by an agent with no memory of
+this session against the brief's Task 2.5 checklist, criterion C2.1 and the code, including "could
+someone else implement from this"; (B) only the tagging spec, since the versions spec's stories
+were already reviewed one by one (entries 133-138). It recommended A, since C2.1 is judged on both
+files and the versions spec's other sections were never reviewed by a fresh reader, and stopped.
+
+**Why the next prompt changed**
+
+I thought the versions spec had already been checked, so the next prompt asks.
+
+
+### Entry 178
+
+**Prompt**
+
+> Didnt we already check the first spec?
+
+**What came back**
+
+Claude searched the log for earlier reviews. Partly: in entries 133-138 I reviewed the versions
+spec's five stories one at a time, in this same conversation, and the spec was committed after
+(`2076902`). No fresh-context reader has read it: the fresh-context reviews in the log (entries
+50 and 69) were of Tasks 2.1-2.3. The plan set in entry 96 put one fresh-context review
+after both specs were written. It added that the story review covered only *User stories*, not the
+data model, endpoints or errors, and was done by the two of us, who know what the spec means to say.
+It restated the question, **what does the review cover?**, with the same options, still
+recommending A, and stopped.
+
+**Why the next prompt changed**
+
+Most of the versions spec had never had an outside reader, so the next prompt takes A.
+
+
+### Entry 179
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Claude started a read-only general-purpose subagent with a fresh context, to review both specs
+against Task 2.5, criterion C2.1 and "someone else could implement from them" (`brief.txt:96`),
+against the code (every claim and line reference), against *PromptLab coding standards*, for
+internal consistency, for places an implementer would have to guess, for quoted messages the
+proposed code would not produce, and for conflicts between the two features. It reports findings
+only, ranked by severity; no file is changed.
+
+The reviewer found **no false claims and nothing blocking C2.1**: both specs meet the Task 2.5
+checklist, every line reference checked was correct, and every quoted `loc` and `msg` matched a
+scratch rebuild on FastAPI 0.141.1 and Pydantic 2.13.5. The provided tests compare no whole
+response, so the new `tags` key will not break them, and the two features do not conflict. It
+reported ten gaps:
+
+1. Versions spec, `utils.py` helpers given in prose only, with no names or signatures, and one
+   returns a dict although helpers "return a new list" (`:229`). *Would make an implementer guess.*
+2. The cross-feature test (tagging E-9) is in neither *Tests to write*, and the versions spec has
+   no matching edge case. *Would make an implementer guess.*
+3. Versions FR-7 / E-6, deleting a prompt removes its history, has no AC or test.
+4. Versions I-1 says tests may assert the dict keys, which are not visible over HTTP.
+5. Versions test list misses `1.5`, `1.0` (E-10), `limit=abc`, `limit=2.5` and an empty `limit=`.
+6. Versions AC-4.8 cites `api.py:70-71`, which is docstring; the code is `:87`, `:91`.
+7. The specs differ on banners: `PromptVersionList` under `Response Models`, `TagList` under a new
+   `Tag Models`.
+8. Neither spec says its new test class is a deliberate addition to the three in `CLAUDE.md`.
+9. Tagging E-5 covers three methods, but its one test is named for PUT.
+10. Versions does not say whether `order` is a `Literal` or an `Enum`.
+
+Claude asked: **how are the findings handled?** (A) all ten one at a time; (B) the two that would
+make an implementer guess (1, 2) one at a time, then 3-10 as one batch of small fixes shown before
+they are applied; (C) only 1 and 2, with 3-10 left as they are. It recommended B, and stopped.
+
+**Why the next prompt changed**
+
+Only findings 1 and 2 would make an implementer guess, so the next prompt **narrows the scope** to
+those two and defers the rest to Module 3, asking where to record them.
+
+
+### Entry 180
+
+**Prompt**
+
+> Implement the first 2, save the others for module 3 just in case (where can we save this info?)
+
+**What came back**
+
+Decision recorded: findings 1 and 2 are fixed now, one at a time; 3-10 are deferred to Module 3.
+Nothing edited yet. Claude took the question the prompt asked first: **where are findings 3-10
+recorded so Module 3 finds them?** (A) one bullet under *Open decisions* in CURRENT STATE of
+`CLAUDE.md`, naming the eight items briefly and pointing to entry 179; (B) a *Known gaps* section at
+the end of each spec; (C) a new note, `docs/spec-review-findings.md`. It recommended A, since Rule 0
+sends anything for a later task there, and CURRENT STATE is the first thing a new session reads. It
+named finding 1 as the next step, and stopped.
+
+**Why the next prompt changed**
+
+CURRENT STATE is what a new session reads first, so the next prompt takes A.
+
+
+### Entry 181
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Claude replaced *None yet.* under *Open decisions* in `CLAUDE.md` with one bullet listing findings
+3-10 and pointing to entry 179. It moved to finding 1 and read the versions spec's data model
+(`specs/prompt-versions.md:170-234`): the `utils.py` row (`:229`) names no helper. The question:
+**what are the two `utils.py` helpers in the versions spec?** (A) `add_version(versions, content,
+created_at) -> Dict[int, PromptVersion]`, returning a new dict with entry *n* + 1 when `content`
+differs from the latest entry, or an unchanged copy otherwise, and `select_versions(versions,
+descending, limit) -> List[PromptVersion]`, mirroring `sort_prompts_by_date(descending=...)`; the
+spec states that `add_version` returns a new dict, not a list, as the one exception to the helper
+rule; (B) the same two helpers, with the history changed from a dict to a list so both return lists;
+(C) no helpers, with the logic inline in `update_prompt` and `patch_prompt`. It recommended A, and
+stopped.
+
+**Why the next prompt changed**
+
+A keeps the dict decided in entry 131 and only needs the exception stated, so the next prompt takes
+A.
+
+
+### Entry 182
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Claude replaced the prose `utils.py` row of `specs/prompt-versions.md` with a table of
+`add_version` and `select_versions`, their signatures and behaviour tied to FR-2, FR-3, FR-9 and
+FR-10; made the `update_prompt` and `patch_prompt` rows call `add_version`, and added a
+`list_prompt_versions` row calling `select_versions`; and stated that `add_version` returning a dict
+is the one exception to the helper rule in `CLAUDE.md`. Finding 1 is fixed, not yet committed. It
+moved to finding 2 and read the versions spec's edge cases (`:390-403`, E-1 to E-14): none covers
+tags. The question: **where does the cross-feature test go?** (A) in both specs: a new E-15 in the
+versions spec mirroring tagging E-9, and the same named test, `test_patch_prompt_tags_saves_no_version`,
+in both *Tests to write*, marked as written by whichever feature is built second; (B) only in the
+spec of the feature built second, which is not yet known; (C) as a *Known trap* in `CLAUDE.md`
+instead of in the specs. It recommended A, and stopped.
+
+**Why the next prompt changed**
+
+A keeps the test visible whichever order Modules 3 and 4 take, so the next prompt takes A.
+
+
+### Entry 183
+
+**Prompt**
+
+> A
+
+**What came back**
+
+Claude added E-15 to the versions spec, mirroring tagging E-9; named the test in tagging E-9; and
+added `test_patch_prompt_tags_saves_no_version` to both *Tests to write*, with its steps, marked as
+written only by whichever feature is built second. Findings 1 and 2 are fixed. It proposed two
+commits, one per finding, the versions spec split by hunk:
+
+> Name the versions spec's utils helpers
+>
+> A fresh-context review found the helpers given only in prose, so an implementer would guess.
+> add_version returns a dict, stated as the one exception to the list rule.
+
+> Add the tags-versions test to both specs
+>
+> Whichever feature is built second must test that a tag-only edit saves no version. Listing it
+> in both specs keeps it visible in either build order.
+
+The `CLAUDE.md` bullet for findings 3-10 is held for the close-out commit, with CURRENT STATE and
+the log. The question: **are the two commits made with these messages?** It stopped.
+
+**Why the next prompt changed**
+
+Each message gave the reason for its finding, so the next prompt approves both.
+
+
+### Entry 184
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude staged only the helper hunk of `specs/prompt-versions.md` (applied from its diff with
+`git apply --cached`), ran the suite (19 passed) and committed it as `595b18b`; then committed the
+remaining hunks of both specs as `51cedfa`. Both specs are now final for Module 2. Task 2.5 is the
+last task in the brief. Claude proposed the close-out: CURRENT STATE in `CLAUDE.md` marks Task 2.5
+complete (entries 96-184), names the two specs, the review and the deferred findings, says the next
+step is the Module 2 submission, and sets the next entry number to 185; it is committed with the
+*Open decisions* bullet and this log as:
+
+> Log Task 2.5 and mark it complete
+>
+> Findings 3-10 of the spec review are deferred to Module 3 under Open decisions rather than fixed
+> now. The log was held back until the task closed, as for Task 2.4.
+
+The question: **is the task closed with this CURRENT STATE and this commit?** It stopped.
+
+**Why the next prompt changed**
+
+The close-out matched the work done, so the next prompt approves it.
+
+
+### Entry 185
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude updated CURRENT STATE in `CLAUDE.md` as proposed in entry 184 (Task 2.5 complete, next step
+the Module 2 submission, next entry number 186 after this one) and committed `CLAUDE.md` with this
+log, with the message from entry 184. Task 2.5 is closed. It stopped and reported.
+
+**Why the next prompt changed**
+
 *Pending.*

@@ -16,13 +16,21 @@ work.** It is how a new session resumes without reading everything.
 | | |
 |---|---|
 | **Current module** | **Module 2** — branch `Week-2`. Brief: `brief.txt`, from `Module_2_Project_Spec_Driven_Development.pdf`. |
-| **Current task** | **Task 2.3 — API reference → `docs/API_REFERENCE.md`: COMPLETE.** All 11 endpoints, with a curl example, a real sample response and an error table for each; errors, response formats and authentication notes in shared sections. Every example was run against a live server, and a script re-runs them all on a fresh one (11/11). A fresh-context review found no false claims and 6 gaps, all fixed (log entries 42-51). **Then the PATCH-null fix (entries 53-71):** fixed on `main` (`158eb0b`, pushed), merged into `Week-2` (`971a6cc`), and Tasks 2.1-2.3 updated to match after a fresh-context sweep against the brief. **Task 2.4 — Custom AI agent: COMPLETE (entries 76-94).** The agent file is `CLAUDE.md`, section *PromptLab coding standards* below: the brief's five headings, every rule taken from the code, no line references, Known exceptions listed. `docs/agent-effect-note.md` reports a controlled before/after: one task prompt, four `claude -p` runs at `ea2182a`, two with and two without only the new section. Of 7 rules, 3 changed the output consistently, 2 did not, and 2 had no effect because the baseline already did it; one after-run added a formatting slip. The worked instance is `time.sleep` → `datetime.fromisoformat`. Raw reports and patches are in `docs/agent-effect-runs/`. **Next: Task 2.5 — Feature specifications. Not started.** |
+| **Current task** | **Task 2.3 — API reference → `docs/API_REFERENCE.md`: COMPLETE.** All 11 endpoints, with a curl example, a real sample response and an error table for each; errors, response formats and authentication notes in shared sections. Every example was run against a live server, and a script re-runs them all on a fresh one (11/11). A fresh-context review found no false claims and 6 gaps, all fixed (log entries 42-51). **Then the PATCH-null fix (entries 53-71):** fixed on `main` (`158eb0b`, pushed), merged into `Week-2` (`971a6cc`), and Tasks 2.1-2.3 updated to match after a fresh-context sweep against the brief. **Task 2.4 — Custom AI agent: COMPLETE (entries 76-94).** The agent file is `CLAUDE.md`, section *PromptLab coding standards* below: the brief's five headings, every rule taken from the code, no line references, Known exceptions listed. `docs/agent-effect-note.md` reports a controlled before/after: one task prompt, four `claude -p` runs at `ea2182a`, two with and two without only the new section. Of 7 rules, 3 changed the output consistently, 2 did not, and 2 had no effect because the baseline already did it; one after-run added a formatting slip. The worked instance is `time.sleep` → `datetime.fromisoformat`. Raw reports and patches are in `docs/agent-effect-runs/`. **Task 2.5 — Feature specifications: COMPLETE (entries 96-185).** `specs/prompt-versions.md` (entries 97-138) and `specs/tagging-system.md` (entries 138-176), every acceptance criterion agreed in chat before it was written. A fresh-context review of both (entry 179) found no false claims and ten gaps: 1-2 fixed (`595b18b`, `51cedfa`), 3-10 deferred to Module 3 under Open decisions. **All Module 2 tasks are done. Next: the Module 2 submission (brief, *What You Submit*).** |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 95 |
+| **Next entry number** | 186 |
 
 **Open decisions:**
 
-- *None yet.*
+- **Spec review findings deferred to Module 3** (fresh-context review, `docs/prompt-log.md` entry
+  179; findings 1-2 fixed in Module 2). Before implementing either spec, decide on each: (3) versions
+  FR-7/E-6, deleting a prompt removes its history, has no AC or test; (4) versions I-1 suggests
+  testing dict keys HTTP never shows; (5) versions test list misses `version` `1.5`, `1.0` (E-10) and
+  `limit` `abc`, `2.5`, empty; (6) versions AC-4.8 cites `api.py:70-71` (docstring), the code is
+  `:87`, `:91`; (7) `TagList` under a new `Tag Models` banner, `PromptVersionList` under
+  `Response Models`; (8) neither spec says its new test class is a deliberate addition; (9) tagging
+  E-5 covers three methods, its test is named for PUT; (10) versions does not say `order` is a
+  `Literal` or an `Enum`.
 
 **Known traps:**
 
