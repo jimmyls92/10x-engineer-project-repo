@@ -92,7 +92,8 @@ Every change is re-read with `GET /prompts/{id}` to prove the tags were stored, 
 > the stored tags stay clean.
 
 Each 422 is asserted on its `loc` and `msg` in the `detail` list. The messages in AC-2.3 and AC-2.6
-are Pydantic's own (checked with Pydantic 2.13.5), so an upgrade could change them; those in AC-2.4
+are Pydantic's own (checked with the pinned Pydantic 2.5.3 and with 2.13.5, which give the same
+text), so an upgrade could change them; those in AC-2.4
 and AC-2.5 are this spec's, raised as `ValueError` by a validator.
 
 | AC | Given | When | Then |
@@ -137,7 +138,8 @@ the ids in `prompts`, in order, and on `total`.
 | **AC-3.9** | P1-P3 | `GET /prompts?tag=ai&tag=ai` | 200; the same result as AC-3.1: a tag repeated in the query counts once |
 
 The pattern in AC-3.7 is the tag pattern made optional, `( … )?`, so that the empty value of
-AC-3.6 passes validation and can be ignored; checked with FastAPI 0.141.1.
+AC-3.6 passes validation and can be ignored; checked with the pinned FastAPI 0.109.0 and with
+0.141.1, which give the same response.
 
 ### US-4: see which tags exist and how often
 

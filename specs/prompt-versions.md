@@ -198,8 +198,8 @@ it.
 
 - **Keyed by version number** (`int`), each value a `PromptVersion` with the same `version`.
 - **Not serialised**, so that FR-8 and NFR-1 hold without changing any response model. Declaring it
-  with `Field(default_factory=dict, exclude=True)` does this. Checked with the project's versions
-  (FastAPI 0.141.1, Pydantic 2.13.5): the field is left out of the response body and does not appear
+  with `Field(default_factory=dict, exclude=True)` does this. Checked with the versions pinned in
+  `requirements.txt` (FastAPI 0.109.0, Pydantic 2.5.3) and with FastAPI 0.141.1 and Pydantic 2.13.5: the field is left out of the response body and does not appear
   in the `Prompt` schema in `/openapi.json`. `model_copy` keeps it, so `delete_collection`
   carries the history across unchanged (FR-6).
 - **Not in any request body.** `PromptCreate`, `PromptUpdate` and `PromptPatch` do not declare it,
@@ -360,7 +360,8 @@ integer or is below 1. See *Error conditions*.
 All errors follow the project's status table (`CLAUDE.md`, *Error handling approach*). 404 bodies
 are `{"detail": "<message>"}`. 422 bodies are FastAPI's validation list, where `detail[0].loc` names
 the parameter and `detail[0].msg` says what is wrong. The messages below are FastAPI's own, checked
-with the project's versions.
+with the versions pinned in `requirements.txt` (FastAPI 0.109.0, Pydantic 2.5.3) and with FastAPI
+0.141.1 and Pydantic 2.13.5, which give the same text.
 
 | Status | Endpoint | Condition | Body |
 |---|---|---|---|
