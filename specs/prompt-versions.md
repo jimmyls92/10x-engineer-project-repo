@@ -224,9 +224,22 @@ rule still holds, and the docstring must say so.
 | Where | Change |
 |---|---|
 | `create_prompt` (`api.py:145`) | After building the `Prompt`, set `versions` to `{1: PromptVersion(version=1, content=prompt.content, created_at=prompt.created_at)}` before storing it. |
-| `update_prompt` (`api.py:183-191`) | Pass `versions=` to the new `Prompt`: `existing.versions` unchanged when `content` equals `existing.content`; otherwise a **new** dict with the old entries plus entry *n* + 1, whose `created_at` is the `updated_at` given to the new `Prompt`. |
-| `patch_prompt` (`api.py:234-242`) | Same rule, using the merged `content`. |
-| `utils.py` | Two pure helpers, each returning new objects and leaving their input unchanged: one that returns the versions dict with a new entry added when the content changed, and one that orders and limits a history for the list endpoint. |
+| `update_prompt` (`api.py:183-191`) | Pass `versions=add_version(existing.versions, prompt_data.content, <updated_at>)` to the new `Prompt`, where `<updated_at>` is the same value given to its `updated_at`. |
+| `patch_prompt` (`api.py:234-242`) | Same, using the merged `content`. |
+| `list_prompt_versions` (new) | Builds its `versions` list with `select_versions`. |
+| `utils.py` | Two new pure helpers, below. |
+
+**New helpers in `backend/app/utils.py`.** Both leave their input unchanged and return a new object.
+
+| Function | Returns |
+|---|---|
+| `add_version(versions: Dict[int, PromptVersion], content: str, created_at: datetime) -> Dict[int, PromptVersion]` | A **new dict**. When `content` differs, character for character, from the content of the latest entry (key *n*), it holds the old entries plus entry *n* + 1, `PromptVersion(version=n + 1, content=content, created_at=created_at)` (FR-2). Otherwise it is an unchanged copy of `versions` (FR-3). |
+| `select_versions(versions: Dict[int, PromptVersion], descending: bool, limit: Optional[int]) -> List[PromptVersion]` | The entries as a list sorted by `version`, highest first when `descending` is true (FR-9), then cut to the first `limit` items when `limit` is not `None` (FR-10). Mirrors `sort_prompts_by_date(prompts, descending)` (`utils.py:13`). |
+
+`add_version` returns a dict, not a list. It is the one exception to the coding standard "helpers
+in `utils.py` never modify their input; they return a new list" (`CLAUDE.md`): the history is a
+dict keyed by version number (see *New field on `Prompt`*), and the helper still returns a new
+object, never the one it was given.
 
 **Trap:** `update_prompt` and `patch_prompt` build a brand-new `Prompt`. A new `Prompt` that is not
 given `versions=` gets an empty history: the list then returns `total` 0 and every version lookup
