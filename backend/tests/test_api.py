@@ -1127,7 +1127,85 @@ class TestCollections:
     def test_get_collection_not_found(self, client: TestClient):
         response = client.get("/collections/nonexistent-id")
         assert response.status_code == 404
-    
+
+    # --- get_collection: success ---
+
+    def test_get_collection_success(self, client: TestClient, sample_collection_data):
+        """Verify a created collection is returned as it was stored.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_collection_data: Valid collection payload fixture.
+        """
+        created = client.post("/collections", json=sample_collection_data).json()
+
+        response = client.get(f"/collections/{created['id']}")
+
+        assert response.status_code == 200
+        assert response.json() == created
+
+    # --- get_collection: error cases ---
+
+    def test_get_collection_not_found_detail(self, client: TestClient):
+        """Verify the 404 for an unknown id carries the documented message.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.get("/collections/nonexistent-id")
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Collection not found"}
+
+    # --- get_collection: edge cases ---
+
+    def test_get_collection_excludes_prompts(
+        self, client: TestClient, sample_collection_data, sample_prompt_data
+    ):
+        """Verify the body holds only the collection's own fields, never its prompts.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_collection_data: Valid collection payload fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        collection_id = client.post("/collections", json=sample_collection_data).json()["id"]
+        client.post("/prompts", json={**sample_prompt_data, "collection_id": collection_id})
+
+        body = client.get(f"/collections/{collection_id}").json()
+
+        assert set(body) == {"name", "description", "id", "created_at"}
+
+    def test_get_collection_returns_the_requested_one(self, client: TestClient):
+        """Verify the lookup returns the collection with that id, not just any one.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        created = [
+            client.post("/collections", json={"name": name}).json() for name in ["A", "B", "C"]
+        ]
+
+        response = client.get(f"/collections/{created[1]['id']}")
+
+        assert response.status_code == 200
+        assert response.json() == created[1]
+
+    def test_get_collection_after_delete(self, client: TestClient, sample_collection_data):
+        """Verify a deleted collection is a 404.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_collection_data: Valid collection payload fixture.
+        """
+        collection_id = client.post("/collections", json=sample_collection_data).json()["id"]
+        client.delete(f"/collections/{collection_id}")
+
+        response = client.get(f"/collections/{collection_id}")
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Collection not found"}
+
     def test_delete_collection_with_prompts(self, client: TestClient, sample_collection_data, sample_prompt_data):
         """Test deleting a collection that has prompts.
 
