@@ -12,7 +12,12 @@ from typing import Optional
 import pytest
 
 from app.models import Prompt
-from app.utils import filter_prompts_by_collection, search_prompts, sort_prompts_by_date
+from app.utils import (
+    filter_prompts_by_collection,
+    search_prompts,
+    sort_prompts_by_date,
+    validate_prompt_content,
+)
 
 
 def make_prompt(
@@ -263,3 +268,87 @@ class TestSearchPrompts:
 
         assert search_prompts(prompts, "plain") == prompts
         assert search_prompts(prompts, "missing") == []
+
+
+class TestValidatePromptContent:
+    """Tests for ``validate_prompt_content``, a minimum of 10 characters once trimmed."""
+
+    # --- behaviour ---
+
+    def test_validate_content_long_enough_true(self):
+        """Verify a text well over 10 characters is accepted."""
+        assert validate_prompt_content("Summarize this article in three bullets.") is True
+
+    def test_validate_content_short_false(self):
+        """Verify a text under 10 characters is rejected."""
+        assert validate_prompt_content("Hi there") is False
+
+    @pytest.mark.parametrize(
+        "content, expected",
+        [
+            ("Summarize this article.", True),
+            ("   too short   ", False),
+            ("", False),
+        ],
+    )
+    def test_validate_content_docstring_examples(self, content, expected):
+        """Verify the three examples in the docstring give the results it shows.
+
+        Args:
+            content: The example input.
+            expected: The result the docstring gives for it.
+        """
+        assert validate_prompt_content(content) is expected
+
+    # --- error conditions ---
+
+    def test_validate_content_none_false(self):
+        """Verify ``None`` is treated as empty and gives ``False``, not an error."""
+        assert validate_prompt_content(None) is False
+
+    def test_validate_content_non_string_raises(self):
+        """Verify a non-string such as ``123`` raises ``AttributeError``.
+
+        Only falsy values are caught before ``strip()`` is called, so a
+        truthy non-string reaches it and fails.
+        """
+        with pytest.raises(AttributeError, match="strip"):
+            validate_prompt_content(123)
+
+    # --- edge cases ---
+
+    @pytest.mark.parametrize("length, expected", [(9, False), (10, True)])
+    def test_validate_content_boundary(self, length, expected):
+        """Verify exactly 10 characters is enough and 9 is not.
+
+        Args:
+            length: The number of characters in the text.
+            expected: Whether that length passes.
+        """
+        assert validate_prompt_content("x" * length) is expected
+
+    @pytest.mark.parametrize(
+        "content, expected",
+        [
+            ("a b c d e f", True),
+            ("   abcdefghi   ", False),
+        ],
+    )
+    def test_validate_content_counts_inner_spaces_only(self, content, expected):
+        """Verify inner spaces count towards the length and surrounding ones do not.
+
+        Args:
+            content: An 11-character text with inner spaces, or a
+                9-character text padded with spaces.
+            expected: Whether it passes.
+        """
+        assert validate_prompt_content(content) is expected
+
+    @pytest.mark.parametrize("content", [" " * 10, "\t" * 10, "\n \t \n \t \n \t"])
+    def test_validate_content_whitespace_only_false(self, content):
+        """Verify a text of only whitespace is rejected, however long.
+
+        Args:
+            content: Ten or more spaces, tabs or newlines.
+        """
+        assert validate_prompt_content(content) is False
