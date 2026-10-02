@@ -13,6 +13,7 @@ import pytest
 
 from app.models import Prompt
 from app.utils import (
+    extract_variables,
     filter_prompts_by_collection,
     search_prompts,
     sort_prompts_by_date,
@@ -352,3 +353,73 @@ class TestValidatePromptContent:
             content: Ten or more spaces, tabs or newlines.
         """
         assert validate_prompt_content(content) is False
+
+
+class TestExtractVariables:
+    """Tests for ``extract_variables``, which finds ``{{name}}`` placeholders."""
+
+    # --- behaviour ---
+
+    def test_extract_variables_in_order_without_braces(self):
+        """Verify names come back in order of appearance, without the braces."""
+        content = "To {{recipient}}: re {{subject}}, from {{sender}}."
+
+        assert extract_variables(content) == ["recipient", "subject", "sender"]
+
+    def test_extract_variables_repeats_kept(self):
+        """Verify a name used more than once appears once per use."""
+        assert extract_variables("{{a}} {{b}} {{a}}") == ["a", "b", "a"]
+
+    @pytest.mark.parametrize(
+        "content, expected",
+        [
+            ("Dear {{name}}, your order {{order_id}} shipped.", ["name", "order_id"]),
+            ("{{name}} and {{name}} again", ["name", "name"]),
+            ("{{ name }} and {{first-name}}", []),
+        ],
+    )
+    def test_extract_variables_docstring_examples(self, content, expected):
+        """Verify the three examples in the docstring give the results it shows.
+
+        Args:
+            content: The example input.
+            expected: The result the docstring gives for it.
+        """
+        assert extract_variables(content) == expected
+
+    # --- error conditions ---
+
+    def test_extract_variables_none_raises(self):
+        """Verify ``None`` raises ``TypeError``, since ``re.findall`` needs a string."""
+        with pytest.raises(TypeError, match="expected string"):
+            extract_variables(None)
+
+    # --- edge cases ---
+
+    def test_extract_variables_none_found(self):
+        """Verify text with no placeholders gives an empty list."""
+        assert extract_variables("Plain text with no variables.") == []
+
+    @pytest.mark.parametrize("content", ["{name}", "{{}}", "{{name}", "{name}}"])
+    def test_extract_variables_needs_double_braces_and_name(self, content):
+        """Verify single, unbalanced or empty braces are not variables.
+
+        Args:
+            content: A near miss for ``{{name}}``.
+        """
+        assert extract_variables(content) == []
+
+    @pytest.mark.parametrize("name", ["var_1", "2", "_", "año"])
+    def test_extract_variables_word_characters_allowed(self, name):
+        """Verify digits, underscores and non-ASCII letters are accepted in a name.
+
+        ``\\w`` matches any Unicode word character, so ``año`` counts.
+
+        Args:
+            name: A name made only of word characters.
+        """
+        assert extract_variables("{{" + name + "}}") == [name]
+
+    def test_extract_variables_triple_braces(self):
+        """Verify ``{{{name}}}`` gives ``name``, the extra braces left as text."""
+        assert extract_variables("{{{name}}}") == ["name"]
