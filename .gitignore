@@ -1,0 +1,9 @@
+# Python virtual environments (the README creates one in backend/.venv)
+.venv/
+
+# Bytecode caches
+__pycache__/
+
+# Coverage data written by pytest-cov
+.coverage
+htmlcov/
