@@ -18,6 +18,7 @@ from app.models import (
     CollectionBase,
     CollectionCreate,
     CollectionList,
+    HealthResponse,
     Prompt,
     PromptBase,
     PromptCreate,
@@ -760,3 +761,52 @@ class TestCollectionList:
         body = CollectionList(collections=[], total=5)
 
         assert body.total == 5
+
+
+class TestHealthResponse:
+    """Tests for ``HealthResponse``, the response body of ``GET /health``."""
+
+    # --- validation ---
+
+    @pytest.mark.parametrize("missing", ["status", "version"])
+    def test_health_response_field_required(self, missing):
+        """Verify each of the two fields is required.
+
+        Args:
+            missing: The field left out of the body.
+        """
+        fields = {"status": "healthy", "version": "0.1.0"}
+        del fields[missing]
+
+        with pytest.raises(ValidationError) as exc:
+            HealthResponse(**fields)
+
+        errors = [(e["loc"], e["msg"]) for e in exc.value.errors()]
+        assert errors == [((missing,), "Field required")]
+
+    def test_health_response_status_must_be_string(self):
+        """Verify a ``status`` that is not a string is rejected, not coerced."""
+        with pytest.raises(ValidationError) as exc:
+            HealthResponse(status=1, version="0.1.0")
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == ("status",)
+        assert error["msg"] == "Input should be a valid string"
+
+    # --- serialization ---
+
+    def test_health_response_dump_has_two_fields(self):
+        """Verify ``model_dump`` gives exactly ``status`` and ``version``."""
+        body = HealthResponse(status="healthy", version="0.1.0")
+
+        assert body.model_dump() == {"status": "healthy", "version": "0.1.0"}
+
+    # --- edge cases ---
+
+    def test_health_response_status_not_restricted(self):
+        """Verify a ``status`` other than ``"healthy"`` is accepted.
+
+        The model takes any string; the value is always ``"healthy"`` only
+        because ``health_check`` in ``api.py`` sets it.
+        """
+        assert HealthResponse(status="down", version="0.1.0").status == "down"
