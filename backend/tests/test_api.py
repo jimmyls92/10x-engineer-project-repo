@@ -365,17 +365,13 @@ class TestPrompts:
         assert data["total"] == 2
         assert len(data["prompts"]) == 2
 
-    def test_list_prompts_newest_first(self, client: TestClient):
+    def test_list_prompts_newest_first(self, client: TestClient, ticking_clock):
         """Verify prompts are listed by ``created_at``, newest first, with no sleep.
-
-        Each prompt is created by its own request, which usually takes longer
-        than one step of the clock behind ``get_current_time()``, so the three
-        usually get distinct timestamps. Where the clock is coarse (Python 3.12
-        on Windows), two may share one and this test can fail rarely; see
-        *Known traps* in ``CLAUDE.md``.
 
         Args:
             client: FastAPI test client fixture.
+            ticking_clock: Gives every timestamp a distinct value, so the
+                ordering cannot be broken by a coarse platform clock.
         """
         ids = [
             client.post("/prompts", json={"title": f"P{i}", "content": "Text."}).json()["id"]
@@ -581,7 +577,9 @@ class TestPrompts:
         # The updated_at should be different from original
         # assert data["updated_at"] != original_updated_at
     
-    def test_update_prompt_refreshes_updated_at(self, client: TestClient, sample_prompt_data):
+    def test_update_prompt_refreshes_updated_at(
+        self, client: TestClient, sample_prompt_data, ticking_clock
+    ):
         """Verify that PUT /prompts/{id} refreshes updated_at and preserves created_at.
 
         Covers Bug #2. The comparison is deliberately made between updated_at
@@ -589,14 +587,13 @@ class TestPrompts:
         can already differ at creation time, because models.Prompt fills them
         with two separate default_factory calls, so asserting updated_at >
         created_at could pass even with the bug present. No sleep is used: the
-        PUT is a separate request, which usually takes longer than one step of
-        the clock behind utcnow(). Where the clock is coarse (Python 3.12 on
-        Windows) the two can still be equal and this test can fail rarely; see
-        *Known traps* in CLAUDE.md.
+        ticking clock gives the PUT a later timestamp than the create.
 
         Args:
             client: FastAPI test client fixture.
             sample_prompt_data: Valid prompt payload fixture.
+            ticking_clock: Gives every timestamp a distinct value, so a coarse
+                platform clock cannot make the two equal.
         """
         created = client.post("/prompts", json=sample_prompt_data).json()
         original_created_at = datetime.fromisoformat(created["created_at"])
@@ -810,7 +807,9 @@ class TestPrompts:
         assert prompts[0]["title"] == "Second"
 
 
-    def test_patch_prompt_partial_update(self, client: TestClient, sample_prompt_data):
+    def test_patch_prompt_partial_update(
+        self, client: TestClient, sample_prompt_data, ticking_clock
+    ):
         """Verify PATCH changes only the fields the body carries.
 
         Covers three of the four behaviours the brief asks of the endpoint at
@@ -820,6 +819,8 @@ class TestPrompts:
         Args:
             client: FastAPI test client fixture.
             sample_prompt_data: Valid prompt payload fixture.
+            ticking_clock: Gives every timestamp a distinct value, so a coarse
+                platform clock cannot make the two equal.
         """
         created = client.post("/prompts", json=sample_prompt_data).json()
         original_updated_at = datetime.fromisoformat(created["updated_at"])
