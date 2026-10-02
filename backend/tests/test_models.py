@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from pydantic import ValidationError
 
-from app.models import PromptBase, generate_id, get_current_time
+from app.models import PromptBase, PromptCreate, generate_id, get_current_time
 
 
 class TestGenerateId:
@@ -171,3 +171,37 @@ class TestPromptBase:
     def test_prompt_base_values_not_stripped(self):
         """Verify a title of spaces passes ``min_length=1`` and is kept as sent."""
         assert PromptBase(title="   ", content="Text.").title == "   "
+
+
+class TestPromptCreate:
+    """Tests for ``PromptCreate``, the body of ``POST /prompts``."""
+
+    # --- validation ---
+
+    def test_prompt_create_inherits_base_rules(self):
+        """Verify a missing ``title`` is still rejected, so the base rules apply."""
+        with pytest.raises(ValidationError) as exc:
+            PromptCreate(content="Text.")
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == ("title",)
+        assert error["msg"] == "Field required"
+
+    # --- serialization ---
+
+    def test_prompt_create_drops_server_fields(self):
+        """Verify a client-sent ``id`` or ``created_at`` is dropped from the body."""
+        body = PromptCreate(
+            title="T", content="Text.", id="mine", created_at="2000-01-01T00:00:00"
+        )
+
+        dumped = body.model_dump()
+        assert "id" not in dumped
+        assert "created_at" not in dumped
+
+    # --- edge cases ---
+
+    def test_prompt_create_same_fields_as_base(self):
+        """Verify the create body adds no field of its own to ``PromptBase``."""
+        assert issubclass(PromptCreate, PromptBase)
+        assert set(PromptCreate.model_fields) == set(PromptBase.model_fields)
