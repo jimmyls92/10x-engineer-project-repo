@@ -399,7 +399,51 @@ class TestPrompts:
         """Test that getting a non-existent prompt returns 404."""
         response = client.get("/prompts/nonexistent-id")
         assert response.status_code == 404
-    
+
+    # --- get_prompt: error cases ---
+
+    def test_get_prompt_not_found_detail(self, client: TestClient):
+        """Verify the 404 for an unknown id carries the documented message.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.get("/prompts/nonexistent-id")
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Prompt not found"}
+
+    # --- get_prompt: edge cases ---
+
+    def test_get_prompt_returns_the_requested_one(self, client: TestClient):
+        """Verify the lookup returns the prompt with that id, not just any prompt.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        created = [
+            client.post("/prompts", json={"title": f"P{i}", "content": "Text."}).json()
+            for i in range(3)
+        ]
+
+        response = client.get(f"/prompts/{created[1]['id']}")
+
+        assert response.status_code == 200
+        assert response.json() == created[1]
+
+    def test_get_prompt_id_is_case_sensitive(self, client: TestClient, sample_prompt_data):
+        """Verify ids match exactly: the same id in upper case names nothing.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        prompt_id = client.post("/prompts", json=sample_prompt_data).json()["id"]
+
+        response = client.get(f"/prompts/{prompt_id.upper()}")
+
+        assert response.status_code == 404
+
     def test_delete_prompt(self, client: TestClient, sample_prompt_data):
         # Create a prompt first
         create_response = client.post("/prompts", json=sample_prompt_data)
