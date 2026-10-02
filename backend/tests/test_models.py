@@ -20,6 +20,7 @@ from app.models import (
     Prompt,
     PromptBase,
     PromptCreate,
+    PromptList,
     PromptPatch,
     PromptUpdate,
     generate_id,
@@ -631,3 +632,67 @@ class TestCollection:
 
         assert collection.id == "x"
         assert collection.name == "N"
+
+
+class TestPromptList:
+    """Tests for ``PromptList``, the response body of ``GET /prompts``."""
+
+    # --- validation ---
+
+    def test_prompt_list_requires_total(self):
+        """Verify a list without ``total`` is rejected."""
+        with pytest.raises(ValidationError) as exc:
+            PromptList(prompts=[])
+
+        errors = [(e["loc"], e["msg"]) for e in exc.value.errors()]
+        assert errors == [(("total",), "Field required")]
+
+    def test_prompt_list_invalid_item_rejected(self):
+        """Verify an item that is not a valid prompt is rejected at its index."""
+        with pytest.raises(ValidationError) as exc:
+            PromptList(prompts=[{"content": "Text."}], total=1)
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == ("prompts", 0, "title")
+        assert error["msg"] == "Field required"
+
+    # --- serialization ---
+
+    def test_prompt_list_dump_nests_full_prompts(self):
+        """Verify ``model_dump`` gives ``prompts`` and ``total``, each prompt dumped in full."""
+        prompt = Prompt(title="T", content="Text.")
+
+        dumped = PromptList(prompts=[prompt], total=1).model_dump()
+
+        assert dumped == {"prompts": [prompt.model_dump()], "total": 1}
+
+    def test_prompt_list_json_timestamps_have_no_timezone(self, ticking_clock):
+        """Verify nested prompt timestamps are written with no timezone suffix.
+
+        Args:
+            ticking_clock: Makes the timestamps known in advance.
+        """
+        body = PromptList(prompts=[Prompt(title="T", content="Text.")], total=1)
+
+        item = json.loads(body.model_dump_json())["prompts"][0]
+        assert item["created_at"] == "2026-01-01T00:00:00"
+        assert item["updated_at"] == "2026-01-01T00:00:00.000001"
+
+    # --- edge cases ---
+
+    def test_prompt_list_empty(self):
+        """Verify an empty list with ``total`` 0 is valid, as a filter matching nothing returns."""
+        body = PromptList(prompts=[], total=0)
+
+        assert body.prompts == []
+        assert body.total == 0
+
+    def test_prompt_list_total_not_checked(self):
+        """Verify a ``total`` that differs from the number of prompts is accepted.
+
+        The model does not compare the two; keeping them equal is left to
+        ``list_prompts`` in ``api.py``.
+        """
+        body = PromptList(prompts=[], total=5)
+
+        assert body.total == 5
