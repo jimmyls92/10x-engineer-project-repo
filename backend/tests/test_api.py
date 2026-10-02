@@ -456,7 +456,104 @@ class TestPrompts:
         # Verify it's gone
         get_response = client.get(f"/prompts/{prompt_id}")
         assert get_response.status_code in [404, 500]
-    
+
+    # --- delete_prompt: error cases ---
+
+    def test_delete_prompt_not_found(self, client: TestClient):
+        """Verify deleting an unknown id is a 404 with the documented message.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.delete("/prompts/nonexistent-id")
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Prompt not found"}
+
+    def test_delete_prompt_twice(self, client: TestClient, sample_prompt_data):
+        """Verify a second delete of the same prompt is a 404, not a silent 204.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        prompt_id = client.post("/prompts", json=sample_prompt_data).json()["id"]
+
+        assert client.delete(f"/prompts/{prompt_id}").status_code == 204
+        assert client.delete(f"/prompts/{prompt_id}").status_code == 404
+
+    # --- delete_prompt: edge cases ---
+
+    def test_delete_prompt_then_get_is_404(self, client: TestClient, sample_prompt_data):
+        """Verify a deleted prompt is a 404 on GET, exactly.
+
+        The provided ``test_delete_prompt`` accepts 404 or 500 for this check,
+        so it would pass if the lookup crashed; this test does not.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        prompt_id = client.post("/prompts", json=sample_prompt_data).json()["id"]
+        client.delete(f"/prompts/{prompt_id}")
+
+        response = client.get(f"/prompts/{prompt_id}")
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Prompt not found"}
+
+    def test_delete_prompt_empty_body(self, client: TestClient, sample_prompt_data):
+        """Verify the 204 response carries no body.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        prompt_id = client.post("/prompts", json=sample_prompt_data).json()["id"]
+
+        response = client.delete(f"/prompts/{prompt_id}")
+
+        assert response.status_code == 204
+        assert response.content == b""
+
+    def test_delete_prompt_leaves_others(self, client: TestClient, sample_prompt_data):
+        """Verify deleting one prompt removes only that one.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        doomed = client.post("/prompts", json=sample_prompt_data).json()["id"]
+        kept = client.post("/prompts", json=sample_prompt_data).json()
+
+        client.delete(f"/prompts/{doomed}")
+
+        data = client.get("/prompts").json()
+        assert [p["id"] for p in data["prompts"]] == [kept["id"]]
+        assert data["total"] == 1
+        assert client.get(f"/prompts/{kept['id']}").json() == kept
+
+    def test_delete_prompt_keeps_its_collection(
+        self, client: TestClient, sample_prompt_data, sample_collection_data
+    ):
+        """Verify deleting a filed prompt does not touch the collection it was in.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            sample_collection_data: Valid collection payload fixture.
+        """
+        collection = client.post("/collections", json=sample_collection_data).json()
+        prompt_id = client.post(
+            "/prompts", json={**sample_prompt_data, "collection_id": collection["id"]}
+        ).json()["id"]
+
+        client.delete(f"/prompts/{prompt_id}")
+
+        response = client.get(f"/collections/{collection['id']}")
+        assert response.status_code == 200
+        assert response.json() == collection
+
     def test_update_prompt(self, client: TestClient, sample_prompt_data):
         # Create a prompt first
         create_response = client.post("/prompts", json=sample_prompt_data)
