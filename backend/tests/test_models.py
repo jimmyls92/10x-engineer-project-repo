@@ -5,13 +5,16 @@ or model, with its cases grouped as the Module 3 brief names them for this
 file: validation, defaults and serialization, plus edge cases.
 """
 
+import json
 import uuid
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
 import pytest
 from pydantic import ValidationError
 
 from app.models import (
+    Prompt,
     PromptBase,
     PromptCreate,
     PromptPatch,
@@ -340,3 +343,99 @@ class TestPromptPatch:
 
         assert body.description is None
         assert body.collection_id is None
+
+
+class TestPrompt:
+    """Tests for ``Prompt``, the stored record with its server-assigned fields."""
+
+    # --- validation ---
+
+    def test_prompt_inherits_base_rules(self):
+        """Verify a missing ``title`` is rejected, so the base rules apply."""
+        with pytest.raises(ValidationError) as exc:
+            Prompt(content="Text.")
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == ("title",)
+        assert error["msg"] == "Field required"
+
+    def test_prompt_created_at_must_be_datetime(self):
+        """Verify a ``created_at`` that is not a datetime is rejected."""
+        with pytest.raises(ValidationError) as exc:
+            Prompt(title="T", content="Text.", created_at="nope")
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == ("created_at",)
+        assert error["msg"] == "Input should be a valid datetime, input is too short"
+
+    # --- defaults ---
+
+    def test_prompt_default_ids_distinct_uuid4(self):
+        """Verify each new prompt gets its own version 4 UUID."""
+        first = Prompt(title="T", content="Text.")
+        second = Prompt(title="T", content="Text.")
+
+        assert first.id != second.id
+        assert uuid.UUID(first.id).version == 4
+
+    def test_prompt_default_timestamps(self, ticking_clock):
+        """Verify ``created_at`` and ``updated_at`` come from ``get_current_time()``.
+
+        The factories run in field order, so with the ticking clock
+        ``created_at`` is its first value and ``updated_at`` the next.
+
+        Args:
+            ticking_clock: Makes the clock start at 2026-01-01 and advance
+                1 µs per call.
+        """
+        prompt = Prompt(title="T", content="Text.")
+
+        assert prompt.created_at == datetime(2026, 1, 1)
+        assert prompt.updated_at == datetime(2026, 1, 1, 0, 0, 0, 1)
+
+    # --- serialization ---
+
+    def test_prompt_json_timestamps_have_no_timezone(self, ticking_clock):
+        """Verify timestamps are written as ISO 8601 with no timezone suffix.
+
+        Args:
+            ticking_clock: Makes the timestamps known in advance.
+        """
+        data = json.loads(Prompt(title="T", content="Text.").model_dump_json())
+
+        assert data["created_at"] == "2026-01-01T00:00:00"
+        assert data["updated_at"] == "2026-01-01T00:00:00.000001"
+
+    def test_prompt_dump_round_trip(self):
+        """Verify a prompt rebuilt from its own dump is equal to it."""
+        prompt = Prompt(title="T", content="Text.", description="D")
+
+        assert Prompt.model_validate(prompt.model_dump()) == prompt
+
+    # --- edge cases ---
+
+    def test_prompt_keeps_given_server_fields(self):
+        """Verify a given ``id`` and ``created_at`` are kept, as PUT and PATCH rely on."""
+        created_at = datetime(2000, 1, 1)
+
+        prompt = Prompt(title="T", content="Text.", id="given", created_at=created_at)
+
+        assert prompt.id == "given"
+        assert prompt.created_at == created_at
+
+    def test_prompt_from_attributes(self):
+        """Verify ``model_validate`` builds a prompt from any object with the attributes."""
+        source = SimpleNamespace(
+            title="T",
+            content="Text.",
+            description=None,
+            collection_id=None,
+            id="x",
+            created_at=datetime(2026, 1, 1),
+            updated_at=datetime(2026, 1, 1),
+        )
+
+        prompt = Prompt.model_validate(source)
+
+        assert prompt.id == "x"
+        assert prompt.title == "T"
