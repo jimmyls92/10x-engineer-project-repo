@@ -12,7 +12,7 @@ from typing import Optional
 import pytest
 
 from app.models import Prompt
-from app.utils import filter_prompts_by_collection, sort_prompts_by_date
+from app.utils import filter_prompts_by_collection, search_prompts, sort_prompts_by_date
 
 
 def make_prompt(
@@ -188,3 +188,78 @@ class TestFilterPromptsByCollection:
         result = filter_prompts_by_collection(prompts, "")
 
         assert [p.title for p in result] == ["empty"]
+
+
+class TestSearchPrompts:
+    """Tests for ``search_prompts``, a case-insensitive match on title or description."""
+
+    # --- behaviour ---
+
+    def test_search_prompts_matches_title_ignoring_case(self):
+        """Verify a query matches part of a title whatever the case of either."""
+        prompts = [
+            Prompt(title="Code Review Helper", content="Text."),
+            Prompt(title="Email draft", content="Text."),
+        ]
+
+        result = search_prompts(prompts, "REVIEW")
+
+        assert [p.title for p in result] == ["Code Review Helper"]
+
+    def test_search_prompts_matches_description(self):
+        """Verify a query matches part of a description."""
+        prompts = [
+            Prompt(title="A", content="Text.", description="Summarises articles"),
+            Prompt(title="B", content="Text.", description="Writes emails"),
+        ]
+
+        result = search_prompts(prompts, "summar")
+
+        assert [p.title for p in result] == ["A"]
+
+    def test_search_prompts_ignores_content(self):
+        """Verify the prompt's ``content`` is not searched."""
+        prompts = [Prompt(title="A", content="Translate to French.")]
+
+        assert search_prompts(prompts, "french") == []
+
+    def test_search_prompts_returns_new_list_in_order(self):
+        """Verify the result is a new list in the original order, the input unchanged."""
+        second = Prompt(title="Review two", content="Text.")
+        other = Prompt(title="Other", content="Text.")
+        first = Prompt(title="Review one", content="Text.")
+        prompts = [second, other, first]
+
+        result = search_prompts(prompts, "review")
+
+        assert result == [second, first]
+        assert prompts == [second, other, first]
+
+    # --- error conditions ---
+
+    def test_search_prompts_none_query_raises(self):
+        """Verify a ``None`` query raises ``AttributeError``, even on an empty list.
+
+        The query is lowered before any prompt is read, and the helper does
+        not check it; ``GET /prompts`` only calls it with a non-empty string.
+        """
+        with pytest.raises(AttributeError, match="lower"):
+            search_prompts([], None)
+
+    # --- edge cases ---
+
+    def test_search_prompts_empty_query_matches_all(self):
+        """Verify an empty query matches every prompt."""
+        prompts = [
+            Prompt(title="A", content="Text."),
+            Prompt(title="B", content="Text.", description="D"),
+        ]
+
+        assert search_prompts(prompts, "") == prompts
+
+    def test_search_prompts_no_description_uses_title(self):
+        """Verify a prompt without a description is matched on its title only."""
+        prompts = [Prompt(title="Plain", content="Text.")]
+
+        assert search_prompts(prompts, "plain") == prompts
+        assert search_prompts(prompts, "missing") == []
