@@ -8,7 +8,10 @@ file: validation, defaults and serialization, plus edge cases.
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from app.models import generate_id, get_current_time
+import pytest
+from pydantic import ValidationError
+
+from app.models import PromptBase, generate_id, get_current_time
 
 
 class TestGenerateId:
@@ -73,3 +76,98 @@ class TestGetCurrentTime:
         second = get_current_time()
 
         assert second >= first
+
+
+class TestPromptBase:
+    """Tests for ``PromptBase``, the client fields of a prompt and their constraints."""
+
+    # --- validation ---
+
+    def test_prompt_base_requires_title_and_content(self):
+        """Verify both required fields are reported when neither is given."""
+        with pytest.raises(ValidationError) as exc:
+            PromptBase()
+
+        errors = [(e["loc"], e["msg"]) for e in exc.value.errors()]
+        assert errors == [(("title",), "Field required"), (("content",), "Field required")]
+
+    @pytest.mark.parametrize(
+        "field, value, msg",
+        [
+            ("title", "", "String should have at least 1 character"),
+            ("title", "a" * 201, "String should have at most 200 characters"),
+            ("content", "", "String should have at least 1 character"),
+            ("description", "d" * 501, "String should have at most 500 characters"),
+        ],
+    )
+    def test_prompt_base_length_rule_broken(self, field, value, msg):
+        """Verify each length constraint raises a ``ValidationError`` on its field.
+
+        Args:
+            field: The field given an out-of-range value.
+            value: The value that breaks the constraint.
+            msg: The message Pydantic reports for it.
+        """
+        data = {"title": "T", "content": "Text.", field: value}
+
+        with pytest.raises(ValidationError) as exc:
+            PromptBase(**data)
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == (field,)
+        assert error["msg"] == msg
+
+    def test_prompt_base_collection_id_must_be_string(self):
+        """Verify a non-string ``collection_id`` is rejected, not coerced."""
+        with pytest.raises(ValidationError) as exc:
+            PromptBase(title="T", content="Text.", collection_id=5)
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == ("collection_id",)
+        assert error["msg"] == "Input should be a valid string"
+
+    # --- defaults ---
+
+    def test_prompt_base_optional_fields_default_to_none(self):
+        """Verify ``description`` and ``collection_id`` default to ``None``."""
+        prompt = PromptBase(title="T", content="Text.")
+
+        assert prompt.description is None
+        assert prompt.collection_id is None
+
+    # --- serialization ---
+
+    def test_prompt_base_dump_has_client_fields(self):
+        """Verify ``model_dump`` gives exactly the four client fields."""
+        dumped = PromptBase(title="T", content="Text.").model_dump()
+
+        assert dumped == {
+            "title": "T",
+            "content": "Text.",
+            "description": None,
+            "collection_id": None,
+        }
+
+    def test_prompt_base_drops_undeclared_keys(self):
+        """Verify a key the model does not declare is dropped, not stored."""
+        prompt = PromptBase(title="T", content="Text.", extra="x")
+
+        assert "extra" not in prompt.model_dump()
+        assert not hasattr(prompt, "extra")
+
+    # --- edge cases ---
+
+    def test_prompt_base_length_limits_inclusive(self):
+        """Verify a title of exactly 200 and a description of exactly 500 are accepted."""
+        prompt = PromptBase(title="a" * 200, content="Text.", description="d" * 500)
+
+        assert len(prompt.title) == 200
+        assert len(prompt.description) == 500
+
+    def test_prompt_base_empty_description_accepted(self):
+        """Verify an empty description is valid, since only a maximum is set."""
+        assert PromptBase(title="T", content="Text.", description="").description == ""
+
+    def test_prompt_base_values_not_stripped(self):
+        """Verify a title of spaces passes ``min_length=1`` and is kept as sent."""
+        assert PromptBase(title="   ", content="Text.").title == "   "
