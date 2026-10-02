@@ -32,7 +32,174 @@ class TestPrompts:
         assert data["content"] == sample_prompt_data["content"]
         assert "id" in data
         assert "created_at" in data
-    
+
+    # --- create_prompt: error cases ---
+
+    def test_create_prompt_unknown_collection(self, client: TestClient, sample_prompt_data):
+        """Verify a ``collection_id`` naming no collection is a 400 and stores nothing.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        response = client.post("/prompts", json={**sample_prompt_data, "collection_id": "nope"})
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "Collection not found"}
+        assert client.get("/prompts").json()["total"] == 0
+
+    @pytest.mark.parametrize("field", ["title", "content"])
+    def test_create_prompt_missing_required_field(
+        self, client: TestClient, sample_prompt_data, field
+    ):
+        """Verify leaving out a required field is a 422 naming that field.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            field: The required field left out of the body.
+        """
+        body = {k: v for k, v in sample_prompt_data.items() if k != field}
+
+        response = client.post("/prompts", json=body)
+
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["body", field]
+        assert error["msg"] == "Field required"
+        assert client.get("/prompts").json()["total"] == 0
+
+    @pytest.mark.parametrize(
+        "field, value, msg",
+        [
+            ("title", "", "String should have at least 1 character"),
+            ("title", "a" * 201, "String should have at most 200 characters"),
+            ("content", "", "String should have at least 1 character"),
+            ("description", "d" * 501, "String should have at most 500 characters"),
+        ],
+    )
+    def test_create_prompt_length_rule_broken(
+        self, client: TestClient, sample_prompt_data, field, value, msg
+    ):
+        """Verify each length constraint of ``PromptBase`` is enforced with a 422.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            field: The field given an out-of-range value.
+            value: The value that breaks the constraint.
+            msg: The message Pydantic reports for it.
+        """
+        response = client.post("/prompts", json={**sample_prompt_data, field: value})
+
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["body", field]
+        assert error["msg"] == msg
+        assert client.get("/prompts").json()["total"] == 0
+
+    # --- create_prompt: edge cases ---
+
+    def test_create_prompt_length_limits_inclusive(self, client: TestClient):
+        """Verify a title of exactly 200 and a description of exactly 500 are accepted.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        body = {"title": "a" * 200, "content": "Text.", "description": "d" * 500}
+
+        response = client.post("/prompts", json=body)
+
+        assert response.status_code == 201
+        assert response.json()["title"] == body["title"]
+        assert response.json()["description"] == body["description"]
+
+    def test_create_prompt_optional_fields_default_to_null(self, client: TestClient):
+        """Verify an omitted ``description`` and ``collection_id`` are stored as null.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        created = client.post("/prompts", json={"title": "T", "content": "Text."}).json()
+
+        stored = client.get(f"/prompts/{created['id']}").json()
+        assert stored["description"] is None
+        assert stored["collection_id"] is None
+
+    def test_create_prompt_ignores_server_fields(self, client: TestClient):
+        """Verify a client cannot choose the ``id`` or ``created_at`` of a new prompt.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.post(
+            "/prompts",
+            json={
+                "title": "T",
+                "content": "Text.",
+                "id": "mine",
+                "created_at": "2000-01-01T00:00:00",
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["id"] != "mine"
+        assert datetime.fromisoformat(data["created_at"]).year != 2000
+        assert client.get("/prompts/mine").status_code == 404
+
+    def test_create_prompt_empty_collection_id_stored_unchecked(self, client: TestClient):
+        """Verify ``"collection_id": ""`` is stored as is, without a lookup.
+
+        Pins a documented known issue (``docs/API_REFERENCE.md``, *Known
+        issues*): ``create_prompt`` tests the id by truthiness, so the empty
+        string skips the collection check. A fix must change this test on
+        purpose.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.post(
+            "/prompts", json={"title": "T", "content": "Text.", "collection_id": ""}
+        )
+
+        assert response.status_code == 201
+        stored = client.get(f"/prompts/{response.json()['id']}").json()
+        assert stored["collection_id"] == ""
+
+    def test_create_prompt_whitespace_title_accepted(self, client: TestClient):
+        """Verify a title made only of spaces passes ``min_length=1``.
+
+        Values are not stripped, so three spaces count as three characters.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.post("/prompts", json={"title": "   ", "content": "Text."})
+
+        assert response.status_code == 201
+        stored = client.get(f"/prompts/{response.json()['id']}").json()
+        assert stored["title"] == "   "
+
+    def test_create_prompt_stored_equals_response(
+        self, client: TestClient, sample_prompt_data, sample_collection_data
+    ):
+        """Verify the 201 body is what was stored, read back with GET.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            sample_collection_data: Valid collection payload fixture.
+        """
+        collection_id = client.post("/collections", json=sample_collection_data).json()["id"]
+
+        created = client.post(
+            "/prompts", json={**sample_prompt_data, "collection_id": collection_id}
+        ).json()
+
+        assert created["collection_id"] == collection_id
+        assert client.get(f"/prompts/{created['id']}").json() == created
+
     def test_list_prompts_empty(self, client: TestClient):
         response = client.get("/prompts")
         assert response.status_code == 200
