@@ -6,8 +6,9 @@ file: validation, defaults and serialization, plus edge cases.
 """
 
 import uuid
+from datetime import datetime, timedelta, timezone
 
-from app.models import generate_id
+from app.models import generate_id, get_current_time
 
 
 class TestGenerateId:
@@ -34,3 +35,41 @@ class TestGenerateId:
         ids = {generate_id() for _ in range(1000)}
 
         assert len(ids) == 1000
+
+
+class TestGetCurrentTime:
+    """Tests for ``get_current_time``."""
+
+    # --- serialization ---
+
+    def test_get_current_time_is_naive_datetime(self):
+        """Verify the value is a ``datetime`` carrying no timezone."""
+        value = get_current_time()
+
+        assert isinstance(value, datetime)
+        assert value.tzinfo is None
+
+    def test_get_current_time_iso_round_trip(self):
+        """Verify the value survives the ISO round trip the API uses for timestamps."""
+        value = get_current_time()
+
+        assert datetime.fromisoformat(value.isoformat()) == value
+
+    # --- edge cases ---
+
+    def test_get_current_time_is_utc(self):
+        """Verify the value is UTC, not local time.
+
+        Compared with an aware UTC "now" stripped of its zone, so the test does
+        not call the deprecated ``utcnow()`` itself.
+        """
+        expected = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        assert abs(get_current_time() - expected) < timedelta(seconds=2)
+
+    def test_get_current_time_never_goes_backwards(self):
+        """Verify two calls in a row give non-decreasing values."""
+        first = get_current_time()
+        second = get_current_time()
+
+        assert second >= first
