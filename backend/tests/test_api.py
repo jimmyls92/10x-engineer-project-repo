@@ -49,7 +49,175 @@ class TestPrompts:
         data = response.json()
         assert len(data["prompts"]) == 1
         assert data["total"] == 1
-    
+
+    # --- list_prompts: query parameters ---
+
+    def test_list_prompts_search_matches_title_ignoring_case(
+        self, client: TestClient, sample_prompt_data
+    ):
+        """Verify ``search`` matches the title whatever the case of the query.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture, titled
+                "Code Review Prompt".
+        """
+        match = client.post("/prompts", json=sample_prompt_data).json()
+        client.post("/prompts", json={"title": "Summarise", "content": "Summarise the text."})
+
+        data = client.get("/prompts?search=CODE").json()
+
+        assert [p["id"] for p in data["prompts"]] == [match["id"]]
+        assert data["total"] == 1
+
+    def test_list_prompts_search_matches_description(
+        self, client: TestClient, sample_prompt_data
+    ):
+        """Verify ``search`` also matches text found only in the description.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture, used as the
+                prompt that must not match.
+        """
+        client.post("/prompts", json=sample_prompt_data)
+        match = client.post(
+            "/prompts",
+            json={
+                "title": "Summarise",
+                "content": "Summarise the text.",
+                "description": "Condense a meeting transcript",
+            },
+        ).json()
+
+        data = client.get("/prompts?search=transcript").json()
+
+        assert [p["id"] for p in data["prompts"]] == [match["id"]]
+        assert data["total"] == 1
+
+    def test_list_prompts_filter_by_collection(
+        self, client: TestClient, sample_prompt_data, sample_collection_data
+    ):
+        """Verify ``collection_id`` keeps only the prompts filed in that collection.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            sample_collection_data: Valid collection payload fixture.
+        """
+        collection_id = client.post("/collections", json=sample_collection_data).json()["id"]
+        filed = client.post(
+            "/prompts", json={**sample_prompt_data, "collection_id": collection_id}
+        ).json()
+        client.post("/prompts", json=sample_prompt_data)
+
+        data = client.get(f"/prompts?collection_id={collection_id}").json()
+
+        assert [p["id"] for p in data["prompts"]] == [filed["id"]]
+        assert data["total"] == 1
+
+    def test_list_prompts_filter_by_collection_and_search(
+        self, client: TestClient, sample_prompt_data, sample_collection_data
+    ):
+        """Verify ``collection_id`` and ``search`` combine: a prompt must pass both.
+
+        Three prompts: two in the collection, of which only one matches the
+        search, and one outside the collection that also matches it.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture, titled
+                "Code Review Prompt".
+            sample_collection_data: Valid collection payload fixture.
+        """
+        collection_id = client.post("/collections", json=sample_collection_data).json()["id"]
+        match = client.post(
+            "/prompts", json={**sample_prompt_data, "collection_id": collection_id}
+        ).json()
+        client.post(
+            "/prompts",
+            json={"title": "Summarise", "content": "Summarise.", "collection_id": collection_id},
+        )
+        client.post("/prompts", json=sample_prompt_data)
+
+        data = client.get(f"/prompts?collection_id={collection_id}&search=review").json()
+
+        assert [p["id"] for p in data["prompts"]] == [match["id"]]
+        assert data["total"] == 1
+
+    # --- list_prompts: error cases (a filter that matches nothing is not an error) ---
+
+    @pytest.mark.parametrize("query", ["search=zzz", "collection_id=nope"])
+    def test_list_prompts_no_match_returns_empty(
+        self, client: TestClient, sample_prompt_data, query
+    ):
+        """Verify a filter that matches nothing gives 200 with an empty list.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            query: A search with no match, or an unknown collection id.
+        """
+        client.post("/prompts", json=sample_prompt_data)
+
+        response = client.get(f"/prompts?{query}")
+
+        assert response.status_code == 200
+        assert response.json() == {"prompts": [], "total": 0}
+
+    # --- list_prompts: edge cases ---
+
+    def test_list_prompts_search_ignores_content(self, client: TestClient):
+        """Verify ``search`` does not look in the prompt's content.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        client.post("/prompts", json={"title": "Summarise", "content": "Use bullet points."})
+
+        data = client.get("/prompts?search=bullet").json()
+
+        assert data == {"prompts": [], "total": 0}
+
+    @pytest.mark.parametrize("query", ["search=", "collection_id=", "search=&collection_id="])
+    def test_list_prompts_empty_query_value_ignored(
+        self, client: TestClient, sample_prompt_data, query
+    ):
+        """Verify an empty query value is treated as absent, not as a filter.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            query: One or both parameters sent with an empty value.
+        """
+        client.post("/prompts", json=sample_prompt_data)
+        client.post("/prompts", json={"title": "Summarise", "content": "Summarise."})
+
+        data = client.get(f"/prompts?{query}").json()
+
+        assert data["total"] == 2
+        assert len(data["prompts"]) == 2
+
+    def test_list_prompts_newest_first(self, client: TestClient):
+        """Verify prompts are listed by ``created_at``, newest first, with no sleep.
+
+        ``get_current_time()`` resolves to microseconds, so three prompts
+        created in a row get three distinct timestamps.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        ids = [
+            client.post("/prompts", json={"title": f"P{i}", "content": "Text."}).json()["id"]
+            for i in range(3)
+        ]
+
+        prompts = client.get("/prompts").json()["prompts"]
+
+        assert [p["id"] for p in prompts] == list(reversed(ids))
+        created = [datetime.fromisoformat(p["created_at"]) for p in prompts]
+        assert created[0] > created[1] > created[2]
+
     def test_get_prompt_success(self, client: TestClient, sample_prompt_data):
         # Create a prompt first
         create_response = client.post("/prompts", json=sample_prompt_data)
