@@ -15,15 +15,20 @@ work.** It is how a new session resumes without reading everything.
 
 | | |
 |---|---|
-| **Current module** | **Module 2** — branch `Week-2`. Brief: `brief.txt`, from `Module_2_Project_Spec_Driven_Development.pdf`. |
-| **Current task** | **Task 2.3 — API reference → `docs/API_REFERENCE.md`: COMPLETE.** All 11 endpoints, with a curl example, a real sample response and an error table for each; errors, response formats and authentication notes in shared sections. Every example was run against a live server, and a script re-runs them all on a fresh one (11/11). A fresh-context review found no false claims and 6 gaps, all fixed (log entries 42-51). **Then the PATCH-null fix (entries 53-71):** fixed on `main` (`158eb0b`, pushed), merged into `Week-2` (`971a6cc`), and Tasks 2.1-2.3 updated to match after a fresh-context sweep against the brief. **Task 2.4 — Custom AI agent: COMPLETE (entries 76-94).** The agent file is `CLAUDE.md`, section *PromptLab coding standards* below: the brief's five headings, every rule taken from the code, no line references, Known exceptions listed. `docs/agent-effect-note.md` reports a controlled before/after: one task prompt, four `claude -p` runs at `ea2182a`, two with and two without only the new section. Of 7 rules, 3 changed the output consistently, 2 did not, and 2 had no effect because the baseline already did it; one after-run added a formatting slip. The worked instance is `time.sleep` → `datetime.fromisoformat`. Raw reports and patches are in `docs/agent-effect-runs/`. **Task 2.5 — Feature specifications: COMPLETE (entries 96-185).** `specs/prompt-versions.md` (entries 97-138) and `specs/tagging-system.md` (entries 138-176), every acceptance criterion agreed in chat before it was written. A fresh-context review of both (entry 179) found no false claims and ten gaps: 1-2 fixed (`595b18b`, `51cedfa`), 3-10 deferred to Module 3 under Open decisions. **All Module 2 tasks are done.** **Module 2 submission: DONE (entries 186-198).** Delivered on branch `Week-2`, pushed to `origin/Week-2`; `main` left at Module 1 (not yet assessed — never overwrite it). Clean clone re-verified (entry 189). Submitted text: `2 specs + docs; fixed PATCH-null 500 bug`; full known issues in `docs/module-2-submission.md`. **Next: wait for Module 2 feedback, or start Module 3 when its brief is given.** |
+| **Current module** | **Module 3** — branch `Week-3`. Brief: `brief.txt`, from `Module_3_Project_Production_Ready.pdf`. Where the brief and this file conflict, **the brief rules**. |
+| **Previous module** | **Module 2: submitted on `Week-2`** (`1c9cc88`); its log, entries 1-198, is on that branch. |
+| **Current task** | **None started. Next: Task 3.1 — Comprehensive test suite.** |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 199 |
+| **Next entry number** | 4 |
+
+Entry numbers cited below, unless marked otherwise, are from **Module 2's log** (on `Week-2`).
 
 **Open decisions:**
 
-- **Spec review findings deferred to Module 3** (fresh-context review, `docs/prompt-log.md` entry
-  179; findings 1-2 fixed in Module 2). Before implementing either spec, decide on each: (3) versions
+- **Which spec feature Task 3.2 implements** — Prompt Versioning or Tagging System; the other is
+  Module 4's. Decided at Task 3.2, not before.
+- **Spec review findings deferred to Module 3** (fresh-context review, Module 2 log entry 179;
+  findings 1-2 fixed in Module 2). Before implementing either spec, decide on each: (3) versions
   FR-7/E-6, deleting a prompt removes its history, has no AC or test; (4) versions I-1 suggests
   testing dict keys HTTP never shows; (5) versions test list misses `version` `1.5`, `1.0` (E-10) and
   `limit` `abc`, `2.5`, empty; (6) versions AC-4.8 cites `api.py:70-71` (docstring), the code is
@@ -53,6 +58,13 @@ work.** It is how a new session resumes without reading everything.
   lookups, so `PATCH /prompts/nope` with `{"title": null}` is 422, not 404. Any doc that lists PATCH
   errors or the order of checks must say so (README, `API_REFERENCE.md`, the `patch_prompt` and
   `PromptPatch` docstrings do). `/openapi.json` still shows both fields as nullable.
+- **Never push to `main`.** The brief's verification says `git push origin main`, but each module
+  is delivered on its own branch (`Week-3`), and `main` holds Module 1, not yet assessed. The CI
+  workflow triggers on push to any branch (`on: [push, pull_request]`), so pushing `Week-3` runs it.
+- **Run tests and lint in a pinned environment.** The global Python is 3.13 with newer libraries
+  (FastAPI 0.141.1, Pydantic 2.13.5); `requirements.txt` pins FastAPI 0.109.0 and Pydantic 2.5.3,
+  which need Python 3.10-3.12. CI installs the pins, so check coverage and lint in a Python 3.12 venv
+  built from `requirements.txt` (`python3.12` and `uv` are installed), not the global interpreter.
 
 ---
 
@@ -308,10 +320,13 @@ models use the deprecated class-based `Config`.
 - **The suite must pass before any commit**: `cd backend` then `pytest tests/ -v`.
 - **Every endpoint, and every bug fix, gets tests for each status it can return**: the success case
   and every error case.
-- **Tests go through the HTTP API** with the `client` fixture, never by calling storage directly.
+- **Endpoint tests go through the HTTP API** with the `client` fixture, in `test_api.py`; they never
+  call storage to set up or check state. **Unit tests call their module directly**:
+  `test_storage.py` the `Storage` class, `test_utils.py` the helpers, `test_models.py` the models.
   Storage is cleared before and after every test by the autouse fixture. Payloads come from the
   `sample_prompt_data` and `sample_collection_data` fixtures.
-- **Tests are grouped by resource** in `TestHealth`, `TestPrompts` and `TestCollections`, and named
+- **Tests are grouped in classes**: by resource in `test_api.py` (`TestHealth`, `TestPrompts`,
+  `TestCollections`), and by class or function under test in the unit-test files. They are named
   `test_<verb>_<resource>_<behaviour>` (`test_patch_prompt_not_found`).
 - **Assert one exact status code**, never a set of acceptable ones.
 - **After a change, re-read the record with GET** to prove it was stored, not just echoed.
@@ -331,6 +346,13 @@ The provided tests must pass in every module:
 ```
 cd backend
 pytest tests/ -v
+```
+
+With coverage, as Module 3's brief measures it (the threshold is 80%):
+
+```
+cd backend
+pytest tests/ -v --cov=app --cov-report=term-missing
 ```
 
 Each module's brief adds its own verification steps.
