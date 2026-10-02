@@ -774,6 +774,184 @@ class TestPrompts:
         # The rejected body left the stored prompt exactly as it was.
         assert client.get(f"/prompts/{created['id']}").json() == created
 
+    # --- patch_prompt: error cases ---
+
+    @pytest.mark.parametrize("collection_id", ["nope", ""])
+    def test_patch_prompt_unknown_collection(
+        self, client: TestClient, sample_prompt_data, collection_id
+    ):
+        """Verify a sent ``collection_id`` naming no collection is a 400 that changes nothing.
+
+        The empty string is looked up too, unlike in POST and PUT, because
+        PATCH checks the id with ``is not None`` (the documented
+        inconsistency in ``docs/API_REFERENCE.md``, *Known issues*).
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            collection_id: An unknown id, or the empty string.
+        """
+        created = client.post("/prompts", json=sample_prompt_data).json()
+
+        response = client.patch(
+            f"/prompts/{created['id']}", json={"collection_id": collection_id}
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "Collection not found"}
+        assert client.get(f"/prompts/{created['id']}").json() == created
+
+    @pytest.mark.parametrize(
+        "field, value, msg",
+        [
+            ("title", "", "String should have at least 1 character"),
+            ("title", "a" * 201, "String should have at most 200 characters"),
+            ("description", "d" * 501, "String should have at most 500 characters"),
+        ],
+    )
+    def test_patch_prompt_length_rule_broken(
+        self, client: TestClient, sample_prompt_data, field, value, msg
+    ):
+        """Verify a sent field is held to the same length rules as on create.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            field: The field given an out-of-range value.
+            value: The value that breaks the constraint.
+            msg: The message Pydantic reports for it.
+        """
+        created = client.post("/prompts", json=sample_prompt_data).json()
+
+        response = client.patch(f"/prompts/{created['id']}", json={field: value})
+
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["body", field]
+        assert error["msg"] == msg
+        assert client.get(f"/prompts/{created['id']}").json() == created
+
+    def test_patch_prompt_not_found_detail(self, client: TestClient):
+        """Verify the 404 for an unknown id carries the documented message.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.patch("/prompts/nonexistent-id", json={"title": "New title"})
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Prompt not found"}
+
+    # --- patch_prompt: edge cases ---
+
+    def test_patch_prompt_empty_body_changes_nothing(
+        self, client: TestClient, sample_prompt_data
+    ):
+        """Verify an empty body is not an edit: even ``updated_at`` stays as it was.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        created = client.post("/prompts", json=sample_prompt_data).json()
+
+        response = client.patch(f"/prompts/{created['id']}", json={})
+
+        assert response.status_code == 200
+        assert response.json() == created
+        assert client.get(f"/prompts/{created['id']}").json() == created
+
+    def test_patch_prompt_null_description_clears_it(
+        self, client: TestClient, sample_prompt_data
+    ):
+        """Verify an explicit null description clears it, unlike a missing key.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture, with a description.
+        """
+        created = client.post("/prompts", json=sample_prompt_data).json()
+
+        response = client.patch(f"/prompts/{created['id']}", json={"description": None})
+
+        assert response.status_code == 200
+        assert client.get(f"/prompts/{created['id']}").json()["description"] is None
+
+    def test_patch_prompt_collection_id_null_vs_absent(
+        self, client: TestClient, sample_prompt_data, sample_collection_data
+    ):
+        """Verify a null ``collection_id`` unfiles the prompt while an absent one keeps it.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            sample_collection_data: Valid collection payload fixture.
+        """
+        collection_id = client.post("/collections", json=sample_collection_data).json()["id"]
+        created = client.post(
+            "/prompts", json={**sample_prompt_data, "collection_id": collection_id}
+        ).json()
+
+        client.patch(f"/prompts/{created['id']}", json={"title": "New title"})
+        assert client.get(f"/prompts/{created['id']}").json()["collection_id"] == collection_id
+
+        client.patch(f"/prompts/{created['id']}", json={"collection_id": None})
+        assert client.get(f"/prompts/{created['id']}").json()["collection_id"] is None
+
+    def test_patch_prompt_several_fields(self, client: TestClient, sample_prompt_data):
+        """Verify every sent field changes and every other field is kept.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        created = client.post("/prompts", json=sample_prompt_data).json()
+
+        client.patch(
+            f"/prompts/{created['id']}", json={"title": "New title", "content": "New text."}
+        )
+
+        stored = client.get(f"/prompts/{created['id']}").json()
+        assert stored["title"] == "New title"
+        assert stored["content"] == "New text."
+        assert stored["description"] == created["description"]
+        assert stored["collection_id"] == created["collection_id"]
+        assert stored["created_at"] == created["created_at"]
+
+    def test_patch_prompt_validation_before_lookup(self, client: TestClient):
+        """Verify the order of checks: body 422 before path 404, path 404 before body 400.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        null_title = client.patch("/prompts/nonexistent-id", json={"title": None})
+        assert null_title.status_code == 422
+
+        unknown_both = client.patch("/prompts/nonexistent-id", json={"collection_id": "nope"})
+        assert unknown_both.status_code == 404
+        assert unknown_both.json() == {"detail": "Prompt not found"}
+
+    def test_patch_prompt_moves_to_collection(
+        self, client: TestClient, sample_prompt_data, sample_collection_data
+    ):
+        """Verify a PATCH naming another existing collection refiles the prompt there.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            sample_collection_data: Valid collection payload fixture.
+        """
+        first = client.post("/collections", json=sample_collection_data).json()["id"]
+        second = client.post("/collections", json={"name": "Writing"}).json()["id"]
+        created = client.post(
+            "/prompts", json={**sample_prompt_data, "collection_id": first}
+        ).json()
+
+        response = client.patch(f"/prompts/{created['id']}", json={"collection_id": second})
+
+        assert response.status_code == 200
+        assert client.get(f"/prompts/{created['id']}").json()["collection_id"] == second
+
 
 class TestCollections:
     """Tests for collection endpoints."""
