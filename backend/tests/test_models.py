@@ -17,6 +17,7 @@ from app.models import (
     Collection,
     CollectionBase,
     CollectionCreate,
+    CollectionList,
     Prompt,
     PromptBase,
     PromptCreate,
@@ -694,5 +695,68 @@ class TestPromptList:
         ``list_prompts`` in ``api.py``.
         """
         body = PromptList(prompts=[], total=5)
+
+        assert body.total == 5
+
+
+class TestCollectionList:
+    """Tests for ``CollectionList``, the response body of ``GET /collections``."""
+
+    # --- validation ---
+
+    def test_collection_list_requires_total(self):
+        """Verify a list without ``total`` is rejected."""
+        with pytest.raises(ValidationError) as exc:
+            CollectionList(collections=[])
+
+        errors = [(e["loc"], e["msg"]) for e in exc.value.errors()]
+        assert errors == [(("total",), "Field required")]
+
+    def test_collection_list_invalid_item_rejected(self):
+        """Verify an item that is not a valid collection is rejected at its index."""
+        with pytest.raises(ValidationError) as exc:
+            CollectionList(collections=[{"description": "D"}], total=1)
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == ("collections", 0, "name")
+        assert error["msg"] == "Field required"
+
+    # --- serialization ---
+
+    def test_collection_list_dump_nests_full_collections(self):
+        """Verify ``model_dump`` gives ``collections`` and ``total``, each collection in full."""
+        collection = Collection(name="N")
+
+        dumped = CollectionList(collections=[collection], total=1).model_dump()
+
+        assert dumped == {"collections": [collection.model_dump()], "total": 1}
+
+    def test_collection_list_json_timestamp_has_no_timezone(self, ticking_clock):
+        """Verify a nested ``created_at`` is written with no timezone suffix.
+
+        Args:
+            ticking_clock: Makes the timestamp known in advance.
+        """
+        body = CollectionList(collections=[Collection(name="N")], total=1)
+
+        item = json.loads(body.model_dump_json())["collections"][0]
+        assert item["created_at"] == "2026-01-01T00:00:00"
+
+    # --- edge cases ---
+
+    def test_collection_list_empty(self):
+        """Verify an empty list with ``total`` 0 is valid, as with no collections stored."""
+        body = CollectionList(collections=[], total=0)
+
+        assert body.collections == []
+        assert body.total == 0
+
+    def test_collection_list_total_not_checked(self):
+        """Verify a ``total`` that differs from the number of collections is accepted.
+
+        The model does not compare the two; keeping them equal is left to
+        ``list_collections`` in ``api.py``.
+        """
+        body = CollectionList(collections=[], total=5)
 
         assert body.total == 5
