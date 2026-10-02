@@ -14,6 +14,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.models import (
+    Collection,
     CollectionBase,
     CollectionCreate,
     Prompt,
@@ -548,3 +549,85 @@ class TestCollectionCreate:
         """Verify the create body adds no field of its own to ``CollectionBase``."""
         assert issubclass(CollectionCreate, CollectionBase)
         assert set(CollectionCreate.model_fields) == set(CollectionBase.model_fields)
+
+
+class TestCollection:
+    """Tests for ``Collection``, the stored collection with its server-assigned fields."""
+
+    # --- validation ---
+
+    def test_collection_inherits_base_rules(self):
+        """Verify a missing ``name`` is rejected, so the base rules apply."""
+        with pytest.raises(ValidationError) as exc:
+            Collection()
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == ("name",)
+        assert error["msg"] == "Field required"
+
+    def test_collection_created_at_must_be_datetime(self):
+        """Verify a ``created_at`` that is not a datetime is rejected."""
+        with pytest.raises(ValidationError) as exc:
+            Collection(name="N", created_at="nope")
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == ("created_at",)
+        assert error["msg"] == "Input should be a valid datetime, input is too short"
+
+    # --- defaults ---
+
+    def test_collection_default_ids_distinct_uuid4(self):
+        """Verify each new collection gets its own version 4 UUID."""
+        first = Collection(name="N")
+        second = Collection(name="N")
+
+        assert first.id != second.id
+        assert uuid.UUID(first.id).version == 4
+
+    def test_collection_default_created_at(self, ticking_clock):
+        """Verify ``created_at`` comes from ``get_current_time()``.
+
+        Args:
+            ticking_clock: Makes the clock start at 2026-01-01 and advance
+                1 µs per call.
+        """
+        assert Collection(name="N").created_at == datetime(2026, 1, 1)
+
+    # --- serialization ---
+
+    def test_collection_dump_has_no_updated_at(self):
+        """Verify ``model_dump`` gives the client fields plus ``id`` and ``created_at`` only."""
+        dumped = Collection(name="N").model_dump()
+
+        assert set(dumped) == {"name", "description", "id", "created_at"}
+
+    def test_collection_dump_round_trip(self):
+        """Verify a collection rebuilt from its own dump is equal to it."""
+        collection = Collection(name="N", description="D")
+
+        assert Collection.model_validate(collection.model_dump()) == collection
+
+    # --- edge cases ---
+
+    def test_collection_keeps_given_server_fields(self):
+        """Verify a given ``id`` and ``created_at`` are kept rather than replaced."""
+        created_at = datetime(2000, 1, 1)
+
+        collection = Collection(name="N", id="given", created_at=created_at)
+
+        assert collection.id == "given"
+        assert collection.created_at == created_at
+
+    def test_collection_from_attributes(self):
+        """Verify ``model_validate`` builds a collection from any object with the attributes."""
+        source = SimpleNamespace(
+            name="N",
+            description=None,
+            id="x",
+            created_at=datetime(2026, 1, 1),
+        )
+
+        collection = Collection.model_validate(source)
+
+        assert collection.id == "x"
+        assert collection.name == "N"
