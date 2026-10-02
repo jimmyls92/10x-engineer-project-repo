@@ -14,6 +14,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.models import (
+    CollectionBase,
     Prompt,
     PromptBase,
     PromptCreate,
@@ -439,3 +440,78 @@ class TestPrompt:
 
         assert prompt.id == "x"
         assert prompt.title == "T"
+
+
+class TestCollectionBase:
+    """Tests for ``CollectionBase``, the client fields of a collection."""
+
+    # --- validation ---
+
+    def test_collection_base_requires_name(self):
+        """Verify an empty body is rejected for its missing ``name``."""
+        with pytest.raises(ValidationError) as exc:
+            CollectionBase()
+
+        errors = [(e["loc"], e["msg"]) for e in exc.value.errors()]
+        assert errors == [(("name",), "Field required")]
+
+    @pytest.mark.parametrize(
+        "field, value, msg",
+        [
+            ("name", "", "String should have at least 1 character"),
+            ("name", "n" * 101, "String should have at most 100 characters"),
+            ("description", "d" * 501, "String should have at most 500 characters"),
+        ],
+    )
+    def test_collection_base_length_rule_broken(self, field, value, msg):
+        """Verify each length constraint raises a ``ValidationError`` on its field.
+
+        Args:
+            field: The field given an out-of-range value.
+            value: The value that breaks the constraint.
+            msg: The message Pydantic reports for it.
+        """
+        with pytest.raises(ValidationError) as exc:
+            CollectionBase(**{"name": "N", field: value})
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == (field,)
+        assert error["msg"] == msg
+
+    def test_collection_base_null_name_rejected(self):
+        """Verify a null ``name`` is rejected rather than stored."""
+        with pytest.raises(ValidationError) as exc:
+            CollectionBase(name=None)
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == ("name",)
+        assert error["msg"] == "Input should be a valid string"
+
+    # --- defaults ---
+
+    def test_collection_base_description_defaults_to_none(self):
+        """Verify ``description`` defaults to ``None``."""
+        assert CollectionBase(name="N").description is None
+
+    # --- serialization ---
+
+    def test_collection_base_dump_has_client_fields(self):
+        """Verify ``model_dump`` gives exactly ``name`` and ``description``."""
+        assert CollectionBase(name="N").model_dump() == {"name": "N", "description": None}
+
+    def test_collection_base_drops_undeclared_keys(self):
+        """Verify a key the model does not declare is dropped, not stored."""
+        assert "extra" not in CollectionBase(name="N", extra="x").model_dump()
+
+    # --- edge cases ---
+
+    def test_collection_base_length_limits_inclusive(self):
+        """Verify a name of exactly 100 and a description of exactly 500 are accepted."""
+        collection = CollectionBase(name="n" * 100, description="d" * 500)
+
+        assert len(collection.name) == 100
+        assert len(collection.description) == 500
+
+    def test_collection_base_empty_description_accepted(self):
+        """Verify an empty description is valid, since only a maximum is set."""
+        assert CollectionBase(name="N", description="").description == ""
