@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from app.models import (
     PromptBase,
     PromptCreate,
+    PromptPatch,
     PromptUpdate,
     generate_id,
     get_current_time,
@@ -248,3 +249,94 @@ class TestPromptUpdate:
         """Verify the replacement body adds no field of its own to ``PromptBase``."""
         assert issubclass(PromptUpdate, PromptBase)
         assert set(PromptUpdate.model_fields) == set(PromptBase.model_fields)
+
+
+class TestPromptPatch:
+    """Tests for ``PromptPatch``, the partial-update body of ``PATCH /prompts/{id}``."""
+
+    # --- validation ---
+
+    @pytest.mark.parametrize("field", ["title", "content"])
+    def test_prompt_patch_rejects_null_required_field(self, field):
+        """Verify ``reject_null`` refuses an explicit null ``title`` or ``content``.
+
+        Args:
+            field: The required field sent as null.
+        """
+        with pytest.raises(ValidationError) as exc:
+            PromptPatch(**{field: None})
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == (field,)
+        assert error["msg"] == (
+            f"Value error, {field} cannot be null; send a value or omit the field "
+            "to keep the current one"
+        )
+
+    @pytest.mark.parametrize(
+        "field, value, msg",
+        [
+            ("title", "", "String should have at least 1 character"),
+            ("title", "a" * 201, "String should have at most 200 characters"),
+            ("content", "", "String should have at least 1 character"),
+            ("description", "d" * 501, "String should have at most 500 characters"),
+        ],
+    )
+    def test_prompt_patch_length_rule_broken(self, field, value, msg):
+        """Verify a sent value is held to the same length rules as ``PromptBase``.
+
+        Args:
+            field: The field given an out-of-range value.
+            value: The value that breaks the constraint.
+            msg: The message Pydantic reports for it.
+        """
+        with pytest.raises(ValidationError) as exc:
+            PromptPatch(**{field: value})
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == (field,)
+        assert error["msg"] == msg
+
+    # --- defaults ---
+
+    def test_prompt_patch_empty_body_valid(self):
+        """Verify an empty body is valid, with every field ``None``."""
+        body = PromptPatch()
+
+        assert body.model_dump() == {
+            "title": None,
+            "content": None,
+            "description": None,
+            "collection_id": None,
+        }
+
+    # --- serialization ---
+
+    def test_prompt_patch_unset_fields_excluded(self):
+        """Verify ``exclude_unset`` gives an empty dict for an empty body."""
+        assert PromptPatch().model_dump(exclude_unset=True) == {}
+
+    def test_prompt_patch_explicit_null_kept(self):
+        """Verify an explicit null is kept by ``exclude_unset``, unlike an absent key.
+
+        This is how ``patch_prompt`` tells "clear this field" from "leave it".
+        """
+        body = PromptPatch(description=None, collection_id=None)
+
+        assert body.model_dump(exclude_unset=True) == {
+            "description": None,
+            "collection_id": None,
+        }
+
+    def test_prompt_patch_drops_undeclared_keys(self):
+        """Verify a key the model does not declare, such as ``id``, is dropped."""
+        assert PromptPatch(title="T", id="x").model_dump(exclude_unset=True) == {"title": "T"}
+
+    # --- edge cases ---
+
+    def test_prompt_patch_null_optional_fields_accepted(self):
+        """Verify a null ``description`` or ``collection_id`` is valid, unlike a null title."""
+        body = PromptPatch(description=None, collection_id=None)
+
+        assert body.description is None
+        assert body.collection_id is None
