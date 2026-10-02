@@ -1059,7 +1059,107 @@ class TestCollections:
         data = response.json()
         assert data["name"] == sample_collection_data["name"]
         assert "id" in data
-    
+
+    # --- create_collection: error cases ---
+
+    def test_create_collection_missing_name(self, client: TestClient):
+        """Verify a body without ``name`` is a 422 naming that field.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.post("/collections", json={"description": "No name"})
+
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["body", "name"]
+        assert error["msg"] == "Field required"
+        assert client.get("/collections").json()["total"] == 0
+
+    @pytest.mark.parametrize(
+        "field, value, msg",
+        [
+            ("name", "", "String should have at least 1 character"),
+            ("name", "n" * 101, "String should have at most 100 characters"),
+            ("description", "d" * 501, "String should have at most 500 characters"),
+            ("name", None, "Input should be a valid string"),
+        ],
+    )
+    def test_create_collection_rule_broken(
+        self, client: TestClient, sample_collection_data, field, value, msg
+    ):
+        """Verify each constraint of ``CollectionBase`` is enforced with a 422.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_collection_data: Valid collection payload fixture.
+            field: The field given an invalid value.
+            value: The value that breaks the constraint.
+            msg: The message Pydantic reports for it.
+        """
+        response = client.post("/collections", json={**sample_collection_data, field: value})
+
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["body", field]
+        assert error["msg"] == msg
+        assert client.get("/collections").json()["total"] == 0
+
+    # --- create_collection: edge cases ---
+
+    def test_create_collection_length_limits_inclusive(self, client: TestClient):
+        """Verify a name of exactly 100 and a description of exactly 500 are accepted.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        body = {"name": "n" * 100, "description": "d" * 500}
+
+        response = client.post("/collections", json=body)
+
+        assert response.status_code == 201
+        assert response.json()["name"] == body["name"]
+        assert response.json()["description"] == body["description"]
+
+    def test_create_collection_ignores_id(self, client: TestClient):
+        """Verify a client cannot choose the ``id`` of a new collection.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.post("/collections", json={"name": "X", "id": "mine"})
+
+        assert response.status_code == 201
+        assert response.json()["id"] != "mine"
+        assert client.get("/collections/mine").status_code == 404
+
+    def test_create_collection_duplicate_name_allowed(self, client: TestClient):
+        """Verify names need not be unique: the same name twice makes two collections.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        first = client.post("/collections", json={"name": "Same"})
+        second = client.post("/collections", json={"name": "Same"})
+
+        assert first.status_code == 201
+        assert second.status_code == 201
+        assert first.json()["id"] != second.json()["id"]
+        assert client.get("/collections").json()["total"] == 2
+
+    def test_create_collection_stored_equals_response(
+        self, client: TestClient, sample_collection_data
+    ):
+        """Verify the 201 body is what was stored, read back with GET.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_collection_data: Valid collection payload fixture.
+        """
+        created = client.post("/collections", json=sample_collection_data).json()
+
+        assert client.get(f"/collections/{created['id']}").json() == created
+
     def test_list_collections(self, client: TestClient, sample_collection_data):
         client.post("/collections", json=sample_collection_data)
         
