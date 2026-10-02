@@ -1373,3 +1373,112 @@ class TestCollections:
         assert filtered["prompts"] == []
         assert filtered["total"] == 0
         assert client.get(f"/collections/{collection_id}").status_code == 404
+
+    # --- delete_collection: error cases ---
+
+    def test_delete_collection_not_found(self, client: TestClient):
+        """Verify deleting an unknown id is a 404 with the documented message.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.delete("/collections/nonexistent-id")
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Collection not found"}
+
+    def test_delete_collection_twice(self, client: TestClient, sample_collection_data):
+        """Verify a second delete of the same collection is a 404.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_collection_data: Valid collection payload fixture.
+        """
+        collection_id = client.post("/collections", json=sample_collection_data).json()["id"]
+
+        assert client.delete(f"/collections/{collection_id}").status_code == 204
+        assert client.delete(f"/collections/{collection_id}").status_code == 404
+
+    # --- delete_collection: edge cases ---
+
+    def test_delete_collection_keeps_prompt_updated_at(
+        self, client: TestClient, sample_collection_data, sample_prompt_data
+    ):
+        """Verify unfiling is not an edit: the prompt's ``updated_at`` is unchanged.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_collection_data: Valid collection payload fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        collection_id = client.post("/collections", json=sample_collection_data).json()["id"]
+        created = client.post(
+            "/prompts", json={**sample_prompt_data, "collection_id": collection_id}
+        ).json()
+
+        client.delete(f"/collections/{collection_id}")
+
+        stored = client.get(f"/prompts/{created['id']}").json()
+        assert stored["updated_at"] == created["updated_at"]
+
+    def test_delete_collection_unfiles_only_its_prompts(
+        self, client: TestClient, sample_prompt_data
+    ):
+        """Verify only the deleted collection's prompts are unfiled.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        doomed = client.post("/collections", json={"name": "A"}).json()["id"]
+        other = client.post("/collections", json={"name": "B"}).json()["id"]
+        in_doomed = client.post(
+            "/prompts", json={**sample_prompt_data, "collection_id": doomed}
+        ).json()["id"]
+        in_other = client.post(
+            "/prompts", json={**sample_prompt_data, "collection_id": other}
+        ).json()
+        unfiled = client.post("/prompts", json=sample_prompt_data).json()
+
+        client.delete(f"/collections/{doomed}")
+
+        assert client.get(f"/prompts/{in_doomed}").json()["collection_id"] is None
+        assert client.get(f"/prompts/{in_other['id']}").json() == in_other
+        assert client.get(f"/prompts/{unfiled['id']}").json() == unfiled
+
+    def test_delete_collection_empty(self, client: TestClient, sample_collection_data):
+        """Verify deleting a collection with no prompts is a 204 with no body.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_collection_data: Valid collection payload fixture.
+        """
+        collection_id = client.post("/collections", json=sample_collection_data).json()["id"]
+
+        response = client.delete(f"/collections/{collection_id}")
+
+        assert response.status_code == 204
+        assert response.content == b""
+
+    def test_delete_collection_unfiles_every_prompt(
+        self, client: TestClient, sample_collection_data, sample_prompt_data
+    ):
+        """Verify every prompt in the collection is unfiled, not just the first.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_collection_data: Valid collection payload fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        collection_id = client.post("/collections", json=sample_collection_data).json()["id"]
+        ids = [
+            client.post(
+                "/prompts", json={**sample_prompt_data, "collection_id": collection_id}
+            ).json()["id"]
+            for _ in range(3)
+        ]
+
+        client.delete(f"/collections/{collection_id}")
+
+        for prompt_id in ids:
+            assert client.get(f"/prompts/{prompt_id}").json()["collection_id"] is None
