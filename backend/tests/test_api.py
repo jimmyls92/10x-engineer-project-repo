@@ -1067,7 +1067,63 @@ class TestCollections:
         assert response.status_code == 200
         data = response.json()
         assert len(data["collections"]) == 1
-    
+
+    # --- list_collections: error cases (none documented; the empty store) ---
+
+    def test_list_collections_empty(self, client: TestClient):
+        """Verify an empty store gives 200 with an empty list, not an error.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.get("/collections")
+
+        assert response.status_code == 200
+        assert response.json() == {"collections": [], "total": 0}
+
+    # --- list_collections: edge cases ---
+
+    def test_list_collections_creation_order(self, client: TestClient):
+        """Verify collections come back in creation order, not sorted by name.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        for name in ["C", "A", "B"]:
+            client.post("/collections", json={"name": name})
+
+        collections = client.get("/collections").json()["collections"]
+
+        assert [c["name"] for c in collections] == ["C", "A", "B"]
+
+    def test_list_collections_total_matches_count(self, client: TestClient):
+        """Verify ``total`` equals the number of collections listed.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        for name in ["C", "A", "B"]:
+            client.post("/collections", json={"name": name})
+
+        data = client.get("/collections").json()
+
+        assert data["total"] == 3
+        assert len(data["collections"]) == 3
+
+    def test_list_collections_omits_deleted(self, client: TestClient):
+        """Verify a deleted collection is no longer listed.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        doomed = client.post("/collections", json={"name": "Old"}).json()["id"]
+        kept = client.post("/collections", json={"name": "New"}).json()
+        client.delete(f"/collections/{doomed}")
+
+        data = client.get("/collections").json()
+
+        assert data == {"collections": [kept], "total": 1}
+
     def test_get_collection_not_found(self, client: TestClient):
         response = client.get("/collections/nonexistent-id")
         assert response.status_code == 404
