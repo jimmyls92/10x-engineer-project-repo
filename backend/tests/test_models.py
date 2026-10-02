@@ -15,6 +15,7 @@ from pydantic import ValidationError
 
 from app.models import (
     CollectionBase,
+    CollectionCreate,
     Prompt,
     PromptBase,
     PromptCreate,
@@ -515,3 +516,35 @@ class TestCollectionBase:
     def test_collection_base_empty_description_accepted(self):
         """Verify an empty description is valid, since only a maximum is set."""
         assert CollectionBase(name="N", description="").description == ""
+
+
+class TestCollectionCreate:
+    """Tests for ``CollectionCreate``, the body of ``POST /collections``."""
+
+    # --- validation ---
+
+    def test_collection_create_inherits_base_rules(self):
+        """Verify a missing ``name`` is still rejected, so the base rules apply."""
+        with pytest.raises(ValidationError) as exc:
+            CollectionCreate()
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == ("name",)
+        assert error["msg"] == "Field required"
+
+    # --- serialization ---
+
+    def test_collection_create_drops_server_fields(self):
+        """Verify a client-sent ``id`` or ``created_at`` is dropped from the body."""
+        body = CollectionCreate(name="N", id="mine", created_at="2000-01-01T00:00:00")
+
+        dumped = body.model_dump()
+        assert "id" not in dumped
+        assert "created_at" not in dumped
+
+    # --- edge cases ---
+
+    def test_collection_create_same_fields_as_base(self):
+        """Verify the create body adds no field of its own to ``CollectionBase``."""
+        assert issubclass(CollectionCreate, CollectionBase)
+        assert set(CollectionCreate.model_fields) == set(CollectionBase.model_fields)
