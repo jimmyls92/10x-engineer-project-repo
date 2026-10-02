@@ -368,8 +368,11 @@ class TestPrompts:
     def test_list_prompts_newest_first(self, client: TestClient):
         """Verify prompts are listed by ``created_at``, newest first, with no sleep.
 
-        ``get_current_time()`` resolves to microseconds, so three prompts
-        created in a row get three distinct timestamps.
+        Each prompt is created by its own request, which usually takes longer
+        than one step of the clock behind ``get_current_time()``, so the three
+        usually get distinct timestamps. Where the clock is coarse (Python 3.12
+        on Windows), two may share one and this test can fail rarely; see
+        *Known traps* in ``CLAUDE.md``.
 
         Args:
             client: FastAPI test client fixture.
@@ -583,10 +586,13 @@ class TestPrompts:
 
         Covers Bug #2. The comparison is deliberately made between updated_at
         *before* the PUT and updated_at *after* it: created_at and updated_at
-        already differ at creation time, because models.Prompt fills them with
-        two separate default_factory calls, so asserting updated_at > created_at
-        would pass even with the bug present. No sleep is needed -- utcnow() was
-        measured to resolve to a few microseconds on this platform.
+        can already differ at creation time, because models.Prompt fills them
+        with two separate default_factory calls, so asserting updated_at >
+        created_at could pass even with the bug present. No sleep is used: the
+        PUT is a separate request, which usually takes longer than one step of
+        the clock behind utcnow(). Where the clock is coarse (Python 3.12 on
+        Windows) the two can still be equal and this test can fail rarely; see
+        *Known traps* in CLAUDE.md.
 
         Args:
             client: FastAPI test client fixture.

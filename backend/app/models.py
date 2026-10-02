@@ -141,7 +141,9 @@ class Prompt(PromptBase):
 
     Adds the server-assigned fields to ``PromptBase``. Each default factory
     runs separately, so on a newly created prompt ``created_at`` and
-    ``updated_at`` differ by a few microseconds rather than being equal.
+    ``updated_at`` are read from the clock twice: they differ by a few
+    microseconds where the clock is that fine, and are usually equal where
+    it is coarser (Python 3.12 on Windows steps about every millisecond).
 
     Attributes:
         id: Unique identifier. Defaults to a new ``generate_id()`` value.

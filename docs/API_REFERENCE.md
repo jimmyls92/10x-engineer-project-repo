@@ -218,7 +218,8 @@ curl -X POST http://localhost:8000/prompts \
 }
 ```
 
-`created_at` and `updated_at` differ by a few microseconds on a new prompt; they are set separately.
+`created_at` and `updated_at` are set separately on a new prompt, so they may differ by a few
+microseconds or be equal, depending on how fine the server's clock is. Do not rely on either.
 
 | Status | When |
 |---|---|
