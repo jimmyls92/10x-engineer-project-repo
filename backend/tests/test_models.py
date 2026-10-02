@@ -11,7 +11,13 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from pydantic import ValidationError
 
-from app.models import PromptBase, PromptCreate, generate_id, get_current_time
+from app.models import (
+    PromptBase,
+    PromptCreate,
+    PromptUpdate,
+    generate_id,
+    get_current_time,
+)
 
 
 class TestGenerateId:
@@ -205,3 +211,40 @@ class TestPromptCreate:
         """Verify the create body adds no field of its own to ``PromptBase``."""
         assert issubclass(PromptCreate, PromptBase)
         assert set(PromptCreate.model_fields) == set(PromptBase.model_fields)
+
+
+class TestPromptUpdate:
+    """Tests for ``PromptUpdate``, the full-replacement body of ``PUT /prompts/{id}``."""
+
+    # --- validation ---
+
+    def test_prompt_update_requires_full_body(self):
+        """Verify a body without ``content`` is rejected: PUT is not a partial update."""
+        with pytest.raises(ValidationError) as exc:
+            PromptUpdate(title="T")
+
+        error = exc.value.errors()[0]
+        assert error["loc"] == ("content",)
+        assert error["msg"] == "Field required"
+
+    # --- defaults ---
+
+    def test_prompt_update_omitted_fields_are_none(self):
+        """Verify optional fields left out are ``None``, which is why PUT resets them."""
+        body = PromptUpdate(title="T", content="Text.")
+
+        assert body.description is None
+        assert body.collection_id is None
+
+    # --- serialization ---
+
+    def test_prompt_update_drops_id(self):
+        """Verify a client-sent ``id`` is dropped from the body."""
+        assert "id" not in PromptUpdate(title="T", content="Text.", id="mine").model_dump()
+
+    # --- edge cases ---
+
+    def test_prompt_update_same_fields_as_base(self):
+        """Verify the replacement body adds no field of its own to ``PromptBase``."""
+        assert issubclass(PromptUpdate, PromptBase)
+        assert set(PromptUpdate.model_fields) == set(PromptBase.model_fields)
