@@ -17,9 +17,9 @@ work.** It is how a new session resumes without reading everything.
 |---|---|
 | **Current module** | **Module 3** — branch `Week-3`. Brief: `brief.txt`, from `Module_3_Project_Production_Ready.pdf`. Where the brief and this file conflict, **the brief rules**. |
 | **Previous module** | **Module 2: submitted on `Week-2`** (`1c9cc88`); its log, entries 1-198, is on that branch. |
-| **Current task** | **None started. Next: Task 3.1 — Comprehensive test suite.** |
+| **Current task** | **Task 3.1 — Comprehensive test suite: done** (Module 3 log entries 4-95). Plan (entry 8) completed: pinned venv + `.gitignore`; `test_api.py` (every endpoint, success and each documented failure); `test_models.py`, `test_utils.py`, `test_storage.py` (every model, helper and `Storage` method). Cases were agreed one function at a time (entries 9, 11, 33) under the brief's headings: `test_api.py` *query parameters / error cases / edge cases*; `test_models.py` *validation / defaults / serialization / edge cases*; `test_utils.py` *behaviour / error conditions / edge cases*; `test_storage.py` *CRUD operations / persistence within a session / edge cases*, with a fresh `Storage()` per test. Close-out: suite **296 passed** (251 test functions, every one asserting, AST scan in entry 92), coverage **100%** on every module in the pinned venv; README *Run the tests* rewritten (`baacb4b`). `Week-3` not yet pushed. **Next: Task 3.2, not started** — first decide the open decision below. |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 4 |
+| **Next entry number** | 96 |
 
 Entry numbers cited below, unless marked otherwise, are from **Module 2's log** (on `Week-2`).
 
@@ -65,6 +65,12 @@ Entry numbers cited below, unless marked otherwise, are from **Module 2's log** 
   (FastAPI 0.141.1, Pydantic 2.13.5); `requirements.txt` pins FastAPI 0.109.0 and Pydantic 2.5.3,
   which need Python 3.10-3.12. CI installs the pins, so check coverage and lint in a Python 3.12 venv
   built from `requirements.txt` (`python3.12` and `uv` are installed), not the global interpreter.
+- **The clock is coarse on Python 3.12 here** (Module 3 log, entries 45-46). `datetime.utcnow()`
+  steps about every 0.3-1 ms in the pinned venv on Windows, but per microsecond on the global 3.13.
+  So a new `Prompt`'s `created_at` and `updated_at` are equal 9,985 times in 10,000 on 3.12, and two
+  back-to-back POSTs share a `created_at` about 5 times in 300. Tests comparing timestamps from
+  separate requests can therefore fail rarely on Windows 3.12. Not measured on Linux. Handled by
+  the `ticking_clock` fixture (entries 47-48) for every strict timestamp comparison.
 
 ---
 
@@ -330,8 +336,10 @@ models use the deprecated class-based `Config`.
   `test_<verb>_<resource>_<behaviour>` (`test_patch_prompt_not_found`).
 - **Assert one exact status code**, never a set of acceptable ones.
 - **After a change, re-read the record with GET** to prove it was stored, not just echoed.
-- **Compare timestamps as values**, parsed with `datetime.fromisoformat`, never with `time.sleep`:
-  `get_current_time()` resolves to microseconds.
+- **Compare timestamps as values**, parsed with `datetime.fromisoformat`, never with `time.sleep`.
+  The clock's step depends on the platform (see Known traps): two values read in one call are often
+  equal, and two from separate requests occasionally are. **A test asserting one timestamp is later
+  than another takes the `ticking_clock` fixture** (`conftest.py`), which advances 1 µs per call.
 - **Use `pytest.mark.parametrize`** for the same check over several fields.
 - **Each new test has a docstring** saying what it verifies, with `Args` for its fixtures.
 
