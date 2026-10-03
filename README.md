@@ -219,11 +219,21 @@ in-memory storage, so data created before an edit is gone after it.
 pytest tests/ -v
 ```
 
-All 19 tests in `tests/test_api.py` should pass. They drive the application through FastAPI's
-`TestClient`, so **no server needs to be running**. An autouse fixture in `tests/conftest.py`
-empties storage before and after every test, so no test depends on data another test left behind.
-`conftest.py` also provides `client`, `sample_prompt_data` and `sample_collection_data` fixtures
-for new tests.
+Every test should pass, and **no server needs to be running**. The suite has one file per module:
+
+| File | Covers |
+|---|---|
+| `tests/test_api.py` | Every endpoint, through FastAPI's `TestClient`: success, error cases (404, 400, 422), edge cases and query parameters |
+| `tests/test_models.py` | The Pydantic models and `generate_id` / `get_current_time`: validation, defaults, serialization |
+| `tests/test_utils.py` | Each helper in `utils.py`, with its error conditions |
+| `tests/test_storage.py` | Each `Storage` method: CRUD operations, persistence within a session, edge cases |
+
+The three unit-test files call their module directly, without HTTP; `test_storage.py` gives each
+test its own fresh `Storage`. An autouse fixture in `tests/conftest.py` empties the shared storage
+before and after every test, so no test depends on data another test left behind. `conftest.py`
+also provides `client`, `sample_prompt_data` and `sample_collection_data` fixtures, and
+`ticking_clock`, which makes `get_current_time()` advance 1 µs per call so that tests comparing
+timestamps are deterministic.
 
 ### Measure test coverage
 
