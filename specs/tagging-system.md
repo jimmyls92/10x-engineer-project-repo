@@ -433,8 +433,10 @@ raised only for a body whose tags are valid.
 
 ### Tests to write
 
-In `backend/tests/test_api.py`, in a new class `TestTags`, named `test_<verb>_<resource>_<behaviour>`,
-one per AC or per parametrised group of ACs:
+In `backend/tests/test_api.py`, named `test_<verb>_<resource>_<behaviour>`, one per AC or per
+parametrised group of ACs. Each goes in the class of the resource whose endpoint it calls, as
+`CLAUDE.md` groups API tests: the `test_list_tags_*` tests in a new class `TestTags`,
+`test_delete_collection_keeps_tags` in `TestCollections`, and every other test in `TestPrompts`.
 
 | Test | Covers |
 |---|---|
