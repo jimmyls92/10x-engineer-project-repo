@@ -156,6 +156,9 @@ Break every task into small steps — typically 3 to 6. For each step:
      - **When the format of the answer is new, show a worked example** or a partly filled template.
      - **Widen the question only after the user has answered a narrow one well.** If an answer shows
        the question was too open, narrow it at once instead of waiting for three exchanges.
+   - **Ask only about what the user is learning: coding and spec-driven development.** A convention
+     already written in this file (naming, layers, banners, file names, response models) is applied
+     by Claude and stated as settled, never turned into a question (Module 3 log, entry 215).
 2. **Stop. Wait for their prompt.** They write it — you do not draft it for them.
 3. **The user always justifies their answer.** If they do not, ask why.
 4. **If the answer is ambiguous, not specific enough or wrong, narrow it** with comments or questions
