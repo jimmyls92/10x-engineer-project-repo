@@ -852,6 +852,23 @@ class TestPrompts:
         assert response.status_code == 200
         assert client.get(f"/prompts/{created['id']}").json()["tags"] == []
 
+    def test_update_prompt_tags_keep_order(self, client: TestClient, sample_prompt_data):
+        """Verify tags sent on PUT are stored in the order sent, not sorted.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture, with no tags.
+        """
+        created = client.post("/prompts", json=sample_prompt_data).json()
+
+        response = client.put(
+            f"/prompts/{created['id']}",
+            json={"title": "New", "content": "New text.", "tags": ["b-tag", "a-tag"]},
+        )
+
+        assert response.status_code == 200
+        assert client.get(f"/prompts/{created['id']}").json()["tags"] == ["b-tag", "a-tag"]
+
     def test_update_prompt_ignores_id_in_body(self, client: TestClient, sample_prompt_data):
         """Verify an ``id`` in the body cannot change the stored prompt's id.
 
