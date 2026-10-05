@@ -48,6 +48,70 @@ class TestPrompts:
         assert response.json() == {"detail": "Collection not found"}
         assert client.get("/prompts").json()["total"] == 0
 
+    def test_create_prompt_with_tags(self, client: TestClient, sample_prompt_data):
+        """Verify tags sent on POST are returned and stored in the order sent.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        response = client.post(
+            "/prompts", json={**sample_prompt_data, "tags": ["code-review", "ai"]}
+        )
+
+        assert response.status_code == 201
+        assert response.json()["tags"] == ["code-review", "ai"]
+        stored = client.get(f"/prompts/{response.json()['id']}").json()
+        assert stored["tags"] == ["code-review", "ai"]
+
+    def test_create_prompt_without_tags(self, client: TestClient, sample_prompt_data):
+        """Verify a POST without ``tags`` stores an empty list.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture, with no tags.
+        """
+        response = client.post("/prompts", json=sample_prompt_data)
+
+        assert response.status_code == 201
+        assert client.get(f"/prompts/{response.json()['id']}").json()["tags"] == []
+
+    def test_create_prompt_null_tags(self, client: TestClient, sample_prompt_data):
+        """Verify ``"tags": null`` on POST is a 422 that stores nothing.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        response = client.post("/prompts", json={**sample_prompt_data, "tags": None})
+
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["body", "tags"]
+        assert error["msg"] == "Input should be a valid list"
+        assert client.get("/prompts").json()["total"] == 0
+
+    def test_create_prompt_unknown_collection_keeps_nothing(
+        self, client: TestClient, sample_prompt_data
+    ):
+        """Verify valid tags with an unknown ``collection_id`` are a 400 that stores nothing.
+
+        Passes before tags exist too: it guards the check running before the
+        prompt is stored.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        response = client.post(
+            "/prompts",
+            json={**sample_prompt_data, "tags": ["ai"], "collection_id": "nope"},
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "Collection not found"}
+        assert client.get("/prompts").json()["total"] == 0
+
     @pytest.mark.parametrize("field", ["title", "content"])
     def test_create_prompt_missing_required_field(
         self, client: TestClient, sample_prompt_data, field
@@ -216,6 +280,25 @@ class TestPrompts:
         data = response.json()
         assert len(data["prompts"]) == 1
         assert data["total"] == 1
+
+    def test_list_prompts_shows_tags(self, client: TestClient, sample_prompt_data):
+        """Verify each listed prompt carries its own tags.
+
+        Prompts are matched by title, not position, so the order of the list
+        does not matter.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        client.post("/prompts", json={**sample_prompt_data, "title": "A", "tags": ["ai"]})
+        client.post("/prompts", json={**sample_prompt_data, "title": "B", "tags": ["python"]})
+
+        response = client.get("/prompts")
+
+        assert response.status_code == 200
+        tags_by_title = {p["title"]: p["tags"] for p in response.json()["prompts"]}
+        assert tags_by_title == {"A": ["ai"], "B": ["python"]}
 
     # --- list_prompts: query parameters ---
 
@@ -648,6 +731,34 @@ class TestPrompts:
         assert response.json() == {"detail": "Collection not found"}
         assert client.get(f"/prompts/{created['id']}").json() == created
 
+    @pytest.mark.parametrize("method", ["PUT", "PATCH"])
+    def test_update_prompt_unknown_collection_keeps_tags(
+        self, client: TestClient, sample_prompt_data, method
+    ):
+        """Verify valid tags with an unknown ``collection_id`` are a 400 that keeps the stored tags.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            method: The editing method, PUT or PATCH.
+        """
+        created = client.post("/prompts", json={**sample_prompt_data, "tags": ["ai"]}).json()
+
+        response = client.request(
+            method,
+            f"/prompts/{created['id']}",
+            json={
+                "title": "New",
+                "content": "New text.",
+                "tags": ["python"],
+                "collection_id": "nope",
+            },
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "Collection not found"}
+        assert client.get(f"/prompts/{created['id']}").json()["tags"] == ["ai"]
+
     @pytest.mark.parametrize(
         "body, field, msg",
         [
@@ -722,6 +833,24 @@ class TestPrompts:
         stored = client.get(f"/prompts/{created['id']}").json()
         assert stored["description"] is None
         assert stored["collection_id"] is None
+
+    def test_update_prompt_without_tags_clears_them(
+        self, client: TestClient, sample_prompt_data
+    ):
+        """Verify a PUT without ``tags`` replaces the stored tags with an empty list.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        created = client.post("/prompts", json={**sample_prompt_data, "tags": ["ai"]}).json()
+
+        response = client.put(
+            f"/prompts/{created['id']}", json={"title": "New", "content": "New text."}
+        )
+
+        assert response.status_code == 200
+        assert client.get(f"/prompts/{created['id']}").json()["tags"] == []
 
     def test_update_prompt_ignores_id_in_body(self, client: TestClient, sample_prompt_data):
         """Verify an ``id`` in the body cannot change the stored prompt's id.
@@ -1489,3 +1618,26 @@ class TestCollections:
 
         for prompt_id in ids:
             assert client.get(f"/prompts/{prompt_id}").json()["collection_id"] is None
+
+    def test_delete_collection_keeps_tags(
+        self, client: TestClient, sample_collection_data, sample_prompt_data
+    ):
+        """Verify a prompt unfiled by deleting its collection keeps its tags.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_collection_data: Valid collection payload fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        collection_id = client.post("/collections", json=sample_collection_data).json()["id"]
+        prompt_id = client.post(
+            "/prompts",
+            json={**sample_prompt_data, "collection_id": collection_id, "tags": ["ai"]},
+        ).json()["id"]
+
+        response = client.delete(f"/collections/{collection_id}")
+
+        assert response.status_code == 204
+        stored = client.get(f"/prompts/{prompt_id}").json()
+        assert stored["collection_id"] is None
+        assert stored["tags"] == ["ai"]

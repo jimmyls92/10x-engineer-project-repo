@@ -151,10 +151,16 @@ class TestPromptBase:
         assert prompt.description is None
         assert prompt.collection_id is None
 
+    def test_prompt_base_tags_default_to_empty_list(self):
+        """Verify ``tags`` defaults to an empty list when it is not sent."""
+        prompt = PromptBase(title="T", content="Text.")
+
+        assert prompt.tags == []
+
     # --- serialization ---
 
     def test_prompt_base_dump_has_client_fields(self):
-        """Verify ``model_dump`` gives exactly the four client fields."""
+        """Verify ``model_dump`` gives exactly the five client fields."""
         dumped = PromptBase(title="T", content="Text.").model_dump()
 
         assert dumped == {
@@ -162,6 +168,7 @@ class TestPromptBase:
             "content": "Text.",
             "description": None,
             "collection_id": None,
+            "tags": [],
         }
 
     def test_prompt_base_drops_undeclared_keys(self):
