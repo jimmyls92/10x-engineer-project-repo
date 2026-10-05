@@ -53,12 +53,15 @@ class PromptBase(BaseModel):
         collection_id: Optional identifier of the collection the prompt is
             filed in. Defaults to ``None``. The model does not check that
             the collection exists; the create and update endpoints do.
+        tags: Optional list of tag strings, kept in the order sent. Defaults
+            to a new empty list.
     """
 
     title: str = Field(..., min_length=1, max_length=200)
     content: str = Field(..., min_length=1)
     description: Optional[str] = Field(None, max_length=500)
     collection_id: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
 
 
 class PromptCreate(PromptBase):
