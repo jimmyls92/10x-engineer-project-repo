@@ -17,25 +17,22 @@ work.** It is how a new session resumes without reading everything.
 |---|---|
 | **Current module** | **Module 3** — branch `Week-3`. Brief: `brief.txt`, from `Module_3_Project_Production_Ready.pdf`. Where the brief and this file conflict, **the brief rules**. |
 | **Previous module** | **Module 2: submitted on `Week-2`** (`1c9cc88`); its log, entries 1-198, is on that branch. |
-| **Current task** | **Task 3.1 — Comprehensive test suite: done** (Module 3 log entries 4-95). Plan (entry 8) completed: pinned venv + `.gitignore`; `test_api.py` (every endpoint, success and each documented failure); `test_models.py`, `test_utils.py`, `test_storage.py` (every model, helper and `Storage` method). Cases were agreed one function at a time (entries 9, 11, 33) under the brief's headings: `test_api.py` *query parameters / error cases / edge cases*; `test_models.py` *validation / defaults / serialization / edge cases*; `test_utils.py` *behaviour / error conditions / edge cases*; `test_storage.py` *CRUD operations / persistence within a session / edge cases*, with a fresh `Storage()` per test. Close-out: suite **296 passed** (251 test functions, every one asserting, AST scan in entry 92), coverage **100%** on every module in the pinned venv; README *Run the tests* rewritten (`baacb4b`). `Week-3` not yet pushed. **Next: Task 3.2, not started** — first decide the open decision below. |
+| **Current task** | **Task 3.2 — Implement the Tagging System with TDD: in progress** (Module 3 log entries 96 on). Task 3.1 is done (entries 4-95; suite 296 passed, coverage 100%, `baacb4b`). Decisions: Tagging System, not Prompt Versioning (entry 98); findings 7 accepted, 8 fixed in the spec (`0131510`), 9 covered by added E-5 tests (entries 98-101); vertical slices US-1 to US-4, unit tests red-first inside each slice, full cycle list drawn up before any test (entries 107-108). **Cycle plan complete** (entries 108-255): 17 cycles, every AC, edge case and added test placed, in the working note `docs/tagging-tdd-plan.md`, **which is never committed** (entry 232). `Week-3` not yet pushed. **Next: US-1 cycle 1's red commit.** |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 96 |
+| **Next entry number** | 256 |
 
 Entry numbers cited below, unless marked otherwise, are from **Module 2's log** (on `Week-2`).
 
 **Open decisions:**
 
-- **Which spec feature Task 3.2 implements** — Prompt Versioning or Tagging System; the other is
-  Module 4's. Decided at Task 3.2, not before.
-- **Spec review findings deferred to Module 3** (fresh-context review, Module 2 log entry 179;
-  findings 1-2 fixed in Module 2). Before implementing either spec, decide on each: (3) versions
-  FR-7/E-6, deleting a prompt removes its history, has no AC or test; (4) versions I-1 suggests
-  testing dict keys HTTP never shows; (5) versions test list misses `version` `1.5`, `1.0` (E-10) and
-  `limit` `abc`, `2.5`, empty; (6) versions AC-4.8 cites `api.py:70-71` (docstring), the code is
-  `:87`, `:91`; (7) `TagList` under a new `Tag Models` banner, `PromptVersionList` under
-  `Response Models`; (8) neither spec says its new test class is a deliberate addition; (9) tagging
-  E-5 covers three methods, its test is named for PUT; (10) versions does not say `order` is a
-  `Literal` or an `Enum`.
+- **Spec review findings left for Module 4's Prompt Versioning** (fresh-context review, Module 2
+  log entry 179; tagging findings 7-9 settled in Module 3, entries 98-101). Before implementing
+  versions, decide on each: (3) FR-7/E-6, deleting a prompt removes its history, has no AC or test;
+  (4) I-1 suggests testing dict keys HTTP never shows; (5) the test list misses `version` `1.5`,
+  `1.0` (E-10) and `limit` `abc`, `2.5`, empty; (6) AC-4.8 cites `api.py:70-71` (docstring), the
+  code is `:87`, `:91`; (10) it does not say `order` is a `Literal` or an `Enum`. Finding 7 was
+  accepted, not fixed: `PromptVersionList` goes under `Response Models` while `TagList` has its own
+  `Tag Models` banner.
 
 **Known traps:**
 
