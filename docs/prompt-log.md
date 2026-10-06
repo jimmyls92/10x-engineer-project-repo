@@ -6496,5 +6496,44 @@ log, proposed the green commit's message and asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 306
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the green change (`784b2bd`), closing US-2 cycle 5. It opened cycle 6's
+red step and proposed one test, `test_patch_prompt_tag_list_rule_broken`, parametrised over 11
+tags (count message) and `["ai", "ai"]` (repeat message): a prompt tagged `["ai"]`, PATCH gives
+422 at `["body", "tags"]` with the exact message, and GET still shows `["ai"]`. Both fail now with
+a 500, since `PromptPatch` has no list check and `Prompt`'s validator raises inside `patch_prompt`.
+It noted these cases are not in the spec's test table, like the tests added for finding 9. It asked
+for permission to write the test and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to write the test and run the suite.
+
+
+### Entry 307
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `test_patch_prompt_tag_list_rule_broken`, parametrised over 11 tags and `["ai",
+"ai"]`. In the Python 3.12 venv: 2 failed, 337 passed. Both fail as expected: `Prompt` raises the
+`check_tag_list` message inside `patch_prompt`, a 500. It staged the test file and this log,
+proposed the red commit's message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 

@@ -1362,6 +1362,38 @@ class TestPrompts:
         )
         assert client.get(f"/prompts/{created['id']}").json()["tags"] == ["ai"]
 
+    @pytest.mark.parametrize(
+        "tags, msg",
+        [
+            (
+                [f"t{i}" for i in range(11)],
+                "Value error, a prompt can have at most 10 tags; "
+                "delete a tag before including another",
+            ),
+            (["ai", "ai"], "Value error, tags must not repeat a tag"),
+        ],
+    )
+    def test_patch_prompt_tag_list_rule_broken(
+        self, client: TestClient, sample_prompt_data, tags, msg
+    ):
+        """Verify a tag list breaking a list rule on PATCH is a 422 that keeps the stored tags.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            tags: A list of valid tags that breaks the count or the repeat rule.
+            msg: The message ``check_tag_list`` gives for it.
+        """
+        created = client.post("/prompts", json={**sample_prompt_data, "tags": ["ai"]}).json()
+
+        response = client.patch(f"/prompts/{created['id']}", json={"tags": tags})
+
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["body", "tags"]
+        assert error["msg"] == msg
+        assert client.get(f"/prompts/{created['id']}").json()["tags"] == ["ai"]
+
     def test_patch_prompt_validation_before_lookup(self, client: TestClient):
         """Verify the order of checks: body 422 before path 404, path 404 before body 400.
 
