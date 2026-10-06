@@ -13,6 +13,9 @@ from fastapi.testclient import TestClient
 # The message Pydantic gives for a tag that breaks the ``Tag`` pattern (AC-2.3).
 PATTERN_MSG = "String should match pattern '^[a-z0-9]+(-[a-z0-9]+)*$'"
 
+# The message for a ``tag`` query value that breaks the ``TagQuery`` pattern (AC-3.7).
+QUERY_PATTERN_MSG = "String should match pattern '^([a-z0-9]+(-[a-z0-9]+)*)?$'"
+
 
 class TestHealth:
     """Tests for health endpoint."""
@@ -581,6 +584,30 @@ class TestPrompts:
             tagged_prompts[n] for n in ["P3", "P2", "P1"]
         ]
         assert data["total"] == 3
+
+    @pytest.mark.parametrize(
+        "query, index, msg",
+        [
+            ("tag=Python", 0, QUERY_PATTERN_MSG),
+            ("tag=ai&tag=Python", 1, QUERY_PATTERN_MSG),
+            ("tag=" + "a" * 33, 0, "String should have at most 32 characters"),
+        ],
+    )
+    def test_list_prompts_invalid_tag(self, client: TestClient, query, index, msg):
+        """Verify a ``tag`` value breaking the ``TagQuery`` rules is a 422 at its index.
+
+        Args:
+            client: FastAPI test client fixture.
+            query: The ``tag`` values sent, one of them invalid.
+            index: The position of the invalid value.
+            msg: The message Pydantic reports for it.
+        """
+        response = client.get(f"/prompts?{query}")
+
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["query", "tag", index]
+        assert error["msg"] == msg
 
     # --- list_prompts: error cases (a filter that matches nothing is not an error) ---
 

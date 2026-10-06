@@ -6987,5 +6987,43 @@ asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 331
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the green change (`519e907`), closing US-3 cycle 3. It opened cycle 4's red step,
+the last of US-3, and proposed `test_list_prompts_invalid_tag` (AC-3.7, E-7), parametrised over
+`tag=Python` (`loc` `["query", "tag", 0]`), `tag=ai&tag=Python` (`["query", "tag", 1]`), both with
+the optional pattern's message, and a 33-character value (`["query", "tag", 0]`, "String should
+have at most 32 characters"). All three fail now with 200, since nothing validates `tag`. It asked
+for permission to write it and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to write the test and run the suite.
+
+
+### Entry 332
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `test_list_prompts_invalid_tag` (AC-3.7, E-7), three cases, with the query pattern's
+message as a `QUERY_PATTERN_MSG` constant beside `PATTERN_MSG`. Suite: 3 failed, 350 passed; all
+three get 200 instead of 422, as predicted. It staged the test file and this log, proposed the red
+commit's message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 
