@@ -6672,5 +6672,42 @@ Claude made the three docstring edits: `PromptBase.tags` (at most 10, none repea
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 315
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the docstring edits (`5dd30dc`). With the US-2 slice closed, it proposed
+the bookkeeping commit, as after US-1: update CURRENT STATE in `CLAUDE.md` (US-2 done, entries
+285-316, suite 339 passed, coverage 100%; remove the note that a PATCH with `"tags": null` gives
+500; next US-3 cycle 1's red commit; next entry 317), and commit it with this log. It asked for
+permission. It stopped.
+
+**Why the next prompt changed**
+
+The bookkeeping was due at the end of the slice; I gave permission.
+
+
+### Entry 316
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude updated CURRENT STATE in `CLAUDE.md`: US-2 done (entries 285-316, 6 cycles plus docstrings,
+`5dd30dc`; suite 339 passed, coverage 100%), the PATCH null-tags 500 note removed, next US-3 cycle
+1's red commit, next entry 317. It staged `CLAUDE.md` and this log, left the plan file unstaged,
+and proposed the commit message. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 
