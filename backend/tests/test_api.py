@@ -1184,6 +1184,44 @@ class TestPrompts:
         assert response.status_code == 200
         assert client.get(f"/prompts/{created['id']}").json()["tags"] == ["ai"]
 
+    def test_patch_prompt_tags_replaced(
+        self, client: TestClient, sample_prompt_data, ticking_clock
+    ):
+        """Verify tags sent on PATCH replace the stored ones and refresh ``updated_at``.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            ticking_clock: Gives every timestamp a distinct value, so a coarse
+                platform clock cannot make the two equal.
+        """
+        created = client.post("/prompts", json={**sample_prompt_data, "tags": ["ai"]}).json()
+
+        response = client.patch(f"/prompts/{created['id']}", json={"tags": ["python"]})
+
+        assert response.status_code == 200
+        stored = client.get(f"/prompts/{created['id']}").json()
+        assert stored["tags"] == ["python"]
+        assert datetime.fromisoformat(stored["updated_at"]) > datetime.fromisoformat(
+            created["updated_at"]
+        )
+
+    def test_patch_prompt_empty_tags_clears_them(
+        self, client: TestClient, sample_prompt_data
+    ):
+        """Verify ``"tags": []`` on PATCH clears the stored tags, unlike an absent key.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        created = client.post("/prompts", json={**sample_prompt_data, "tags": ["ai"]}).json()
+
+        response = client.patch(f"/prompts/{created['id']}", json={"tags": []})
+
+        assert response.status_code == 200
+        assert client.get(f"/prompts/{created['id']}").json()["tags"] == []
+
     def test_patch_prompt_validation_before_lookup(self, client: TestClient):
         """Verify the order of checks: body 422 before path 404, path 404 before body 400.
 
