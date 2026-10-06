@@ -47,8 +47,8 @@ Tag = Annotated[str, Field(min_length=1, max_length=32, pattern=r"^[a-z0-9]+(-[a
 def check_tag_list(tags: List[str]) -> List[str]:
     """Apply the rules on a whole list of tags, once each tag has passed ``Tag``.
 
-    Called by the ``tags`` validator of ``PromptBase``, so the list rules are
-    written in one place.
+    Called by the ``tags`` validator of ``PromptBase`` and ``PromptPatch``, so
+    the list rules are written in one place.
 
     Args:
         tags: The tags sent, each already a valid ``Tag``.
@@ -196,6 +196,30 @@ class PromptPatch(BaseModel):
                 "field to keep the current one"
             )
         return value
+
+    @field_validator("tags")
+    @classmethod
+    def check_tags(cls, value):
+        """Apply ``check_tag_list`` to the tags sent.
+
+        Runs only when the body carries ``tags``, and after ``reject_null``,
+        so the value is always a list.
+
+        Args:
+            value: The list of tags sent.
+
+        Returns:
+            The list unchanged, when it passes ``check_tag_list``.
+
+        Raises:
+            ValueError: If ``check_tag_list`` refuses the list.
+        """
+        # No None check: value is never None here. An absent key keeps the
+        # default without running validators, and an explicit null is
+        # refused by reject_null, declared above so it runs first. Moving
+        # this validator above reject_null, or adding validate_default=True,
+        # would let None reach len() in check_tag_list and give a 500.
+        return check_tag_list(value)
 
 
 class Prompt(PromptBase):

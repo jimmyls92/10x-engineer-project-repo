@@ -6535,5 +6535,104 @@ proposed the red commit's message and asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 308
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the red test (`36b73c8`). It opened cycle 6's green step and proposed
+the change: a `check_tags` validator on `PromptPatch`, after `reject_null`, returning
+`check_tag_list(value)` when the value is not `None`; and `check_tag_list`'s docstring updated to
+say both models call it, since it would otherwise be wrong. It asked for permission to make it and
+run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to make the change and run the suite.
+
+
+### Entry 309
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `check_tags` to `PromptPatch` and updated `check_tag_list`'s docstring. In the Python
+3.12 venv: 339 passed, but coverage fell to 99%: `models.py:221`, the `return value` for `None`,
+never runs. Claude did not stage or commit. It asked me, as one question, why no test reaches that
+line, and to say what I would do with it and why. It stopped.
+
+**Why the next prompt changed**
+
+I answered for the explicit null only, and did not say what to do with the line.
+
+
+### Entry 310
+
+**Prompt**
+
+> Because the null value is dealt with before getting into check_tags
+
+**What came back**
+
+Claude confirmed my answer covers the second way, an explicit `null`: `reject_null` runs first and
+raises, so `check_tags` never sees it. It pointed out that I had not covered the first way, a body
+without the `tags` key, and narrowed the question to that one case: does Pydantic run a
+`field_validator` on a field left at its default? It suggested I check
+`test_prompt_patch_empty_body_valid` (`test_models.py:383`) or try it in the venv. The decision on
+the line was left for the next step. It stopped.
+
+**Why the next prompt changed**
+
+I settled the first case and made the decision on the line.
+
+
+### Entry 311
+
+**Prompt**
+
+> No, validators don't run on defaults, so remove it
+
+**What came back**
+
+Claude confirmed both cases are now settled, so the `None` branch is unreachable. Before acting it
+named the downsides of removing the guard: `check_tags` would then rely on two facts that the code
+does not show (`reject_null` running first, and validators not running on defaults), and if either
+changed, `len(None)` would raise a `TypeError`, a 500; and the spec's text says the validator calls
+`check_tag_list` "when the value is not `None`". It asked whether I would remove it as is, or with
+something that keeps those two facts visible, and why. It stopped.
+
+**Why the next prompt changed**
+
+I chose to remove it with a comment, so a future reader sees what the code relies on.
+
+
+### Entry 312
+
+**Prompt**
+
+> remove it with a comment explaining why None never arrives
+
+**What came back**
+
+Claude removed the `None` guard from `PromptPatch.check_tags`, so it returns `check_tag_list(value)`
+directly, and added a comment above that line: an absent key keeps its default without running
+validators, a null is refused by `reject_null`, declared first; reordering them or adding
+`validate_default=True` would let `None` reach `len()` and give a 500. Its docstring now says the
+value is always a list. Claude checked the ordering claim in the venv with a throwaway model: with
+the null check first, `None` gives the null message; with it second, `TypeError: object of type
+'NoneType' has no len()`. Suite: 339 passed, coverage 100%. It staged `models.py` and this log,
+proposed the green commit's message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 
