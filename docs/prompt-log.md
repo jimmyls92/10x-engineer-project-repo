@@ -7332,5 +7332,45 @@ docstrings, `TagSummary.prompt_count`). Suite: 360 passed, coverage 100%. It sta
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 349
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the docstring edits (`e76bb18`), closing the US-4 slice. It re-read Task 3.2 and
+the C2.4 and C2.2 criteria in `brief.txt` and pointed out what is still open before Task 3.2 is
+done: the "Refactor" of Red-Green-Refactor, which C2.4 wants visible and which no cycle has used
+(entry 105 settled "a refactor if one is needed"); and the README and `docs/API_REFERENCE.md`,
+which must document `GET /tags`, the `tag` filter and the `tags` field (Known trap, C2.2). It
+proposed the bookkeeping commit first: CURRENT STATE in `CLAUDE.md` with US-4 done (entries
+339-350, suite 360 passed, coverage 100%), all 17 cycles complete, next a refactor review and then
+the README and API reference, next entry 351. It asked for permission. It stopped.
+
+**Why the next prompt changed**
+
+The bookkeeping was due at the end of the slice; I gave permission.
+
+
+### Entry 350
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude updated CURRENT STATE in `CLAUDE.md`: US-4 done (entries 339-350, `e76bb18`), all 17 cycles
+complete, suite 360 passed, coverage 100%; still open for Task 3.2, the refactor review and the
+README and API reference; next a refactor review; next entry 351. It staged `CLAUDE.md` and this
+log, left the plan file unstaged, and proposed the commit message. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 
