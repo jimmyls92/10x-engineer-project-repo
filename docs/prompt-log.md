@@ -5549,5 +5549,546 @@ question: is it committed with this message? It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 256
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude ran the suite in the pinned venv (296 passed), committed `CLAUDE.md` and the prompt log with
+the approved message, and left the plan file unstaged. It opened US-1 cycle 1, the first red
+commit of the implementation, and asked one coding question about its unit test in
+`test_models.py`: what does it build and what does it assert, so that it fails before `PromptBase`
+has a `tags` field and passes once the field exists with a default of `[]`? It stopped.
+
+**Why the next prompt changed**
+
+Before writing the first test, I wanted the promised rule from entry 215 written down.
+
+
+### Entry 257
+
+**Prompt**
+
+> update rule 0b
+
+**What came back**
+
+Claude added a sub-bullet to Rule 0b point 1 of `CLAUDE.md`: ask only about what I am learning,
+coding and spec-driven development; a convention already written in `CLAUDE.md` is applied by
+Claude and stated as settled, never turned into a question (entry 215). It removed the memory note
+that held the same rule, since `CLAUDE.md` now holds it, as in entry 117. It staged `CLAUDE.md`
+alone and proposed the commit message for approval. The unit-test question for US-1 cycle 1 waits
+until then. It stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 258
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `CLAUDE.md` with the approved message and returned to US-1 cycle 1. It asked the
+question from entry 256 again: what does the `PromptBase.tags` unit test in `test_models.py` build
+and assert, so that it fails before the field exists and passes once it exists with a default of
+`[]`? It stopped.
+
+**Why the next prompt changed**
+
+I cleared the session before answering, so the next prompt only asked Claude to pick up where it
+left off.
+
+
+### Entry 259
+
+**Prompt**
+
+> continue
+
+**What came back**
+
+Claude resumed from CURRENT STATE, the tail of this log and `docs/tagging-tdd-plan.md`: US-1
+cycle 1's red commit, with the question from entry 258 still unanswered. It stated where the new
+test goes (class `TestPromptBase` in `test_models.py`, named `test_prompt_base_...`, with a
+docstring) as settled by `CLAUDE.md`, and asked the question again. It stopped.
+
+**Why the next prompt changed**
+
+The question seemed to repeat planning work, so I checked whether the plan already settled it.
+
+
+### Entry 260
+
+**Prompt**
+
+> Isnt the test already planned?
+
+**What came back**
+
+Claude checked the plan and entries 108-114. They settle the unit test's **cycle** (US-1 cycle 1,
+merged with AC-1.1, AC-1.2 and AC-1.8 in entry 113), its **file**, its **green** (`tags:
+List[str] = Field(default_factory=list)`) and **why it fails** (`.tags` raises). They never settle
+its **body**: which arguments it builds `PromptBase` with and the exact assertion. That is the
+only part still open. It asked for just that, and said that if I would rather Claude write it, it
+would, and that the skipped part is choosing the test's inputs and assertion. It stopped.
+
+**Why the next prompt changed**
+
+Planning had taken long enough; I asked Claude to propose the tests itself. **Restructured**: from
+guided questions to a proposal I review.
+
+
+### Entry 261
+
+**Prompt**
+
+> I think we already spent a lot of time in the planning, just propose me how you would do each test
+
+**What came back**
+
+Claude said once what is skipped: choosing each test's inputs and assertions myself. It proposed
+the body of every test in US-1 cycle 1's red commit, with the spec's test names
+(`specs/tagging-system.md:443-464`): the `PromptBase` unit test, AC-1.1, AC-1.2, AC-1.6, AC-1.8,
+AC-2.6, E-5 on POST (on arrival) and on PUT and PATCH (one test parametrised over the two methods,
+as AC-2.7 is), and E-8. It raised two findings. **`test_prompt_base_dump_has_client_fields`
+(`test_models.py:156`) asserts exactly four fields**, so cycle 1's green would break it; it
+proposed updating it in the red commit, where it fails for the same reason as the new tests.
+**E-8 also says `GET /tags` is unchanged**, which cannot be tested before US-4 adds the route. It
+asked for permission to write the tests. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to write and run the tests.
+
+
+### Entry 262
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote the ten tests in `test_models.py` and `test_api.py` as proposed, and updated
+`test_prompt_base_dump_has_client_fields` to expect `"tags": []`. One change from the proposal: the
+E-5 PUT and PATCH body also sends `"tags": ["python"]`, so the request carries valid tags as E-5
+says. The suite in the pinned venv gave **10 failed, 296 passed**: every planned test fails for the
+planned reason (`KeyError: 'tags'` in the API tests, `AttributeError` on `PromptBase.tags`, and 201
+instead of 422 for AC-2.6), and E-5 on POST passes on arrival. It proposed the red commit's message,
+staging the two test files only, and stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 263
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the two test files with the approved message (`b104be3`). It opened the green
+step of US-1 cycle 1 with the change the plan already fixes: `tags: List[str] =
+Field(default_factory=list)` on `PromptBase` (`models.py:61`), plus a `tags` line in its
+docstring's `Attributes`. It asked for permission to make the change and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The change was the planned one; I gave permission.
+
+
+### Entry 264
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `tags: List[str] = Field(default_factory=list)` to `PromptBase` and a `tags` line to
+its docstring. The suite in the pinned venv gave **306 passed**, coverage 100%. It staged
+`models.py` alone and proposed the green commit's message. It stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 265
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `models.py` with the approved message (`6a72d7b`); US-1 cycle 1 is done. It
+opened US-1 cycle 2's red step, keeping the proposal format of entry 261: AC-1.7 as
+`test_update_prompt_tags_keep_order`, failing because `update_prompt` rebuilds the `Prompt` without
+`tags` (`api.py:183-191`), so PUT stores `[]`. It asked for permission to write it and run the
+suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission.
+
+
+### Entry 266
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote `test_update_prompt_tags_keep_order` in `TestPrompts`. The suite gave **1 failed, 306
+passed**, the failure for the planned reason: `assert [] == ['b-tag', 'a-tag']`. It staged
+`test_api.py` alone and proposed the red commit's message. It stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 267
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `test_api.py` with the approved message (`cee1ff4`). It proposed US-1 cycle 2's
+green step from the plan: one argument, `tags=prompt_data.tags`, in the `Prompt(...)` that
+`update_prompt` builds (`api.py:183-191`), and asked for permission to make it and run the suite.
+It stopped.
+
+**Why the next prompt changed**
+
+The change was the planned one; I gave permission.
+
+
+### Entry 268
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `tags=prompt_data.tags` to `update_prompt`'s `Prompt(...)`. The suite gave **307
+passed**, coverage 100%. It staged `api.py` alone and proposed the green commit's message. It
+stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 269
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `api.py` with the approved message (`559bfd1`); US-1 cycle 2 is done. It proposed
+US-1 cycle 3's red step: a unit test in `TestPromptPatch`, `test_prompt_patch_tags_sent_kept`,
+asserting `PromptPatch(tags=["ai"]).model_dump(exclude_unset=True) == {"tags": ["ai"]}`, the form
+`patch_prompt` reads. It fails now because the undeclared key is dropped and the dump is `{}`. It
+raised one finding, as in entry 261: **`test_prompt_patch_empty_body_valid` (`test_models.py:322`)
+asserts the exact dump**, so the green step would break it; it proposed adding `"tags": None` there
+in the red commit. It asked for permission to write both and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission.
+
+
+### Entry 270
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote `test_prompt_patch_tags_sent_kept` and added `"tags": None` to
+`test_prompt_patch_empty_body_valid`. The suite gave **2 failed, 306 passed**, both for the planned
+reason: the new test got `{}`, the changed one a dump without `tags`. It staged `test_models.py`
+alone and proposed the red commit's message. It stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 271
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `test_models.py` with the approved message (`7134f24`). It proposed US-1 cycle 3's
+green step from the plan: `tags: Optional[List[str]] = None` on `PromptPatch` (`models.py:111`),
+with a docstring line that describes the model only, since `patch_prompt` ignores `tags` until
+cycles 4-5 (Rule 2). It asked for permission to make it and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The change was the planned one; I gave permission.
+
+
+### Entry 272
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `tags: Optional[List[str]] = None` to `PromptPatch` and its docstring line. The suite
+gave **308 passed**, coverage 100%. It staged `models.py` alone and proposed the green commit's
+message. It stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 273
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `models.py` with the approved message (`2b56d93`); US-1 cycle 3 is done. It
+proposed US-1 cycle 4's red step: AC-1.4 as `test_patch_prompt_without_tags_keeps_them` (POST with
+`["ai"]`, PATCH `{"title": "New"}`, 200, GET still shows `["ai"]`). It fails now because
+`patch_prompt` rebuilds the `Prompt` without `tags` (`api.py:235-243`), so the default stores `[]`.
+It asked for permission to write it and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission.
+
+
+### Entry 274
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote `test_patch_prompt_without_tags_keeps_them` in `TestPrompts`. The suite gave **1
+failed, 308 passed**, for the planned reason: `assert [] == ['ai']`. It staged `test_api.py` alone
+and proposed the red commit's message. It stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 275
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `test_api.py` with the approved message. It proposed US-1 cycle 4's green step
+from the plan: `tags=existing.tags` in `patch_prompt`'s `Prompt(...)` (`api.py:235-243`). It noted
+this is deliberately the minimum: a PATCH that sends `tags` still keeps the old ones, which AC-1.3
+and AC-1.5 catch in cycle 5. It asked for permission to make it and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The change was the planned one; I gave permission.
+
+
+### Entry 276
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `tags=existing.tags` to `patch_prompt`'s `Prompt(...)`. The suite gave **309 passed**,
+coverage 100%. It staged `api.py` alone and proposed the green commit's message. It stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 277
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `api.py` with the approved message; US-1 cycle 4 is done. It proposed US-1 cycle
+5's red step, the last of the slice: AC-1.3 as `test_patch_prompt_tags_replaced` (with
+`ticking_clock`, since it compares `updated_at`) and AC-1.5 as
+`test_patch_prompt_empty_tags_clears_them`. Both fail now because `patch_prompt` always copies
+`existing.tags`. It asked for permission to write them and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission.
+
+
+### Entry 278
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote both tests in `TestPrompts`. The suite gave **2 failed, 309 passed**, for the planned
+reason: `['ai'] == ['python']` and `['ai'] == []`. It staged `test_api.py` alone and proposed the
+red commit's message. It stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 279
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `test_api.py` with the approved message. It proposed US-1 cycle 5's green step
+from the plan: `tags=changes.get("tags", existing.tags)` in `patch_prompt`, the same form as the
+other fields, not `or`, which would turn `[]` into the old tags (entry 126). With it, a PATCH body
+`{"tags": null}` would reach `Prompt(tags=None)` and give 500; that is AC-2.9, planned for US-2
+cycle 5, so no test covers it until then. It asked for permission to make the change and run the
+suite. It stopped.
+
+**Why the next prompt changed**
+
+The change was the planned one; I gave permission.
+
+
+### Entry 280
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude replaced `tags=existing.tags` with `tags=changes.get("tags", existing.tags)`. The suite gave
+**311 passed**, coverage 100%. It staged `api.py` alone and proposed the green commit's message.
+It raised one finding for after the commit: the `update_prompt` docstring (`api.py:162-163`) lists
+only `description` and `collection_id` as optional, and neither endpoint docstring mentions
+`tags`; the `PromptPatch` docstring can now say a PATCH replaces them (Rule 2). It stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 281
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `api.py` with the approved message (`f62fd2e`); **every planned US-1 cycle is
+done**. It checked the docstrings of the code the slice touched and proposed four one-line edits,
+each describing what the code does now: `create_prompt`'s and `update_prompt`'s `Args` add `tags`
+(left out → `[]`, so a PUT without it clears them), `patch_prompt`'s summary adds that an absent
+`tags` keeps them and `[]` clears them, and the `PromptPatch` field line says the same. It asked for permission to make them as one docs commit before US-2. It stopped.
+
+**Why the next prompt changed**
+
+The edits were small and matched the code; I gave permission.
+
+
+### Entry 282
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude made the four docstring edits in `api.py` and `models.py`, rewrapping two paragraphs to keep
+the line length. The suite gave **311 passed**. It staged both files and proposed the docs commit's
+message. It noted one stale claim in `CLAUDE.md`'s *Known traps*: it says a CI workflow runs on
+push, but no `.github/workflows/` exists yet; that is Task 3.3, so Claude left it for then. It
+stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 283
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the docstring edits. With the US-1 slice closed, it proposed a bookkeeping commit
+before US-2: update CURRENT STATE in `CLAUDE.md` (US-1 done, entries 256-283; next US-2 cycle 1's
+red commit; next entry 284), note in the CI trap that no workflow exists until Task 3.3, and commit
+it with this log. It asked for permission. It stopped.
+
+**Why the next prompt changed**
+
+The bookkeeping was due at the end of the slice; I gave permission.
+
+
+### Entry 284
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude updated CURRENT STATE in `CLAUDE.md` (US-1 done, entries 256-284, suite 311 passed; the
+switch to Claude proposing tests from entry 261; the PATCH null-tags 500 until AC-2.9; next US-2
+cycle 1's red commit; next entry 285) and reworded the CI trap to say no workflow exists until
+Task 3.3. It staged `CLAUDE.md` and this log, left the plan file unstaged, and proposed the commit
+message. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 

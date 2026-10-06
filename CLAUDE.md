@@ -17,9 +17,9 @@ work.** It is how a new session resumes without reading everything.
 |---|---|
 | **Current module** | **Module 3** — branch `Week-3`. Brief: `brief.txt`, from `Module_3_Project_Production_Ready.pdf`. Where the brief and this file conflict, **the brief rules**. |
 | **Previous module** | **Module 2: submitted on `Week-2`** (`1c9cc88`); its log, entries 1-198, is on that branch. |
-| **Current task** | **Task 3.2 — Implement the Tagging System with TDD: in progress** (Module 3 log entries 96 on). Task 3.1 is done (entries 4-95; suite 296 passed, coverage 100%, `baacb4b`). Decisions: Tagging System, not Prompt Versioning (entry 98); findings 7 accepted, 8 fixed in the spec (`0131510`), 9 covered by added E-5 tests (entries 98-101); vertical slices US-1 to US-4, unit tests red-first inside each slice, full cycle list drawn up before any test (entries 107-108). **Cycle plan complete** (entries 108-255): 17 cycles, every AC, edge case and added test placed, in the working note `docs/tagging-tdd-plan.md`, **which is never committed** (entry 232). `Week-3` not yet pushed. **Next: US-1 cycle 1's red commit.** |
+| **Current task** | **Task 3.2 — Implement the Tagging System with TDD: in progress** (Module 3 log entries 96 on). Task 3.1 is done (entries 4-95; suite 296 passed, coverage 100%, `baacb4b`). Decisions: Tagging System, not Prompt Versioning (entry 98); findings 7 accepted, 8 fixed in the spec (`0131510`), 9 covered by added E-5 tests (entries 98-101); vertical slices US-1 to US-4, unit tests red-first inside each slice, full cycle list drawn up before any test (entries 107-108). **Cycle plan complete** (entries 108-255): 17 cycles, every AC, edge case and added test placed, in the working note `docs/tagging-tdd-plan.md`, **which is never committed** (entry 232). From entry 261 Claude proposes each cycle's tests and code for approval instead of asking for them. **US-1 done** (entries 256-284): 5 cycles, red then green, plus docstrings (`1785ecc`); suite 311 passed, coverage 100%. A PATCH with `"tags": null` gives 500 until US-2 cycle 5 (AC-2.9). `Week-3` not yet pushed. **Next: US-2 cycle 1's red commit.** |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 256 |
+| **Next entry number** | 285 |
 
 Entry numbers cited below, unless marked otherwise, are from **Module 2's log** (on `Week-2`).
 
@@ -56,8 +56,9 @@ Entry numbers cited below, unless marked otherwise, are from **Module 2's log** 
   errors or the order of checks must say so (README, `API_REFERENCE.md`, the `patch_prompt` and
   `PromptPatch` docstrings do). `/openapi.json` still shows both fields as nullable.
 - **Never push to `main`.** The brief's verification says `git push origin main`, but each module
-  is delivered on its own branch (`Week-3`), and `main` holds Module 1, not yet assessed. The CI
-  workflow triggers on push to any branch (`on: [push, pull_request]`), so pushing `Week-3` runs it.
+  is delivered on its own branch (`Week-3`), and `main` holds Module 1, not yet assessed. Once Task 3.3
+  adds the CI workflow, it triggers on push to any branch (`on: [push, pull_request]`), so pushing
+  `Week-3` runs it. No `.github/workflows/` exists yet.
 - **Run tests and lint in a pinned environment.** The global Python is 3.13 with newer libraries
   (FastAPI 0.141.1, Pydantic 2.13.5); `requirements.txt` pins FastAPI 0.109.0 and Pydantic 2.5.3,
   which need Python 3.10-3.12. CI installs the pins, so check coverage and lint in a Python 3.12 venv
