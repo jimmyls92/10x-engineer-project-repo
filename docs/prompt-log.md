@@ -9214,4 +9214,42 @@ to make them.
 
 **Why the next prompt changed**
 
+The edits were what closing the task needed; I approved them.
+
+
+### Entry 446
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude edited `CLAUDE.md`: CURRENT STATE marks Task 3.4 done (entries 412-446, commits `bb74d4f`,
+`4c5916f`, `3b3a10b`, and what was checked) and Task 3.5 next, shortens Task 3.3's summary, and sets
+the next entry number to 447 (it had stayed at 411 after that number was used). Two Known traps were
+added: `python main.py` exits with the pinned uvicorn, so Docker calls uvicorn directly; and the
+Docker points (only `app/` is mounted, the engine must be started, port 8000 is shared). It proposed
+one commit for `CLAUDE.md` and this log, followed by lint, tests and a push, and stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved the commit and the push.
+
+
+### Entry 447
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude re-ran lint ("All checks passed!") and the suite (360 passed, coverage 100.00%), committed the
+state update with this log and pushed `Week-3`, then reported the CI run on the pushed commit. Task
+3.4 is closed; Claude stopped without starting Task 3.5, as Rule 0 requires. This entry stays
+uncommitted until the next commit.
+
+**Why the next prompt changed**
+
 *Pending.*

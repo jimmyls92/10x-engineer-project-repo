@@ -17,9 +17,9 @@ work.** It is how a new session resumes without reading everything.
 |---|---|
 | **Current module** | **Module 3** — branch `Week-3`. Brief: `brief.txt`, from `Module_3_Project_Production_Ready.pdf`. Where the brief and this file conflict, **the brief rules**. |
 | **Previous module** | **Module 2: submitted on `Week-2`** (`1c9cc88`); its log, entries 1-198, is on that branch. |
-| **Current task** | **Task 3.4 — Docker configuration: not started.** **Task 3.3 is done** (Module 3 log entries 380-410): ruff with the classic rule set (`129762f`) pinned in `requirements.txt` (`7f8f79e`), after removing the one finding, an unused variable in a provided test (`a2a6a88`); workflow `.github/workflows/ci.yml` (`b77e6ea`); gate proved by a deliberately broken test (`8632b84`) and its undo (`81d514d`, test file only, entry 405), recorded in `docs/ci-gate-evidence.md` (`b56a3f2`). Runs 37490611819 ✓, 37491674238 ✗, 37492120010 ✓. `Week-3` is pushed. From entry 397 on, Task 3.3 was proposed by Claude, not guided by questions, at the user's request. **Task 3.2 is done** (Module 3 log entries 96-376): the Tagging System, not Prompt Versioning (entry 98), built in 17 Red-Green cycles as vertical slices US-1 to US-4 (`1785ecc`, `5dd30dc`, `0a35e72`, `e76bb18`), then refactored (`f24766c`, `095b90a`; spec updated in `219ed83`) and documented in the README and API reference (`a531e52`, `fd24d63`, `efbd01d`); suite 360 passed, coverage 100%. The cycle plan `docs/tagging-tdd-plan.md` is a working note, **never committed** (entry 232). The refactor commits came after all 17 cycles, not inside each one (entry 353). Task 3.1 is done (entries 4-95; suite 296 passed, coverage 100%, `baacb4b`). **Next: Task 3.4.** |
+| **Current task** | **Task 3.5 — Documented refactor: not started.** **Task 3.4 is done** (Module 3 log entries 412-446): `backend/Dockerfile` on `python:3.12-slim` with `backend/.dockerignore` (`bb74d4f`), root `docker-compose.yml` with the bind mount and `--reload` (`4c5916f`), README section `## Docker usage` (`3b3a10b`). Checked: `docker-compose up --build` builds and starts, `GET /health` and `GET /prompts` return 200, hot reload fires on a host edit (entry 440), the image runs alone without reload (entry 444). Parts of Task 3.4 were proposed by Claude at the user's request (entries 413, 431, 443). **Task 3.3 is done** (entries 380-410): ruff `E4,E7,E9,F`, `.github/workflows/ci.yml` (`b77e6ea`), gate evidence in `docs/ci-gate-evidence.md` (`b56a3f2`); runs 37490611819 ✓, 37491674238 ✗, 37492120010 ✓. **Task 3.2 is done** (entries 96-376): the Tagging System, not Prompt Versioning (entry 98), built in 17 Red-Green cycles as vertical slices US-1 to US-4 (`1785ecc`, `5dd30dc`, `0a35e72`, `e76bb18`), then refactored (`f24766c`, `095b90a`; spec updated in `219ed83`) and documented (`a531e52`, `fd24d63`, `efbd01d`); suite 360 passed, coverage 100%. The cycle plan `docs/tagging-tdd-plan.md` is a working note, **never committed** (entry 232). The refactor commits came after all 17 cycles, not inside each one (entry 353). Task 3.1 is done (entries 4-95, `baacb4b`). **Next: Task 3.5.** |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 411 |
+| **Next entry number** | 447 |
 
 Entry numbers cited below, unless marked otherwise, are from **Module 2's log** (on `Week-2`).
 
@@ -75,6 +75,15 @@ Entry numbers cited below, unless marked otherwise, are from **Module 2's log** 
   back-to-back POSTs share a `created_at` about 5 times in 300. Tests comparing timestamps from
   separate requests can therefore fail rarely on Windows 3.12. Not measured on Linux. Handled by
   the `ticking_clock` fixture (entries 47-48) for every strict timestamp comparison.
+- **`python main.py` does not start a server** with the pinned uvicorn 0.27.0 (Module 3 log, entry
+  421): `main.py:10` passes the app object with `reload=True`, so uvicorn logs "You must pass the
+  application as an import string" and exits with code 1. `backend/Dockerfile` and `docker-compose.yml`
+  call `uvicorn app.api:app` directly; never switch them to `main.py`. The README says the same
+  (`README.md:111-114`).
+- **Docker** (Task 3.4). Compose mounts only `backend/app/`, so a change to `requirements.txt` or the
+  `Dockerfile` needs `docker-compose up --build`. Docker Desktop does not start on its own; without the
+  engine every `docker` command fails on `dockerDesktopLinuxEngine`. Compose and a local uvicorn both
+  use port 8000: stop one before starting the other.
 
 ---
 
