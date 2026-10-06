@@ -8,7 +8,7 @@ breaks one is rejected with status 422.
 
 from datetime import datetime
 from typing import Annotated, Optional, List
-from pydantic import BaseModel, Field, field_validator
+from pydantic import AfterValidator, BaseModel, Field, field_validator
 from uuid import uuid4
 
 
@@ -55,8 +55,8 @@ TagQuery = Annotated[str, Field(max_length=TAG_MAX_LENGTH, pattern=rf"^({TAG_PAT
 def check_tag_list(tags: List[str]) -> List[str]:
     """Apply the rules on a whole list of tags, once each tag has passed ``Tag``.
 
-    Called by the ``tags`` validator of ``PromptBase`` and ``PromptPatch``, so
-    the list rules are written in one place.
+    Attached to the ``TagList`` type, so every model whose ``tags`` field is
+    a ``TagList`` applies the list rules from this one place.
 
     Args:
         tags: The tags sent, each already a valid ``Tag``.
@@ -80,6 +80,12 @@ def check_tag_list(tags: List[str]) -> List[str]:
     if len(set(tags)) != len(tags):
         raise ValueError("tags must not repeat a tag")
     return tags
+
+
+# The list rules travel with the type, so PromptBase and PromptPatch need no
+# validator of their own. AfterValidator runs once every item has passed Tag,
+# so a list holding a bad tag is reported on that tag, not on the list.
+TagList = Annotated[List[Tag], AfterValidator(check_tag_list)]
 
 
 class PromptBase(BaseModel):
@@ -107,26 +113,7 @@ class PromptBase(BaseModel):
     content: str = Field(..., min_length=1)
     description: Optional[str] = Field(None, max_length=500)
     collection_id: Optional[str] = None
-    tags: List[Tag] = Field(default_factory=list)
-
-    @field_validator("tags")
-    @classmethod
-    def check_tags(cls, value):
-        """Apply ``check_tag_list`` to the tags sent.
-
-        Runs after every item has passed ``Tag``, so a list holding a bad tag
-        is reported on that tag, not on the list.
-
-        Args:
-            value: The list of tags sent.
-
-        Returns:
-            The list unchanged, when it passes ``check_tag_list``.
-
-        Raises:
-            ValueError: If ``check_tag_list`` refuses the list.
-        """
-        return check_tag_list(value)
+    tags: TagList = Field(default_factory=list)
 
 
 class PromptCreate(PromptBase):
@@ -178,7 +165,7 @@ class PromptPatch(BaseModel):
     content: Optional[str] = Field(None, min_length=1)
     description: Optional[str] = Field(None, max_length=500)
     collection_id: Optional[str] = None
-    tags: Optional[List[Tag]] = None
+    tags: Optional[TagList] = None
 
     @field_validator("title", "content", "tags")
     @classmethod
@@ -207,30 +194,6 @@ class PromptPatch(BaseModel):
                 "field to keep the current one"
             )
         return value
-
-    @field_validator("tags")
-    @classmethod
-    def check_tags(cls, value):
-        """Apply ``check_tag_list`` to the tags sent.
-
-        Runs only when the body carries ``tags``, and after ``reject_null``,
-        so the value is always a list.
-
-        Args:
-            value: The list of tags sent.
-
-        Returns:
-            The list unchanged, when it passes ``check_tag_list``.
-
-        Raises:
-            ValueError: If ``check_tag_list`` refuses the list.
-        """
-        # No None check: value is never None here. An absent key keeps the
-        # default without running validators, and an explicit null is
-        # refused by reject_null, declared above so it runs first. Moving
-        # this validator above reject_null, or adding validate_default=True,
-        # would let None reach len() in check_tag_list and give a 500.
-        return check_tag_list(value)
 
 
 class Prompt(PromptBase):

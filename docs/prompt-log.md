@@ -7600,4 +7600,89 @@ stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 363
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the refactor (`f24766c`), the first Refactor commit of Task 3.2's Red-Green-Refactor.
+It asked whether to look for another refactor in the tagging code and tests, which it would
+propose for my review, or to close the refactor review here. It stopped.
+
+**Why the next prompt changed**
+
+I chose one more refactor, proposed by Claude, and set it as the last.
+
+
+### Entry 364
+
+**Prompt**
+
+> look for another refactor and propose it. This is the lask one
+
+**What came back**
+
+Claude read the tests added by the 17 cycles and proposed one refactor in `test_api.py`: five
+tagging tests on `GET /prompts` (`test_list_prompts_by_tag`, `_by_tag_and_collection`,
+`_by_tag_and_search`, `_empty_tag_ignored`, `_without_tag`, around lines 496-590) repeat the same
+four lines (status 200, the ids listed in order, `total`). It proposed a module-level helper
+`assert_listed(response, ids)` after the message constants, called by those five tests. It named
+the downsides: a helper is a new idiom in `test_api.py`, and five older `GET /prompts` tests from
+Task 3.1 have the same shape but would be left as they are, to keep the change inside the tagging
+work. Behaviour of the app is untouched; the suite should stay at 360 passed. It asked for
+acceptance. It stopped.
+
+**Why the next prompt changed**
+
+I rejected a refactor in the tests: the one refactor left should be in the application code. **Added a constraint.**
+
+
+### Entry 365
+
+**Prompt**
+
+> no, the refactor should e in the code, not in the test
+
+**What came back**
+
+Claude dropped the test helper and proposed a refactor in `models.py`: `PromptBase` (`:113-129`)
+and `PromptPatch` (`:212-233`) each declare a `check_tags` validator that only calls
+`check_tag_list`. It proposed one annotated type, `TagList = Annotated[List[Tag],
+AfterValidator(check_tag_list)]`, used as `tags: TagList` and `tags: Optional[TagList]`, removing
+both validators and the comment warning that reordering them would give a 500. It checked in the
+3.12 venv with a throwaway model that error locations and messages stay the same (`("tags",)` for
+the list rules, `("tags", 0)` for a bad tag, `reject_null` still refusing `null`). It named the
+cost: `specs/tagging-system.md:214` and `:229` describe the two validators, so the spec needs a
+matching edit in its own commit (C2.5). It mentioned `collections.Counter` in `count_tags` as a
+smaller alternative with no spec change. It asked for acceptance. It stopped.
+
+**Why the next prompt changed**
+
+I chose the `TagList` refactor over the smaller `Counter` one.
+
+
+### Entry 366
+
+**Prompt**
+
+> go with TagList
+
+**What came back**
+
+Claude edited `models.py`: imported `AfterValidator`, added `TagList = Annotated[List[Tag],
+AfterValidator(check_tag_list)]` after `check_tag_list` with a comment on why, typed `tags` as
+`TagList` in `PromptBase` and `Optional[TagList]` in `PromptPatch`, removed both `check_tags`
+validators and the ordering-trap comment, and updated the `check_tag_list` docstring. Suite in
+the 3.12 venv: 360 passed, coverage 100% (`models.py` 76 to 69 statements). It staged `models.py`
+and this log and proposed the commit message, with the spec edit (`specs/tagging-system.md:214`,
+`:229`) left as the next, separate commit. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
