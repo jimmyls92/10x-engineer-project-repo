@@ -7,7 +7,7 @@ the API or the tests.
 """
 
 from typing import List
-from app.models import Prompt
+from app.models import Prompt, TagSummary
 
 
 def sort_prompts_by_date(prompts: List[Prompt], descending: bool = True) -> List[Prompt]:
@@ -58,6 +58,27 @@ def filter_prompts_by_tags(prompts: List[Prompt], tags: List[str]) -> List[Promp
         A new list of the matching prompts, in their original order.
     """
     return [p for p in prompts if all(tag in p.tags for tag in tags)]
+
+
+def count_tags(prompts: List[Prompt]) -> List[TagSummary]:
+    """Count how many of the given prompts carry each tag.
+
+    A tag no prompt carries does not appear. Each prompt counts once per
+    tag, since a prompt cannot repeat a tag.
+
+    Args:
+        prompts: The prompts to count. The list itself is not modified.
+
+    Returns:
+        A new list with one ``TagSummary`` per distinct tag, sorted by name
+        in Python's string order, so ``"a-b"`` comes before ``"a1"`` and
+        ``"a1"`` before ``"ab"``.
+    """
+    counts = {}
+    for prompt in prompts:
+        for tag in prompt.tags:
+            counts[tag] = counts.get(tag, 0) + 1
+    return [TagSummary(name=tag, prompt_count=counts[tag]) for tag in sorted(counts)]
 
 
 def search_prompts(prompts: List[Prompt], query: str) -> List[Prompt]:

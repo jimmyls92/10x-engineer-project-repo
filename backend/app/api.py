@@ -23,7 +23,7 @@ from app.models import (
 from app.storage import storage
 from app.utils import (
     sort_prompts_by_date, filter_prompts_by_collection, filter_prompts_by_tags,
-    search_prompts,
+    search_prompts, count_tags,
 )
 from app import __version__
 
@@ -384,10 +384,12 @@ def delete_collection(collection_id: str):
 def list_tags():
     """List the tags in use, with how many prompts carry each.
 
-    Not yet computed from the stored prompts: it always returns an empty
-    list.
+    The list is computed from the stored prompts on every call, so it
+    reflects every create, edit and delete. A tag no prompt carries is not
+    listed.
 
     Returns:
-        A ``TagList`` with no tags and a total of 0.
+        A ``TagList`` with the tags sorted by name and their number.
     """
-    return TagList(tags=[], total=0)
+    tags = count_tags(storage.get_all_prompts())
+    return TagList(tags=tags, total=len(tags))

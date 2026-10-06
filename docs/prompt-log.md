@@ -7257,5 +7257,42 @@ asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 345
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the red tests (`8f4f193`). It opened cycle 2's green step and proposed
+the change from the plan: `count_tags` in `utils.py` (counts with `counts.get(tag, 0) + 1`, returns
+a `TagSummary` for each `tag in sorted(counts)`), `TagSummary` added to its `app.models` import;
+`list_tags` computing `count_tags(storage.get_all_prompts())` on every call; and its docstring no
+longer saying the list is fixed. It asked for permission to make it and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to make the change and run the suite.
+
+
+### Entry 346
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `count_tags` to `utils.py` and made `list_tags` compute its body from the stored
+prompts on every call, with both docstrings saying so. Suite: 360 passed, coverage 100%. Claude
+corrected its estimate of 361, a miscount: 355 + 5 new tests is 360. It staged `utils.py`, `api.py`
+and this log, proposed the green commit's message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 
