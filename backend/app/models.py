@@ -39,13 +39,17 @@ def get_current_time() -> datetime:
 
 # ============== Prompt Models ==============
 
+# The tag rule, stated once so Tag and TagQuery cannot drift apart.
+TAG_MAX_LENGTH = 32
+TAG_PATTERN = r"[a-z0-9]+(-[a-z0-9]+)*"
+
 # A type of its own, not a validator on the list, so Pydantic reports each bad
 # tag at its own index, ["body", "tags", <i>], with its own message.
-Tag = Annotated[str, Field(min_length=1, max_length=32, pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$")]
+Tag = Annotated[str, Field(min_length=1, max_length=TAG_MAX_LENGTH, pattern=rf"^{TAG_PATTERN}$")]
 
 # One value of the ?tag= filter on GET /prompts. The Tag rule made optional,
 # ( ... )?, so "" passes validation and list_prompts can drop it (AC-3.6).
-TagQuery = Annotated[str, Field(max_length=32, pattern=r"^([a-z0-9]+(-[a-z0-9]+)*)?$")]
+TagQuery = Annotated[str, Field(max_length=TAG_MAX_LENGTH, pattern=rf"^({TAG_PATTERN})?$")]
 
 
 def check_tag_list(tags: List[str]) -> List[str]:

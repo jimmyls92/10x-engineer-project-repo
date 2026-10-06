@@ -7372,5 +7372,232 @@ log, left the plan file unstaged, and proposed the commit message. It stopped.
 
 **Why the next prompt changed**
 
-*Pending.*
+The message was good enough; I approved it as proposed.
 
+
+### Entry 351
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `CLAUDE.md` and the log (`ea82213`). It opened the refactor review and
+asked me one question: in the code and tests written across the 17 cycles (`git diff 1785ecc
+HEAD -- backend/` for US-2 to US-4), name one place you would refactor, and why, in the form
+"file, function or test: what is wrong with it". It reminded me a refactor changes no behaviour, so
+the suite must stay at 360 passed. It stopped.
+
+**Why the next prompt changed**
+
+I cleared the session before answering, and sent "Continue" instead of naming a place to refactor.
+
+
+### Entry 352
+
+**Prompt**
+
+> Continue
+
+**What came back**
+
+After the session was cleared, Claude read the end of this log, found the refactor question from
+entry 351 unanswered, and asked it again unchanged. It stopped.
+
+**Why the next prompt changed**
+
+I checked which step of Task 3.2 the refactor question belongs to before answering it.
+
+
+### Entry 353
+
+**Prompt**
+
+> this is point 3 of task 3.2 right?
+
+**What came back**
+
+Claude re-read Task 3.2 in `brief.txt` and confirmed it: step 3, "Refactor while tests stay green".
+It pointed out that the brief places the refactor inside every cycle (step 4, "Repeat"), while we
+have done all 17 Red-Green cycles first and are refactoring once at the end; Red then Green still
+precedes it in the history, but the refactor commit(s) will show as one step after the feature,
+not as a rhythm. It asked the refactor question from entry 351 again. It stopped.
+
+**Why the next prompt changed**
+
+Before answering, I proposed my own reading of what the refactor step is for.
+
+
+### Entry 354
+
+**Prompt**
+
+> what I understand is that we should refactor in order to meet the spec, that means that we should modify aming for the things in the spec we are not meeting while ensuring all test remain green. Wouldt you agree?
+
+**What came back**
+
+Claude disagreed and corrected it directly, since it could fail C2.4: a refactor changes the
+structure of the code and not its behaviour, so it adds nothing the spec asks for. Anything the
+spec asks for that is still missing is step 4 ("Repeat until the feature meets its spec"): a new
+failing test, then the code. Adding behaviour in a refactor commit would put code ahead of its test
+in the history. It narrowed the question to what a refactor looks for (duplication, unclear names,
+long functions, code that breaks the CLAUDE.md conventions) and asked me to name one such place.
+It stopped.
+
+**Why the next prompt changed**
+
+I asked Claude whether duplication exists before looking for it myself.
+
+
+### Entry 355
+
+**Prompt**
+
+> is there any duplication in the code?
+
+**What came back**
+
+Claude read the application code changed by the 17 cycles (`git diff 1785ecc~1 HEAD --
+backend/app/`) and answered yes, without saying where: there is duplication in `models.py`,
+within the code added under the `Prompt Models` banner. It narrowed the search to that file and
+that section, and asked me to compare the definitions there line by line and name two pieces that
+say the same thing, and why that would be a problem if the tag rule changed. It stopped.
+
+**Why the next prompt changed**
+
+I had found the place; my reason for why it matters was still vague.
+
+
+### Entry 356
+
+**Prompt**
+
+> Tag and TagQuery repeat max_length and pattern; changing one breaks the other
+
+**What came back**
+
+Claude confirmed the place (`models.py:44` and `:48` state the same tag rule twice) and said the
+reason was not precise: changing one does not break the other, it leaves the other unchanged, so
+the two rules drift apart without an error. It narrowed with one concrete case: if `Tag` were
+changed to `max_length=40` and `TagQuery` left at 32, what would a client see when it creates a
+prompt with a 35-character tag and then filters `GET /prompts?tag=<that tag>`? It stopped.
+
+**Why the next prompt changed**
+
+My answer to the concrete case was right, so the finding was settled and the next step was the fix.
+
+
+### Entry 357
+
+**Prompt**
+
+> POST gives 201, GET gives 422 since TagQuery still caps at 32
+
+**What came back**
+
+Claude confirmed it: a tag the API accepts on create could not be used to filter, and no error
+would point at the cause. Finding settled: `models.py:44` and `:48` duplicate the tag rule. It
+opened the next step, the design of the refactor, and asked how I would state the rule once so
+that both types take it from the same place, naming what would be shared and why, given that
+`TagQuery` differs from `Tag` only by also accepting `""`. It stopped.
+
+**Why the next prompt changed**
+
+My design named shared constants but left "Optional" ambiguous and gave no reason.
+
+
+### Entry 358
+
+**Prompt**
+
+> TagQuery = Optional of Tag's pattern via shared constants
+
+**What came back**
+
+Claude said the shared constants part was clear (the length and the pattern defined once) but
+"Optional" could mean two different things: `typing.Optional[Tag]`, or the regex made optional,
+`( ... )?`, as `TagQuery` does today. It asked one question to settle it: `?tag=` reaches the
+endpoint as the string `""`, not as `None`; would `Optional[Tag]` accept `""`? It named the
+reason for the choice as the next step. It stopped.
+
+**Why the next prompt changed**
+
+My answer settled the ambiguity: the regex is made optional, not the type.
+
+
+### Entry 359
+
+**Prompt**
+
+> it wont accept "", and is the pattern contrait that wont accept it
+
+**What came back**
+
+Claude confirmed `Optional[Tag]` would refuse `""` and added that `min_length=1` refuses it too,
+not only the pattern. So the design is: the length and the pattern are constants, `Tag` uses them
+as they are, and `TagQuery` wraps the pattern constant in `( ... )?` and keeps no minimum length.
+It opened the step named in entry 358 and asked why this design is better than what is there now,
+in one sentence naming what it guarantees. It stopped.
+
+**Why the next prompt changed**
+
+My reason described the opposite of what the design does.
+
+
+### Entry 360
+
+**Prompt**
+
+> it garantees that for one we have a max_length different thant the other
+
+**What came back**
+
+Claude said that is not what the design does: in the table, both `Tag` and `TagQuery` read the
+same length constant, and the only difference between them is `""`. It narrowed by replaying the
+35-character case on the new design: if the length constant is changed to 40, what status do the
+POST and the GET give now, and what does that say the design guarantees? It stopped.
+
+**Why the next prompt changed**
+
+I had the reason, and chose to skip the remaining design steps to go faster. **Restructured:** from here Claude proposes and I review.
+
+
+### Entry 361
+
+**Prompt**
+
+> both 201, so both always share the same rule. But I dont wnat to go in this detail for this raks. Just propose a refactor and I review it and accept it
+
+**What came back**
+
+Claude confirmed the reason (one corrected detail: the GET answers 200, not 201) and said once what
+going faster skips: working out the code and the check that the tests stay green step by step.
+It proposed the refactor for `models.py:42-48`: two constants, `TAG_MAX_LENGTH = 32` and
+`TAG_PATTERN`, with `Tag` built as `^{TAG_PATTERN}$` and `TagQuery` as `^({TAG_PATTERN})?$`.
+It noted the regex strings come out identical to today's, so the tests that assert the exact
+pattern message (`test_models.py:34`, the `test_list_prompts_invalid_tag` cases) still pass, and
+that no test or doc changes. If accepted: edit, run the suite in the 3.12 venv, propose the commit
+message. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I accepted it as proposed.
+
+
+### Entry 362
+
+**Prompt**
+
+> I accept
+
+**What came back**
+
+Claude made the edit in `models.py` (`TAG_MAX_LENGTH`, `TAG_PATTERN`, and `Tag` and `TagQuery`
+built from them). Suite in the Python 3.12.13 venv: 360 passed, coverage 100%, unchanged. It
+staged `models.py` and this log, left the plan file unstaged, and proposed the commit message. It
+stopped.
+
+**Why the next prompt changed**
+
+*Pending.*
