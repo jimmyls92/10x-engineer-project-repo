@@ -59,12 +59,18 @@ def check_tag_list(tags: List[str]) -> List[str]:
     Raises:
         ValueError: If there are more than 10 tags. FastAPI reports it as
             status 422, with ``msg`` "Value error, a prompt can have at most
-            10 tags; delete a tag before including another".
+            10 tags; delete a tag before including another". Checked first,
+            so a list that also repeats a tag gets only this message.
+        ValueError: If a tag appears more than once. FastAPI reports it as
+            status 422, with ``msg`` "Value error, tags must not repeat a
+            tag".
     """
     if len(tags) > 10:
         raise ValueError(
             "a prompt can have at most 10 tags; delete a tag before including another"
         )
+    if len(set(tags)) != len(tags):
+        raise ValueError("tags must not repeat a tag")
     return tags
 
 

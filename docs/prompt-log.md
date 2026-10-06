@@ -6309,5 +6309,41 @@ It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 296
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the red tests (`a009249`). It opened cycle 3's green step and proposed the
+change: in `check_tag_list`, after the count check, raise `ValueError("tags must not repeat a
+tag")` when `len(set(tags)) != len(tags)`, and add the repeat case to its docstring's `Raises`. It
+asked for permission to make it and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to make the change and run the suite.
+
+
+### Entry 297
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added the repeat check to `check_tag_list`, after the count check, and documented both
+`ValueError`s in its docstring, saying the count is checked first (E-2). In the Python 3.12 venv:
+333 passed, coverage 100%. It staged `models.py` and this log, proposed the green commit's message
+and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 
