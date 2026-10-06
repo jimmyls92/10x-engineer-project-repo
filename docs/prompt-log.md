@@ -7725,4 +7725,41 @@ re-run. It staged the spec and this log and proposed the commit message. It stop
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 369
+
+**Prompt**
+
+> si
+
+**What came back**
+
+Claude committed the spec edit (`219ed83`), closing the refactor review: two refactors (`f24766c`,
+`095b90a`) and the spec kept in step. It said CURRENT STATE in `CLAUDE.md` still names the
+refactor review as next, and proposed the bookkeeping commit: refactor review done (entries
+351-369), next the README and `docs/API_REFERENCE.md` for `GET /tags`, the `tag` filter and the
+`tags` field (C2.2), next entry 370. It asked for permission. It stopped.
+
+**Why the next prompt changed**
+
+The bookkeeping was due at the end of the refactor review; I gave permission.
+
+
+### Entry 370
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude updated CURRENT STATE in `CLAUDE.md`: refactor review done (entries 351-369, `f24766c`,
+`095b90a`, `219ed83`), suite 360 passed, coverage 100%; next the README and API reference (C2.2);
+next entry 371. It staged `CLAUDE.md` and this log, left the plan file unstaged, and proposed the
+commit message. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
