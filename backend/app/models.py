@@ -44,6 +44,30 @@ def get_current_time() -> datetime:
 Tag = Annotated[str, Field(min_length=1, max_length=32, pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$")]
 
 
+def check_tag_list(tags: List[str]) -> List[str]:
+    """Apply the rules on a whole list of tags, once each tag has passed ``Tag``.
+
+    Called by the ``tags`` validator of ``PromptBase``, so the list rules are
+    written in one place.
+
+    Args:
+        tags: The tags sent, each already a valid ``Tag``.
+
+    Returns:
+        The same list, unchanged and in the order sent.
+
+    Raises:
+        ValueError: If there are more than 10 tags. FastAPI reports it as
+            status 422, with ``msg`` "Value error, a prompt can have at most
+            10 tags; delete a tag before including another".
+    """
+    if len(tags) > 10:
+        raise ValueError(
+            "a prompt can have at most 10 tags; delete a tag before including another"
+        )
+    return tags
+
+
 class PromptBase(BaseModel):
     """Fields a client supplies for a prompt, with their constraints.
 
@@ -69,6 +93,25 @@ class PromptBase(BaseModel):
     description: Optional[str] = Field(None, max_length=500)
     collection_id: Optional[str] = None
     tags: List[Tag] = Field(default_factory=list)
+
+    @field_validator("tags")
+    @classmethod
+    def check_tags(cls, value):
+        """Apply ``check_tag_list`` to the tags sent.
+
+        Runs after every item has passed ``Tag``, so a list holding a bad tag
+        is reported on that tag, not on the list.
+
+        Args:
+            value: The list of tags sent.
+
+        Returns:
+            The list unchanged, when it passes ``check_tag_list``.
+
+        Raises:
+            ValueError: If ``check_tag_list`` refuses the list.
+        """
+        return check_tag_list(value)
 
 
 class PromptCreate(PromptBase):
