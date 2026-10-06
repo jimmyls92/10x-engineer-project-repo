@@ -6709,5 +6709,51 @@ and proposed the commit message. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 317
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `CLAUDE.md` and the log (`76a26fa`). It opened US-3 cycle 1's red step and
+proposed its tests: a `tags` parameter on `make_prompt` in `test_utils.py` and a
+`TestFilterPromptsByTags` unit test (A `["ai", "code-review"]`, B `["ai"]`, C `["python"]`,
+`tags=["ai"]` gives `[A, B]` in input order); a `tagged_prompts` fixture in `conftest.py` creating
+P1-P3 through the API with `ticking_clock`, since AC-3.1 asserts P2 before P1 and equal timestamps
+would keep P1 first; `test_list_prompts_by_tag` parametrised over AC-3.1, AC-3.3 and AC-3.9 (AC-3.2
+joins in cycle 2); and `test_list_prompts_by_tag_and_collection` (AC-3.4) and
+`test_list_prompts_by_tag_and_search` (AC-3.5), both on arrival. Importing the missing helper
+halts collection again. It asked for permission to write them and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to write the tests and run the suite.
+
+
+### Entry 318
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added the `tagged_prompts` fixture to `conftest.py` (P1-P3 created through the API with
+`ticking_clock`, titled by their names, returning their ids), a `tags` parameter on `make_prompt`,
+`TestFilterPromptsByTags` in `test_utils.py`, and in `test_api.py` `test_list_prompts_by_tag`
+(AC-3.1, AC-3.3, AC-3.9), `test_list_prompts_by_tag_and_collection` (AC-3.4, P1 filed by a PATCH)
+and `test_list_prompts_by_tag_and_search` (AC-3.5, searching P2's title). Plain `pytest` stops on
+the `ImportError` in `test_utils.py`, as predicted. With `--continue-on-collection-errors`: 3
+failed, 288 passed, 1 error. The three `test_list_prompts_by_tag` cases list all three prompts,
+since `tag` is ignored; AC-3.4 and AC-3.5 passed on arrival. Claude staged the three test files and
+this log, proposed the red commit's message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 

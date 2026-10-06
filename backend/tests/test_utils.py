@@ -7,7 +7,7 @@ the Module 3 brief's "all utility functions and error conditions".
 
 from datetime import datetime
 from types import SimpleNamespace
-from typing import Optional
+from typing import List, Optional
 
 import pytest
 
@@ -15,6 +15,7 @@ from app.models import Prompt
 from app.utils import (
     extract_variables,
     filter_prompts_by_collection,
+    filter_prompts_by_tags,
     search_prompts,
     sort_prompts_by_date,
     validate_prompt_content,
@@ -25,6 +26,7 @@ def make_prompt(
     title: str,
     created_at: datetime = datetime(2026, 1, 1),
     collection_id: Optional[str] = None,
+    tags: Optional[List[str]] = None,
 ) -> Prompt:
     """Build a prompt with known fields, so its place in a result is fixed.
 
@@ -32,6 +34,7 @@ def make_prompt(
         title: The prompt's title, used to tell prompts apart in assertions.
         created_at: The creation time to give it.
         collection_id: The collection to file it in, or ``None`` for none.
+        tags: The tags to give it, or ``None`` for none.
 
     Returns:
         A ``Prompt`` with those fields.
@@ -41,6 +44,7 @@ def make_prompt(
         content="Text.",
         created_at=created_at,
         collection_id=collection_id,
+        tags=[] if tags is None else tags,
     )
 
 
@@ -194,6 +198,24 @@ class TestFilterPromptsByCollection:
         result = filter_prompts_by_collection(prompts, "")
 
         assert [p.title for p in result] == ["empty"]
+
+
+class TestFilterPromptsByTags:
+    """Tests for ``filter_prompts_by_tags``, which keeps prompts carrying every tag given."""
+
+    # --- behaviour ---
+
+    def test_filter_prompts_by_tags_keeps_tagged_in_order(self):
+        """Verify only the prompts carrying the tag are kept, in their original order."""
+        prompts = [
+            make_prompt("a", tags=["ai", "code-review"]),
+            make_prompt("b", tags=["ai"]),
+            make_prompt("c", tags=["python"]),
+        ]
+
+        result = filter_prompts_by_tags(prompts, ["ai"])
+
+        assert [p.title for p in result] == ["a", "b"]
 
 
 class TestSearchPrompts:

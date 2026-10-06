@@ -481,6 +481,65 @@ class TestPrompts:
         assert [p["id"] for p in data["prompts"]] == [match["id"]]
         assert data["total"] == 1
 
+    @pytest.mark.parametrize(
+        "query, expected",
+        [
+            ("tag=ai", ["P2", "P1"]),
+            ("tag=rust", []),
+            ("tag=ai&tag=ai", ["P2", "P1"]),
+        ],
+    )
+    def test_list_prompts_by_tag(self, client: TestClient, tagged_prompts, query, expected):
+        """Verify ``tag`` keeps the prompts carrying it, newest first.
+
+        Args:
+            client: FastAPI test client fixture.
+            tagged_prompts: Fixture creating P1 to P3 with their tags.
+            query: The ``tag`` values sent.
+            expected: The names of the prompts listed, in order.
+        """
+        response = client.get(f"/prompts?{query}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert [p["id"] for p in data["prompts"]] == [tagged_prompts[n] for n in expected]
+        assert data["total"] == len(expected)
+
+    def test_list_prompts_by_tag_and_collection(
+        self, client: TestClient, tagged_prompts, sample_collection_data
+    ):
+        """Verify ``tag`` and ``collection_id`` combine: a prompt must pass both.
+
+        Args:
+            client: FastAPI test client fixture.
+            tagged_prompts: Fixture creating P1 to P3 with their tags.
+            sample_collection_data: Valid collection payload fixture.
+        """
+        collection_id = client.post("/collections", json=sample_collection_data).json()["id"]
+        client.patch(f"/prompts/{tagged_prompts['P1']}", json={"collection_id": collection_id})
+
+        response = client.get(f"/prompts?tag=ai&collection_id={collection_id}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert [p["id"] for p in data["prompts"]] == [tagged_prompts["P1"]]
+        assert data["total"] == 1
+
+    def test_list_prompts_by_tag_and_search(self, client: TestClient, tagged_prompts):
+        """Verify ``tag`` and ``search`` combine: a prompt must pass both.
+
+        Args:
+            client: FastAPI test client fixture.
+            tagged_prompts: Fixture creating P1 to P3 with their tags, titled
+                by their names.
+        """
+        response = client.get("/prompts?tag=ai&search=P2")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert [p["id"] for p in data["prompts"]] == [tagged_prompts["P2"]]
+        assert data["total"] == 1
+
     # --- list_prompts: error cases (a filter that matches nothing is not an error) ---
 
     @pytest.mark.parametrize("query", ["search=zzz", "collection_id=nope"])

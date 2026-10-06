@@ -67,3 +67,28 @@ def ticking_clock(monkeypatch):
             return start + timedelta(microseconds=next(ticks))
 
     monkeypatch.setattr(models, "datetime", TickingDatetime)
+
+
+@pytest.fixture
+def tagged_prompts(client, ticking_clock):
+    """Create the three tagged prompts that the tag filter's criteria start from.
+
+    P1 is tagged ``["ai", "code-review"]``, P2 ``["ai"]`` and P3 ``["python"]``,
+    created in that order through the API and titled by their names. The
+    ticking clock gives each a distinct ``created_at``, so the newest-first
+    order P3, P2, P1 is fixed.
+
+    Args:
+        client: FastAPI test client fixture.
+        ticking_clock: Clock fixture that makes every timestamp distinct.
+
+    Returns:
+        A dict from each name, ``"P1"`` to ``"P3"``, to that prompt's id.
+    """
+    tags = {"P1": ["ai", "code-review"], "P2": ["ai"], "P3": ["python"]}
+    return {
+        name: client.post(
+            "/prompts", json={"title": name, "content": "Text.", "tags": tags[name]}
+        ).json()["id"]
+        for name in ["P1", "P2", "P3"]
+    }
