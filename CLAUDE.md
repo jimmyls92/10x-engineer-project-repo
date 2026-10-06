@@ -19,7 +19,7 @@ work.** It is how a new session resumes without reading everything.
 | **Previous module** | **Module 2: submitted on `Week-2`** (`1c9cc88`); its log, entries 1-198, is on that branch. |
 | **Current task** | **Task 3.3 — GitHub Actions CI: not started.** **Task 3.2 is done** (Module 3 log entries 96-376): the Tagging System, not Prompt Versioning (entry 98), built in 17 Red-Green cycles as vertical slices US-1 to US-4 (`1785ecc`, `5dd30dc`, `0a35e72`, `e76bb18`), then refactored (`f24766c`, `095b90a`; spec updated in `219ed83`) and documented in the README and API reference (`a531e52`, `fd24d63`, `efbd01d`); suite 360 passed, coverage 100%. The cycle plan `docs/tagging-tdd-plan.md` is a working note, **never committed** (entry 232). The refactor commits came after all 17 cycles, not inside each one (entry 353). Task 3.1 is done (entries 4-95; suite 296 passed, coverage 100%, `baacb4b`). `Week-3` not yet pushed. **Next: Task 3.3.** |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 378 |
+| **Next entry number** | 379 |
 
 Entry numbers cited below, unless marked otherwise, are from **Module 2's log** (on `Week-2`).
 
@@ -30,7 +30,7 @@ Entry numbers cited below, unless marked otherwise, are from **Module 2's log** 
   versions, decide on each: (3) FR-7/E-6, deleting a prompt removes its history, has no AC or test;
   (4) I-1 suggests testing dict keys HTTP never shows; (5) the test list misses `version` `1.5`,
   `1.0` (E-10) and `limit` `abc`, `2.5`, empty; (6) AC-4.8 cites `api.py:70-71` (docstring), the
-  code is `:87`, `:91`; (10) it does not say `order` is a `Literal` or an `Enum`. Finding 7 was
+  code is `:95`, `:99`; (10) it does not say `order` is a `Literal` or an `Enum`. Finding 7 was
   accepted, not fixed: `PromptVersionList` goes under `Response Models` while `TagList` has its own
   `Tag Models` banner.
 
@@ -40,15 +40,15 @@ Entry numbers cited below, unless marked otherwise, are from **Module 2's log** 
   3's feature) must also go into the README's Features list and API endpoint summary, and get its own
   section in the API reference (curl example, sample response, errors), or C2.2 fails at Module 3.
 - **Two deprecation warnings in `models.py`** (seen in entry 22): the class-based `Config` blocks
-  (`models.py:158`, `:207`) and `datetime.utcnow()` (`models.py:37`). No Module 2 task covers them;
+  (`models.py:220`, `:269`) and `datetime.utcnow()` (`models.py:37`). No Module 2 task covers them;
   docstrings describe them as they are.
 - **`Storage.update_prompt` does not check that `prompt.id` equals `prompt_id`** (entry 30,
-  `storage.py:66`). Unreachable today, since PUT and PATCH copy `existing.id` (`api.py:184`, `:235`);
+  `storage.py:66`). Unreachable today, since PUT and PATCH copy `existing.id` (`api.py:201`, `:254`);
   any new code that replaces a prompt must do the same.
 - **An empty-string `collection_id` is handled inconsistently** (entry 37). POST and PUT store `""`
-  unchecked (`api.py:140`, `:178` test truthiness); PATCH looks it up and returns 400 (`api.py:229`,
+  unchecked (`api.py:156`, `:195` test truthiness); PATCH looks it up and returns 400 (`api.py:248`,
   `is not None`). The docstrings describe it; any spec or doc touching `collection_id` must too.
-  A consequence (entry 50): `GET /prompts?collection_id=` ignores the empty value (`api.py:87`), so
+  A consequence (entry 50): `GET /prompts?collection_id=` ignores the empty value (`api.py:95`), so
   prompts stored with `""` cannot be listed by collection. Stated in the API reference's Known issues.
 - **`PATCH` rejects a null `title` or `content` with 422** (fixed in `158eb0b`, entries 53-71;
   `reject_null` in `models.py`). It runs while the body is validated, **before** the 404 and 400

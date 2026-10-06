@@ -7907,4 +7907,24 @@ number with the current one, not deleting the references, and said so. It stoppe
 
 **Why the next prompt changed**
 
+The message was good enough, and replacing the line numbers was what I meant; I approved both.
+
+
+### Entry 378
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the state update (`476dfa6`). It then replaced the old line numbers in `CLAUDE.md`,
+each matched to the same statement today: the Config blocks `models.py:158`, `:207` to `:220`,
+`:269`; `existing.id` `api.py:184`, `:235` to `:201`, `:254`; the `collection_id` checks `:140`,
+`:178`, `:229` to `:156`, `:195`, `:248`; the empty filter `:87` to `:95`; the AC-4.8 note `:87`,
+`:91` to `:95`, `:99`. It set the next entry number to 379, staged `CLAUDE.md` and this log, and
+proposed the commit message. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
