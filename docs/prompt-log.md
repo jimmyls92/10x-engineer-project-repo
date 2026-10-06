@@ -8162,3 +8162,40 @@ stopped.
 **Why the next prompt changed**
 
 The message was good enough; I approved it as proposed.
+
+
+### Entry 391
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the ruff config with this log (`129762f`). It opened step 6 by pointing out that ruff
+0.16.10 is installed only in my local venv, by hand, and is in no committed file, so a clean clone
+has no way to get it, let alone that version. It asked where the pinned ruff version should be
+declared so CI installs it.
+
+**Why the next prompt changed**
+
+The question was narrow enough; I named the file.
+
+
+### Entry 392
+
+**Prompt**
+
+> in requierements.txt
+
+**What came back**
+
+Claude appended `ruff==0.16.10` to `backend/requirements.txt`, after the test tools, keeping the
+file's CRLF line endings. Installing from the file into the venv found nothing new to install, and
+`ruff check .` still passes. It named the downside: everything in `requirements.txt` is installed
+wherever the app is installed, so ruff, like `pytest` already, will be installed even where only the
+app needs to run. It proposed a commit message and stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
