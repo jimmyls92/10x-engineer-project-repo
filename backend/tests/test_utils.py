@@ -11,8 +11,9 @@ from typing import List, Optional
 
 import pytest
 
-from app.models import Prompt
+from app.models import Prompt, TagSummary
 from app.utils import (
+    count_tags,
     extract_variables,
     filter_prompts_by_collection,
     filter_prompts_by_tags,
@@ -227,6 +228,24 @@ class TestFilterPromptsByTags:
         result = filter_prompts_by_tags(prompts, ["ai", "code-review"])
 
         assert [p.title for p in result] == ["b"]
+
+
+class TestCountTags:
+    """Tests for ``count_tags``, which counts the prompts carrying each tag."""
+
+    # --- behaviour ---
+
+    def test_count_tags_counts_and_sorts_by_name(self):
+        """Verify each tag is counted once per prompt and listed by name, not first use."""
+        prompts = [
+            make_prompt("a", tags=["python", "ai"]),
+            make_prompt("b", tags=["ai"]),
+        ]
+
+        assert count_tags(prompts) == [
+            TagSummary(name="ai", prompt_count=2),
+            TagSummary(name="python", prompt_count=1),
+        ]
 
 
 class TestSearchPrompts:

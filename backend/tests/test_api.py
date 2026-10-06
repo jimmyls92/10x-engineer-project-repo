@@ -2035,3 +2035,87 @@ class TestTags:
 
         assert response.status_code == 200
         assert response.json() == {"tags": [], "total": 0}
+
+    def test_list_tags_counts_and_order(self, client: TestClient):
+        """Verify each tag is listed once with its prompt count, sorted by name.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        client.post("/prompts", json={"title": "A", "content": "Text.", "tags": ["python", "ai"]})
+        client.post(
+            "/prompts", json={"title": "B", "content": "Text.", "tags": ["code-review", "ai"]}
+        )
+
+        response = client.get("/tags")
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "tags": [
+                {"name": "ai", "prompt_count": 2},
+                {"name": "code-review", "prompt_count": 1},
+                {"name": "python", "prompt_count": 1},
+            ],
+            "total": 3,
+        }
+
+    def test_list_tags_after_delete(self, client: TestClient):
+        """Verify deleting a prompt lowers its tags' counts and drops a tag no prompt carries.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        first = client.post(
+            "/prompts", json={"title": "A", "content": "Text.", "tags": ["python", "ai"]}
+        ).json()
+        client.post(
+            "/prompts", json={"title": "B", "content": "Text.", "tags": ["code-review", "ai"]}
+        )
+        client.delete(f"/prompts/{first['id']}")
+
+        response = client.get("/tags")
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "tags": [
+                {"name": "ai", "prompt_count": 1},
+                {"name": "code-review", "prompt_count": 1},
+            ],
+            "total": 2,
+        }
+
+    def test_list_tags_after_patch(self, client: TestClient):
+        """Verify clearing a prompt's tags with PATCH is reflected in the counts.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        client.post("/prompts", json={"title": "A", "content": "Text.", "tags": ["python", "ai"]})
+        second = client.post(
+            "/prompts", json={"title": "B", "content": "Text.", "tags": ["code-review", "ai"]}
+        ).json()
+        client.patch(f"/prompts/{second['id']}", json={"tags": []})
+
+        response = client.get("/tags")
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "tags": [
+                {"name": "ai", "prompt_count": 1},
+                {"name": "python", "prompt_count": 1},
+            ],
+            "total": 2,
+        }
+
+    def test_list_tags_string_order(self, client: TestClient):
+        """Verify tags sort in Python's string order: hyphen, then digits, then letters.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        client.post("/prompts", json={"title": "A", "content": "Text.", "tags": ["ab", "a1", "a-b"]})
+
+        response = client.get("/tags")
+
+        assert response.status_code == 200
+        assert [t["name"] for t in response.json()["tags"]] == ["a-b", "a1", "ab"]
