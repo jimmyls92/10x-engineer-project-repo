@@ -210,8 +210,8 @@ def patch_prompt(prompt_id: str, prompt_data: PromptPatch):
         prompt_id: Identifier of the prompt to update.
         prompt_data: The partial update body. Every field is optional, but a
             field sent as text must satisfy the same constraints as it does
-            on create. An explicit null title or content is rejected by the
-            body model with status 422, before this function runs.
+            on create. An explicit null title, content or tags is rejected by
+            the body model with status 422, before this function runs.
 
     Returns:
         The stored prompt as it stands after the merge.

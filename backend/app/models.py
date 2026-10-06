@@ -92,6 +92,7 @@ class PromptBase(BaseModel):
             new empty list. Each tag is 1 to 32 characters of lowercase
             letters and digits, with single hyphens between them, so
             ``"code-review"`` is valid and ``"Python"`` or ``"-ai"`` is not.
+            At most 10 tags, none repeated.
     """
 
     title: str = Field(..., min_length=1, max_length=200)
@@ -159,8 +160,10 @@ class PromptPatch(BaseModel):
             to clear it.
         collection_id: Optional. If sent, a collection identifier, or
             ``null`` to unfile the prompt.
-        tags: Optional. If sent, a list of tag strings that replaces the
-            stored tags; an empty list clears them.
+        tags: Optional. If sent, a list of tags that replaces the stored
+            tags, under the same rules as on create; an empty list clears
+            them. An explicit ``null`` is rejected with status 422, as for
+            ``title``.
     """
 
     title: Optional[str] = Field(None, min_length=1, max_length=200)
