@@ -167,7 +167,7 @@ class PromptPatch(BaseModel):
     content: Optional[str] = Field(None, min_length=1)
     description: Optional[str] = Field(None, max_length=500)
     collection_id: Optional[str] = None
-    tags: Optional[List[str]] = None
+    tags: Optional[List[Tag]] = None
 
     @field_validator("title", "content")
     @classmethod

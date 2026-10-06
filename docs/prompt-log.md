@@ -6387,5 +6387,40 @@ and asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 300
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the red tests (`8b8407f`). It opened cycle 4's green step and proposed
+the change: `PromptPatch.tags` typed `Optional[List[Tag]] = None`, so a bad tag is refused while
+the body is validated, before the lookup. The docstring update was left for the slice's docstring
+commit. It asked for permission to make it and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to make the change and run the suite.
+
+
+### Entry 301
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude typed `PromptPatch.tags` as `Optional[List[Tag]] = None` (`models.py:170`). In the Python
+3.12 venv: 336 passed, coverage 100%. It staged `models.py` and this log, proposed the green
+commit's message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 
