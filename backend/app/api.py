@@ -127,7 +127,7 @@ def create_prompt(prompt_data: PromptCreate):
 
     Args:
         prompt_data: The new prompt's title and content, with an optional
-            description and collection_id.
+            description, collection_id and tags.
 
     Returns:
         The stored prompt, sent with status 201.
@@ -152,15 +152,16 @@ def update_prompt(prompt_id: str, prompt_data: PromptUpdate):
 
     Every client-supplied field is taken from the request body, so a field the
     body leaves out is reset to its default rather than kept -- omitting
-    collection_id unfiles the prompt. The creation timestamp is carried over
-    from the stored prompt and the update timestamp is set to the current time.
+    collection_id unfiles the prompt, and omitting tags clears them. The
+    creation timestamp is carried over from the stored prompt and the update
+    timestamp is set to the current time.
     A non-empty collection_id must name an existing collection; an empty string
     is not checked and is stored as is, although PATCH rejects it with 400.
 
     Args:
         prompt_id: Identifier of the prompt to replace.
         prompt_data: The full replacement body. Title and content are required;
-            description and collection_id are optional.
+            description, collection_id and tags are optional.
 
     Returns:
         The stored prompt as it stands after the replacement.
@@ -200,9 +201,10 @@ def patch_prompt(prompt_id: str, prompt_data: PromptPatch):
 
     Presence is judged by whether a key appears in the body, not by whether its
     value is null, so an explicit null collection_id unfiles the prompt while
-    leaving the key out keeps the prompt in its collection. The update timestamp
-    is refreshed only when the body carries at least one field; an empty body is
-    not an edit.
+    leaving the key out keeps the prompt in its collection. Likewise, leaving
+    tags out keeps the stored tags, while an empty list clears them. The update
+    timestamp is refreshed only when the body carries at least one field; an
+    empty body is not an edit.
 
     Args:
         prompt_id: Identifier of the prompt to update.

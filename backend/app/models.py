@@ -103,7 +103,8 @@ class PromptPatch(BaseModel):
             to clear it.
         collection_id: Optional. If sent, a collection identifier, or
             ``null`` to unfile the prompt.
-        tags: Optional. If sent, a list of tag strings.
+        tags: Optional. If sent, a list of tag strings that replaces the
+            stored tags; an empty list clears them.
     """
 
     title: Optional[str] = Field(None, min_length=1, max_length=200)
