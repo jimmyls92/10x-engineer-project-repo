@@ -6189,5 +6189,48 @@ for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 290
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the green change (`d5d3349`), closing US-2 cycle 1. It opened cycle 2's red step
+and proposed its tests: a new `TestCheckTagList` class in `test_models.py` with 10 tags returned
+unchanged and 11 raising `ValueError` with the spec's message; `test_create_prompt_too_many_tags`
+(AC-2.5); and the 10-tag case added to `test_create_prompt_tags_at_limits` (AC-2.2, on arrival). It
+pointed out that importing the missing `check_tag_list` makes all of `test_models.py` fail to load,
+as the plan already accepts for `count_tags` in US-4. It asked for permission to write them and run
+the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to write the tests and run the suite.
+
+
+### Entry 291
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `TestCheckTagList` to `test_models.py` (11 tags raise `ValueError` with the count
+message; 10 tags are returned unchanged), `test_create_prompt_too_many_tags` (AC-2.5), and the
+10-tag case of `test_create_prompt_tags_at_limits` (AC-2.2). The run was worse than Claude had said:
+the `ImportError` in `test_models.py` is a collection error, so plain `pytest tests/` stops before
+running any test, not only that file's. With `--continue-on-collection-errors`: 1 failed (AC-2.5,
+201 instead of 422), 235 passed, 1 error (`test_models.py` not loaded). The 10-tag case passed, as
+planned. Claude corrected its claim, proposed the red commit's message and asked for approval. It
+stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 

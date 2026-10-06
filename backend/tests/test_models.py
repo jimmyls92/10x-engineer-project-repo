@@ -25,6 +25,7 @@ from app.models import (
     PromptList,
     PromptPatch,
     PromptUpdate,
+    check_tag_list,
     generate_id,
     get_current_time,
 )
@@ -95,6 +96,29 @@ class TestGetCurrentTime:
         second = get_current_time()
 
         assert second >= first
+
+
+class TestCheckTagList:
+    """Tests for ``check_tag_list``, the rules on a whole list of tags."""
+
+    # --- validation ---
+
+    def test_check_tag_list_too_many_tags(self):
+        """Verify 11 tags raise a ``ValueError`` with the spec's count message."""
+        with pytest.raises(ValueError) as exc:
+            check_tag_list([f"t{i}" for i in range(11)])
+
+        assert str(exc.value) == (
+            "a prompt can have at most 10 tags; delete a tag before including another"
+        )
+
+    # --- edge cases ---
+
+    def test_check_tag_list_ten_tags_returned_unchanged(self):
+        """Verify 10 tags, the limit, are returned as given and in order."""
+        tags = [f"t{i}" for i in range(10)]
+
+        assert check_tag_list(tags) == [f"t{i}" for i in range(10)]
 
 
 class TestPromptBase:

@@ -198,6 +198,25 @@ class TestPrompts:
         assert detail[0]["msg"] == msg
         assert client.get("/prompts").json()["total"] == 0
 
+    def test_create_prompt_too_many_tags(self, client: TestClient, sample_prompt_data):
+        """Verify 11 distinct tags on POST are a 422 on the list that stores nothing.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        tags = [f"t{i}" for i in range(11)]
+
+        response = client.post("/prompts", json={**sample_prompt_data, "tags": tags})
+
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["body", "tags"]
+        assert error["msg"] == (
+            "Value error, a prompt can have at most 10 tags; delete a tag before including another"
+        )
+        assert client.get("/prompts").json()["total"] == 0
+
     # --- create_prompt: edge cases ---
 
     def test_create_prompt_length_limits_inclusive(self, client: TestClient):
@@ -214,16 +233,16 @@ class TestPrompts:
         assert response.json()["title"] == body["title"]
         assert response.json()["description"] == body["description"]
 
-    @pytest.mark.parametrize("tags", [["a" * 32]])
+    @pytest.mark.parametrize("tags", [["a" * 32], [f"t{i}" for i in range(10)]])
     def test_create_prompt_tags_at_limits(
         self, client: TestClient, sample_prompt_data, tags
     ):
-        """Verify tags at the ``Tag`` and list limits are accepted and stored as sent.
+        """Verify tags at the ``Tag`` and list limits are accepted and stored in order.
 
         Args:
             client: FastAPI test client fixture.
             sample_prompt_data: Valid prompt payload fixture.
-            tags: Tags at a limit: one of exactly 32 characters.
+            tags: Tags at a limit: one of exactly 32 characters, or 10 tags.
         """
         response = client.post("/prompts", json={**sample_prompt_data, "tags": tags})
 
