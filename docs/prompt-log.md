@@ -6911,5 +6911,43 @@ and in `list_prompts`' `tag` argument. Suite: 347 passed, coverage 100%. It stag
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 327
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the green change (`f0f2bc3`), closing US-3 cycle 2. It opened cycle 3's
+red step and proposed its tests, named as in the spec's test table: `test_list_prompts_empty_tag_
+ignored`, parametrised over `tag=` (P3, P2, P1) and `tag=ai&tag=` (P2, P1) (AC-3.6), both failing
+now with `[]` since `all` needs `""`; and `test_list_prompts_without_tag` (AC-3.8: P3, P2, P1), on
+arrival, guarding the comprehension against a `None` default. It asked for permission to write them
+and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to write the tests and run the suite.
+
+
+### Entry 328
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `test_list_prompts_empty_tag_ignored` (AC-3.6, two cases) and
+`test_list_prompts_without_tag` (AC-3.8). Suite: 2 failed, 348 passed. Both AC-3.6 cases list `[]`
+as predicted; AC-3.8 passed on arrival. It staged the test file and this log, proposed the red
+commit's message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 

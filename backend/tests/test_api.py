@@ -541,6 +541,47 @@ class TestPrompts:
         assert [p["id"] for p in data["prompts"]] == [tagged_prompts["P2"]]
         assert data["total"] == 1
 
+    @pytest.mark.parametrize(
+        "query, expected",
+        [
+            ("tag=", ["P3", "P2", "P1"]),
+            ("tag=ai&tag=", ["P2", "P1"]),
+        ],
+    )
+    def test_list_prompts_empty_tag_ignored(
+        self, client: TestClient, tagged_prompts, query, expected
+    ):
+        """Verify an empty ``tag`` value is dropped, as if it were not sent.
+
+        Args:
+            client: FastAPI test client fixture.
+            tagged_prompts: Fixture creating P1 to P3 with their tags.
+            query: The ``tag`` values sent, one of them empty.
+            expected: The names of the prompts listed, in order.
+        """
+        response = client.get(f"/prompts?{query}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert [p["id"] for p in data["prompts"]] == [tagged_prompts[n] for n in expected]
+        assert data["total"] == len(expected)
+
+    def test_list_prompts_without_tag(self, client: TestClient, tagged_prompts):
+        """Verify a request with no ``tag`` lists every prompt, newest first.
+
+        Args:
+            client: FastAPI test client fixture.
+            tagged_prompts: Fixture creating P1 to P3 with their tags.
+        """
+        response = client.get("/prompts")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert [p["id"] for p in data["prompts"]] == [
+            tagged_prompts[n] for n in ["P3", "P2", "P1"]
+        ]
+        assert data["total"] == 3
+
     # --- list_prompts: error cases (a filter that matches nothing is not an error) ---
 
     @pytest.mark.parametrize("query", ["search=zzz", "collection_id=nope"])
