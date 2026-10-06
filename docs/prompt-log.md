@@ -7869,4 +7869,42 @@ and this log, and proposed the commit message. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 376
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the API reference (`efbd01d`), the last open item of Task 3.2. It proposed closing the
+task with the bookkeeping commit: CURRENT STATE in `CLAUDE.md` with Task 3.2 done (docs entries
+372-376, `a531e52`, `fd24d63`, `efbd01d`), next Task 3.3, next entry 377; and, as a separate commit if
+I wanted it, the stale `api.py` line numbers in the Known traps. It asked for permission. It
+stopped.
+
+**Why the next prompt changed**
+
+I gave permission for the bookkeeping, and asked for the old `api.py` lines in the Known traps to be replaced.
+
+
+### Entry 377
+
+**Prompt**
+
+> yes to the bookeeping and erase the old api lines
+
+**What came back**
+
+Claude updated CURRENT STATE in `CLAUDE.md`: Task 3.2 done (entries 96-376, the cycle, refactor and
+docs commits), suite 360 passed, coverage 100%; current task Task 3.3, not started; next entry
+378. It staged `CLAUDE.md` and this log and proposed the commit message, keeping the Known traps
+line numbers for a second commit. It read "erase the old api lines" as replacing each old line
+number with the current one, not deleting the references, and said so. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
