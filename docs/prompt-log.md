@@ -7843,4 +7843,30 @@ commit message. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 375
+
+**Prompt**
+
+> ye
+
+**What came back**
+
+Claude committed the README (`fd24d63`) and went on to the API reference, accepted in entry 372.
+It restarted the server with empty storage and re-recorded every example in one run (new ids and
+timestamps, a second prompt `"Launch email"` for `GET /tags`), plus the tag error cases. Changes to
+`docs/API_REFERENCE.md`: `tags` nullable on PATCH in `/openapi.json`; the `loc` forms for a bad tag
+and a bad `?tag=` value; the 422 row no longer says query parameters never cause one; the tag
+example in the order of checks; a `tags` row in Prompt and five client fields; new `TagSummary`
+and `TagList`; a `GET /tags` row and section; the `tag` parameter, filter order and a 422 example
+on `GET /prompts`; tags in every prompt example, the tag errors under POST, PUT clearing omitted
+tags, and PATCH rows for `tags`. It checked against the server that 11 tags with one repeated give
+only the count message, that `"tags": null` on POST gives "Input should be a valid list", and that
+PUT to an unknown id with a bad tag list is 422. It stopped the server, staged the API reference
+and this log, and proposed the commit message. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
