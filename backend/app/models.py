@@ -310,6 +310,32 @@ class Collection(CollectionBase):
         from_attributes = True
 
 
+# ============== Tag Models ==============
+
+class TagSummary(BaseModel):
+    """One tag in use, with how many prompts carry it.
+
+    Attributes:
+        name: The tag.
+        prompt_count: How many stored prompts carry the tag.
+    """
+
+    name: str
+    prompt_count: int
+
+
+class TagList(BaseModel):
+    """Response body for ``GET /tags``.
+
+    Attributes:
+        tags: The tags in use, one ``TagSummary`` each.
+        total: Number of items in ``tags``: tags, not prompts.
+    """
+
+    tags: List[TagSummary]
+    total: int
+
+
 # ============== Response Models ==============
 
 class PromptList(BaseModel):

@@ -7175,5 +7175,46 @@ message and asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 341
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the red test (`7c4dfd1`). It opened cycle 1's green step and proposed the change
+from the plan: `TagSummary` and `TagList` in `models.py` under a new `Tag Models` banner, between
+`Collection Models` and `Response Models`; and `list_tags` in `api.py` under a new `Tag Endpoints`
+banner after the collection endpoints, with `response_model=TagList`, returning the fixed
+`TagList(tags=[], total=0)`. While reading `models.py` it found that `PromptList`'s docstring still
+says "collection and search filters", missed in US-3's docstring check; it proposed fixing it in
+US-4's docstring commit. It asked for permission to make the green change and run the suite. It
+stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to make the change and run the suite.
+
+
+### Entry 342
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `TagSummary` and `TagList` under a new `Tag Models` banner in `models.py`, and
+`list_tags` under a new `Tag Endpoints` banner at the end of `api.py`, returning the fixed empty
+`TagList`, with a docstring saying it is not yet computed from the stored prompts. Suite: 355
+passed, coverage 100%. It staged `models.py`, `api.py` and this log, proposed the green commit's
+message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 

@@ -17,7 +17,7 @@ from typing import List, Optional
 from app.models import (
     Prompt, PromptCreate, PromptUpdate, PromptPatch,
     Collection, CollectionCreate,
-    PromptList, CollectionList, HealthResponse, TagQuery,
+    PromptList, CollectionList, HealthResponse, TagQuery, TagList,
     get_current_time
 )
 from app.storage import storage
@@ -376,3 +376,18 @@ def delete_collection(collection_id: str):
         )
 
     return None
+
+
+# ============== Tag Endpoints ==============
+
+@app.get("/tags", response_model=TagList)
+def list_tags():
+    """List the tags in use, with how many prompts carry each.
+
+    Not yet computed from the stored prompts: it always returns an empty
+    list.
+
+    Returns:
+        A ``TagList`` with no tags and a total of 0.
+    """
+    return TagList(tags=[], total=0)
