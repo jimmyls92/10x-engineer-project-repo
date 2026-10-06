@@ -1168,6 +1168,22 @@ class TestPrompts:
         assert stored["collection_id"] == created["collection_id"]
         assert stored["created_at"] == created["created_at"]
 
+    def test_patch_prompt_without_tags_keeps_them(
+        self, client: TestClient, sample_prompt_data
+    ):
+        """Verify a PATCH that does not send ``tags`` keeps the stored tags.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        created = client.post("/prompts", json={**sample_prompt_data, "tags": ["ai"]}).json()
+
+        response = client.patch(f"/prompts/{created['id']}", json={"title": "New"})
+
+        assert response.status_code == 200
+        assert client.get(f"/prompts/{created['id']}").json()["tags"] == ["ai"]
+
     def test_patch_prompt_validation_before_lookup(self, client: TestClient):
         """Verify the order of checks: body 422 before path 404, path 404 before body 400.
 
