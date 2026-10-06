@@ -6090,5 +6090,66 @@ message. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 285
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `CLAUDE.md` and the log (`2d9e4a7`). It opened US-2 cycle 1's red step and
+proposed its tests: a unit test `test_prompt_base_invalid_tag` parametrised over the seven AC-2.3
+values (`ValidationError`, `loc` `("tags", 0)`, the spec's message), a unit test that a
+32-character tag is accepted (on arrival), AC-2.3 as `test_create_prompt_invalid_tag` (422, one
+error at `["body", "tags", 0]`, nothing stored), and AC-2.1 as the 32-character case of
+`test_create_prompt_tags_at_limits` (on arrival); its 10-tag case joins cycle 2 with AC-2.2. The
+bad values fail now because `tags` is a plain `List[str]`. It asked for permission to write them
+and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+I cleared the session and asked Claude to continue, without answering the request for permission.
+
+
+### Entry 286
+
+**Prompt**
+
+> continue
+
+**What came back**
+
+After `/clear`, Claude read the log and the plan, found entry 285's request for permission still
+unanswered, and did not take "continue" as that permission. It restated the proposed red tests for
+US-2 cycle 1 and asked again for permission to write them and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to write the tests and run the suite.
+
+
+### Entry 287
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added the red tests for US-2 cycle 1. In `test_models.py`: `test_prompt_base_invalid_tag`,
+parametrised over the seven AC-2.3 values, and `test_prompt_base_tag_length_limit_inclusive`. In
+`test_api.py`: `test_create_prompt_invalid_tag` (AC-2.3) and `test_create_prompt_tags_at_limits`,
+parametrised with only the 32-character case for now (AC-2.1). Both files share the pattern message
+as a `PATTERN_MSG` constant. In the Python 3.12 venv: 14 failed, 313 passed. The 14 are the seven
+bad values in each file, for the expected reason: POST returns 201 instead of 422, and `PromptBase`
+does not raise. The two limit tests passed, as planned. Claude proposed the red commit's message and
+asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 

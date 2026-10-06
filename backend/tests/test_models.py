@@ -29,6 +29,9 @@ from app.models import (
     get_current_time,
 )
 
+# The message Pydantic gives for a tag that breaks the ``Tag`` pattern (AC-2.3).
+PATTERN_MSG = "String should match pattern '^[a-z0-9]+(-[a-z0-9]+)*$'"
+
 
 class TestGenerateId:
     """Tests for ``generate_id``."""
@@ -142,6 +145,33 @@ class TestPromptBase:
         assert error["loc"] == ("collection_id",)
         assert error["msg"] == "Input should be a valid string"
 
+    @pytest.mark.parametrize(
+        "tag, msg",
+        [
+            ("Python", PATTERN_MSG),
+            ("code review", PATTERN_MSG),
+            ("-ai", PATTERN_MSG),
+            ("ai-", PATTERN_MSG),
+            ("a--b", PATTERN_MSG),
+            ("", "String should have at least 1 character"),
+            ("a" * 33, "String should have at most 32 characters"),
+        ],
+    )
+    def test_prompt_base_invalid_tag(self, tag, msg):
+        """Verify a tag breaking the ``Tag`` rules raises a ``ValidationError`` at its index.
+
+        Args:
+            tag: The bad tag, sent as the only one.
+            msg: The message Pydantic reports for it.
+        """
+        with pytest.raises(ValidationError) as exc:
+            PromptBase(title="T", content="Text.", tags=[tag])
+
+        errors = exc.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("tags", 0)
+        assert errors[0]["msg"] == msg
+
     # --- defaults ---
 
     def test_prompt_base_optional_fields_default_to_none(self):
@@ -186,6 +216,10 @@ class TestPromptBase:
 
         assert len(prompt.title) == 200
         assert len(prompt.description) == 500
+
+    def test_prompt_base_tag_length_limit_inclusive(self):
+        """Verify a tag of exactly 32 characters is accepted."""
+        assert PromptBase(title="T", content="Text.", tags=["a" * 32]).tags == ["a" * 32]
 
     def test_prompt_base_empty_description_accepted(self):
         """Verify an empty description is valid, since only a maximum is set."""

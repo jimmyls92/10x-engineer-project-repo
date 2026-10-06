@@ -10,6 +10,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 
+# The message Pydantic gives for a tag that breaks the ``Tag`` pattern (AC-2.3).
+PATTERN_MSG = "String should match pattern '^[a-z0-9]+(-[a-z0-9]+)*$'"
+
+
 class TestHealth:
     """Tests for health endpoint."""
     
@@ -162,6 +166,38 @@ class TestPrompts:
         assert error["msg"] == msg
         assert client.get("/prompts").json()["total"] == 0
 
+    @pytest.mark.parametrize(
+        "tag, msg",
+        [
+            ("Python", PATTERN_MSG),
+            ("code review", PATTERN_MSG),
+            ("-ai", PATTERN_MSG),
+            ("ai-", PATTERN_MSG),
+            ("a--b", PATTERN_MSG),
+            ("", "String should have at least 1 character"),
+            ("a" * 33, "String should have at most 32 characters"),
+        ],
+    )
+    def test_create_prompt_invalid_tag(
+        self, client: TestClient, sample_prompt_data, tag, msg
+    ):
+        """Verify a tag breaking the ``Tag`` rules is a 422 at its index that stores nothing.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            tag: The bad tag, sent as the only one.
+            msg: The message Pydantic reports for it.
+        """
+        response = client.post("/prompts", json={**sample_prompt_data, "tags": [tag]})
+
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert len(detail) == 1
+        assert detail[0]["loc"] == ["body", "tags", 0]
+        assert detail[0]["msg"] == msg
+        assert client.get("/prompts").json()["total"] == 0
+
     # --- create_prompt: edge cases ---
 
     def test_create_prompt_length_limits_inclusive(self, client: TestClient):
@@ -177,6 +213,22 @@ class TestPrompts:
         assert response.status_code == 201
         assert response.json()["title"] == body["title"]
         assert response.json()["description"] == body["description"]
+
+    @pytest.mark.parametrize("tags", [["a" * 32]])
+    def test_create_prompt_tags_at_limits(
+        self, client: TestClient, sample_prompt_data, tags
+    ):
+        """Verify tags at the ``Tag`` and list limits are accepted and stored as sent.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            tags: Tags at a limit: one of exactly 32 characters.
+        """
+        response = client.post("/prompts", json={**sample_prompt_data, "tags": tags})
+
+        assert response.status_code == 201
+        assert client.get(f"/prompts/{response.json()['id']}").json()["tags"] == tags
 
     def test_create_prompt_optional_fields_default_to_null(self, client: TestClient):
         """Verify an omitted ``description`` and ``collection_id`` are stored as null.
