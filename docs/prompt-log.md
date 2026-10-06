@@ -8313,3 +8313,81 @@ give the first real run is a separate step.
 **Why the next prompt changed**
 
 The message was good enough; I approved it as proposed.
+
+
+### Entry 399
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the workflow with this log (`b77e6ea`). It checked the remote: `origin` has `main`
+and `Week-2` but no `Week-3`, and `Week-3` is 97 commits ahead of `origin/Week-2`. It proposed the
+next step, `git push -u origin Week-3`, the first push of Module 3 and the one that should give the
+first CI run, never a push to `main`, and asked for permission.
+
+**Why the next prompt changed**
+
+The plan was right; I approved the push.
+
+
+### Entry 400
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude ran `git push -u origin Week-3`; I rejected the tool call and interrupted, then ran
+`gh auth login` myself so Claude could follow the CI runs. Claude reported that nothing had been
+pushed; that was wrong, as entry 401 shows: `origin/Week-3` was already at `b77e6ea`. Claude checked
+`gh auth status`: logged in as `jimmyls92`, token scopes `gist`, `read:org`, `repo`, without
+`workflow`. It stopped and waited for my instructions.
+
+**Why the next prompt changed**
+
+I wanted the push done, so I asked Claude to retry it.
+
+
+### Entry 401
+
+**Prompt**
+
+> retry
+
+**What came back**
+
+`git push -u origin Week-3` answered "Everything up-to-date" and only set the upstream: the remote
+branch was already at `b77e6ea`, so the push in entry 400 had in fact reached GitHub; Claude
+corrected its claim in that entry. The first CI run, 37490611819, triggered by that push at
+2026-10-06T15:48:34Z, **succeeded** in 25 s: dependencies installed from the pins (including
+`ruff-0.16.10`), Lint "All checks passed!", Python 3.12.15 on Linux, "Required test coverage of 80%
+reached. Total coverage: 100.00%", 360 passed. GitHub annotated the run that `ubuntu-latest` moves to
+Ubuntu 26 from 2026-10-19. Claude proposed the gate-evidence step: break `test_health_check`
+(`tests/test_api.py:25`, expect 201 instead of 200) in its own commit, push, capture the failed run,
+then undo it with `git revert` so both commits stay in the history; and asked for permission.
+
+**Why the next prompt changed**
+
+The plan was right; I approved step 1.
+
+
+### Entry 402
+
+**Prompt**
+
+> perfect lets do it
+
+**What came back**
+
+Claude changed `tests/test_api.py:25` from `== 200` to `== 201`, nothing else. Run locally, the suite
+gives "1 failed, 359 passed" with `FAILED tests/test_api.py::TestHealth::test_health_check - assert
+200 == 201`. It noted that this commit deliberately breaks the `CLAUDE.md` rule that the suite passes
+before every commit, because the brief asks for exactly that, proposed a commit message and stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
