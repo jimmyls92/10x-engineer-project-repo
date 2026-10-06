@@ -7685,4 +7685,44 @@ and this log and proposed the commit message, with the spec edit (`specs/tagging
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 367
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the refactor (`095b90a`). It re-read `specs/tagging-system.md` and found that
+both refactors left it describing the old code: the `Tag` and `TagQuery` snippets (`:173`, `:181`)
+still restate 32 and the pattern, and the `check_tag_list`, `PromptBase` and `PromptPatch` sections
+(`:191`, `:211-214`, `:224-229`) still describe two `field_validator("tags")`. It proposed one spec
+commit for both: show the two constants, add a `TagList` section after `check_tag_list`, type the
+fields as `TagList` and `Optional[TagList]`, and drop the validator sentences. It asked for
+acceptance. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I accepted it.
+
+
+### Entry 368
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude edited `specs/tagging-system.md` as proposed: the two constants in the `Tag` snippet with a
+sentence on why, `TagQuery` built from them, `check_tag_list` attached to `TagList`, a new
+`TagList` section, and the `PromptBase` and `PromptPatch` fields typed `TagList` and
+`Optional[TagList]` without the validator sentences. No AC or test changed, so the suite was not
+re-run. It staged the spec and this log and proposed the commit message. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*

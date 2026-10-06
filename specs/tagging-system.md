@@ -170,8 +170,14 @@ whole `Prompt` objects, so `storage.py` is unchanged.
 ### New type: `Tag`
 
 ```python
-Tag = Annotated[str, Field(min_length=1, max_length=32, pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$")]
+TAG_MAX_LENGTH = 32
+TAG_PATTERN = r"[a-z0-9]+(-[a-z0-9]+)*"
+
+Tag = Annotated[str, Field(min_length=1, max_length=TAG_MAX_LENGTH, pattern=rf"^{TAG_PATTERN}$")]
 ```
+
+The length and the pattern are constants, so `Tag` and `TagQuery` state the tag rule once and cannot
+drift apart.
 
 One tag in a request body. Being a Pydantic item type, each tag that breaks a rule is reported at
 its own index, `["body", "tags", <i>]`, with Pydantic's message (AC-2.3).
@@ -179,7 +185,7 @@ its own index, `["body", "tags", <i>]`, with Pydantic's message (AC-2.3).
 ### New type: `TagQuery`
 
 ```python
-TagQuery = Annotated[str, Field(max_length=32, pattern=r"^([a-z0-9]+(-[a-z0-9]+)*)?$")]
+TagQuery = Annotated[str, Field(max_length=TAG_MAX_LENGTH, pattern=rf"^({TAG_PATTERN})?$")]
 ```
 
 One value of the `?tag=` filter. The same rule as `Tag`, except that the empty string passes, so the
@@ -188,8 +194,8 @@ uses Pydantic's `Field`, not FastAPI's, so `models.py` still imports nothing fro
 
 ### New function: `check_tag_list`
 
-A module-level function in `models.py`, called by the `tags` validator of both `PromptBase` and
-`PromptPatch`, so the list rules are written once.
+A module-level function in `models.py`, attached to the `TagList` type, so the list rules are
+written once.
 
 ```python
 def check_tag_list(tags: List[str]) -> List[str]:
@@ -205,14 +211,22 @@ that breaks both rules is reported with the count message only. FastAPI prefixes
 "Value error, " (AC-2.4, AC-2.5). It runs after every item has passed `Tag`, so a list holding a bad
 tag is reported on the tag, not the list.
 
+### New type: `TagList`
+
+```python
+TagList = Annotated[List[Tag], AfterValidator(check_tag_list)]
+```
+
+A list of tags with the list rules attached. `AfterValidator` runs `check_tag_list` once every item
+has passed `Tag`, so `PromptBase` and `PromptPatch` need no `tags` validator of their own.
+
 ### New field on `PromptBase`: `tags`
 
 ```python
-tags: List[Tag] = Field(default_factory=list)
+tags: TagList = Field(default_factory=list)
 ```
 
-With a `field_validator("tags")` that returns `check_tag_list(value)`. `PromptCreate`, `PromptUpdate`
-and the stored `Prompt` inherit it, so:
+`PromptCreate`, `PromptUpdate` and the stored `Prompt` inherit it, so:
 
 - a POST or PUT without `tags` stores `[]` (AC-1.2, AC-1.6), and every prompt in a response carries
   `tags` (AC-1.8);
@@ -221,12 +235,12 @@ and the stored `Prompt` inherit it, so:
 ### New field on `PromptPatch`: `tags`
 
 ```python
-tags: Optional[List[Tag]] = None
+tags: Optional[TagList] = None
 ```
 
 `Optional` so the key can be left out, which keeps the stored tags (AC-1.4). `"tags"` is added to the
 fields of the existing `reject_null` validator (`models.py:110`), so an explicit `null` is a 422.
-A second `field_validator("tags")` calls `check_tag_list` when the value is not `None`.
+`check_tag_list` runs only on a list; a `null` skips it and reaches `reject_null`.
 
 ### New model: `TagSummary`
 
