@@ -17,9 +17,9 @@ work.** It is how a new session resumes without reading everything.
 |---|---|
 | **Current module** | **Module 3** — branch `Week-3`. Brief: `brief.txt`, from `Module_3_Project_Production_Ready.pdf`. Where the brief and this file conflict, **the brief rules**. |
 | **Previous module** | **Module 2: submitted on `Week-2`** (`1c9cc88`); its log, entries 1-198, is on that branch. |
-| **Current task** | **Task 3.3 — GitHub Actions CI: not started.** **Task 3.2 is done** (Module 3 log entries 96-376): the Tagging System, not Prompt Versioning (entry 98), built in 17 Red-Green cycles as vertical slices US-1 to US-4 (`1785ecc`, `5dd30dc`, `0a35e72`, `e76bb18`), then refactored (`f24766c`, `095b90a`; spec updated in `219ed83`) and documented in the README and API reference (`a531e52`, `fd24d63`, `efbd01d`); suite 360 passed, coverage 100%. The cycle plan `docs/tagging-tdd-plan.md` is a working note, **never committed** (entry 232). The refactor commits came after all 17 cycles, not inside each one (entry 353). Task 3.1 is done (entries 4-95; suite 296 passed, coverage 100%, `baacb4b`). `Week-3` not yet pushed. **Next: Task 3.3.** |
+| **Current task** | **Task 3.4 — Docker configuration: not started.** **Task 3.3 is done** (Module 3 log entries 380-410): ruff with the classic rule set (`129762f`) pinned in `requirements.txt` (`7f8f79e`), after removing the one finding, an unused variable in a provided test (`a2a6a88`); workflow `.github/workflows/ci.yml` (`b77e6ea`); gate proved by a deliberately broken test (`8632b84`) and its undo (`81d514d`, test file only, entry 405), recorded in `docs/ci-gate-evidence.md` (`b56a3f2`). Runs 37490611819 ✓, 37491674238 ✗, 37492120010 ✓. `Week-3` is pushed. From entry 397 on, Task 3.3 was proposed by Claude, not guided by questions, at the user's request. **Task 3.2 is done** (Module 3 log entries 96-376): the Tagging System, not Prompt Versioning (entry 98), built in 17 Red-Green cycles as vertical slices US-1 to US-4 (`1785ecc`, `5dd30dc`, `0a35e72`, `e76bb18`), then refactored (`f24766c`, `095b90a`; spec updated in `219ed83`) and documented in the README and API reference (`a531e52`, `fd24d63`, `efbd01d`); suite 360 passed, coverage 100%. The cycle plan `docs/tagging-tdd-plan.md` is a working note, **never committed** (entry 232). The refactor commits came after all 17 cycles, not inside each one (entry 353). Task 3.1 is done (entries 4-95; suite 296 passed, coverage 100%, `baacb4b`). **Next: Task 3.4.** |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 379 |
+| **Next entry number** | 411 |
 
 Entry numbers cited below, unless marked otherwise, are from **Module 2's log** (on `Week-2`).
 
@@ -56,13 +56,19 @@ Entry numbers cited below, unless marked otherwise, are from **Module 2's log** 
   errors or the order of checks must say so (README, `API_REFERENCE.md`, the `patch_prompt` and
   `PromptPatch` docstrings do). `/openapi.json` still shows both fields as nullable.
 - **Never push to `main`.** The brief's verification says `git push origin main`, but each module
-  is delivered on its own branch (`Week-3`), and `main` holds Module 1, not yet assessed. Once Task 3.3
-  adds the CI workflow, it triggers on push to any branch (`on: [push, pull_request]`), so pushing
-  `Week-3` runs it. No `.github/workflows/` exists yet.
+  is delivered on its own branch (`Week-3`), and `main` holds Module 1, not yet assessed. The CI workflow
+  (`.github/workflows/ci.yml`) triggers on push to any branch (`on: [push, pull_request]`), so
+  **every push of `Week-3` runs it, and a red run is public**. Run the suite and lint before pushing.
 - **Run tests and lint in a pinned environment.** The global Python is 3.13 with newer libraries
   (FastAPI 0.141.1, Pydantic 2.13.5); `requirements.txt` pins FastAPI 0.109.0 and Pydantic 2.5.3,
-  which need Python 3.10-3.12. CI installs the pins, so check coverage and lint in a Python 3.12 venv
-  built from `requirements.txt` (`python3.12` and `uv` are installed), not the global interpreter.
+  which need Python 3.10-3.12. CI installs the pins (on Python 3.12), so check coverage and lint in
+  a Python 3.12 venv built from `requirements.txt` (`backend/.venv`; `python3.12` and `uv` are
+  installed), not the global interpreter. Ruff is pinned there too (`0.16.10`).
+- **Ruff enforces only `E4`, `E7`, `E9`, `F`** (`backend/ruff.toml`, Module 3 log entries 383-384).
+  Ruff 0.16's wider defaults gave 81 findings, most contradicting conventions in this file (`typing`
+  imports, naive UTC timestamps, deletion routes returning `None`). Do not widen the set without a
+  task that asks for it. GitHub warned that `ubuntu-latest` moves to Ubuntu 26 from 2026-10-19; the
+  workflow does not pin an Ubuntu version.
 - **The clock is coarse on Python 3.12 here** (Module 3 log, entries 45-46). `datetime.utcnow()`
   steps about every 0.3-1 ms in the pinned venv on Windows, but per microsecond on the global 3.13.
   So a new `Prompt`'s `created_at` and `updated_at` are equal 9,985 times in 10,000 on 3.12, and two
@@ -381,6 +387,15 @@ With coverage, as Module 3's brief measures it (the threshold is 80%):
 ```
 cd backend
 pytest tests/ -v --cov=app --cov-report=term-missing
+```
+
+CI (`.github/workflows/ci.yml`) runs, in `backend/`, lint first and then the tests with the
+threshold enforced:
+
+```
+cd backend
+ruff check .
+pytest tests/ -v --cov=app --cov-report=term-missing --cov-fail-under=80
 ```
 
 Each module's brief adds its own verification steps.

@@ -8502,3 +8502,42 @@ runner image change. It proposed a commit message and stopped.
 **Why the next prompt changed**
 
 The message was good enough; I approved it as proposed.
+
+
+### Entry 409
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the evidence doc with this log (`b56a3f2`). It proposed the edits to `CLAUDE.md`
+that close Task 3.3: CURRENT STATE (Task 3.3 done, next Task 3.4, next entry number), the Known traps
+on pushing and on the pinned environment, a new trap for the ruff rule set and the runner image, and
+the lint command under Verification command; and asked permission to make them.
+
+**Why the next prompt changed**
+
+The edits were what closing the task needed; I approved them.
+
+
+### Entry 410
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude edited `CLAUDE.md` as proposed: CURRENT STATE marks Task 3.3 done (entries 380-410, its
+commits and the three runs, `Week-3` pushed) and Task 3.4 next, with the next entry number 411; the
+push trap now says every push of `Week-3` runs CI publicly; the pinned-environment trap names the
+venv and the ruff pin; a new trap explains the `E4,E7,E9,F` rule set and the Ubuntu 26 runner change;
+Verification command adds the CI's `ruff check .` and `--cov-fail-under=80`. It checked the claim
+about deletion routes against ruff (RET501 and PLR1711 at `api.py:282` and `:378`). It proposed one
+commit for `CLAUDE.md` and this log, followed by a push, and stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved the commit and the push.
