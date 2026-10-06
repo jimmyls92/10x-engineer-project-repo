@@ -8391,3 +8391,60 @@ before every commit, because the brief asks for exactly that, proposed a commit 
 **Why the next prompt changed**
 
 The message was good enough; I approved it as proposed.
+
+
+### Entry 403
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the broken test with this log (`8632b84`) and stopped before pushing, which it asked
+permission for as the next step.
+
+**Why the next prompt changed**
+
+I approved the push.
+
+
+### Entry 404
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude pushed (`b77e6ea..8632b84`) and watched the run. CI run 37491674238, on `8632b84`, created
+2026-10-06T15:56:20Z, **failed**: checkout, Python, install and Lint passed; Test with coverage
+failed with `FAILED tests/test_api.py::TestHealth::test_health_check - assert 200 == 201`, "1 failed,
+359 passed", `##[error]Process completed with exit code 1.` The log also shows "Required test coverage
+of 80% reached. Total coverage: 100.00%", so the build failed on the broken test alone. Claude noted
+that this run proves the test gate, not the coverage gate, and proposed the next step: `git revert
+8632b84`, then push and capture the green run.
+
+**Why the next prompt changed**
+
+I approved the revert.
+
+
+### Entry 405
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+`git revert --no-commit 8632b84` refused to run, because the log had uncommitted changes, and Claude
+then saw the real problem: `8632b84` also holds 78 lines of this log, so a whole-commit revert would
+have deleted log entries. It restored only the test instead (`git checkout 8632b84^ --
+backend/tests/test_api.py`), which brings back `== 200` and nothing else. The suite gives 360 passed
+and lint passes. It explained the change of method, proposed a commit message that still names the
+reverted commit, and stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.

@@ -22,7 +22,7 @@ class TestHealth:
     
     def test_health_check(self, client: TestClient):
         response = client.get("/health")
-        assert response.status_code == 201
+        assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
         assert "version" in data
