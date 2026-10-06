@@ -8448,3 +8448,57 @@ reverted commit, and stopped.
 **Why the next prompt changed**
 
 The message was good enough; I approved it as proposed.
+
+
+### Entry 406
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the revert with this log (`81d514d`) and asked permission to push it and capture the
+green run.
+
+**Why the next prompt changed**
+
+I approved the push.
+
+
+### Entry 407
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude pushed (`8632b84..81d514d`). CI run 37492120010, on `81d514d`, created
+2026-10-06T15:59:38Z, **succeeded**: Lint "All checks passed!", "Required test coverage of 80%
+reached. Total coverage: 100.00%", 360 passed. Claude proposed the outline of
+`docs/ci-gate-evidence.md` built from the three runs and asked permission to write it.
+
+**Why the next prompt changed**
+
+The outline was good enough; I approved writing it.
+
+
+### Entry 408
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude fetched each run's commit, times, result and URL with `gh run view`, and the failing assertion
+lines from run 2's log, then wrote `docs/ci-gate-evidence.md`: a table of the three runs; the brief's
+CI checklist mapped to `ci.yml`; run 1 as the clean-clone pass; run 2's diff and log lines quoted
+verbatim; run 3 and why only the test was restored; and notes on the branch (`Week-3`, not `main`),
+the `pull_request` trigger never exercised, the coverage threshold never seen failing, and the
+runner image change. It proposed a commit message and stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
