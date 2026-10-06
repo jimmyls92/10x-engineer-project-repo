@@ -324,9 +324,16 @@ class TestPromptPatch:
             "content": None,
             "description": None,
             "collection_id": None,
+            "tags": None,
         }
 
     # --- serialization ---
+
+    def test_prompt_patch_tags_sent_kept(self):
+        """Verify sent ``tags`` are kept by ``exclude_unset``, the form ``patch_prompt`` reads."""
+        body = PromptPatch(tags=["ai"])
+
+        assert body.model_dump(exclude_unset=True) == {"tags": ["ai"]}
 
     def test_prompt_patch_unset_fields_excluded(self):
         """Verify ``exclude_unset`` gives an empty dict for an empty body."""
