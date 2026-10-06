@@ -6755,5 +6755,86 @@ this log, proposed the red commit's message and asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 319
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the red tests (`e96e326`). It opened cycle 1's green step and proposed the change
+as the plan has it: `filter_prompts_by_tags` in `utils.py`, keeping a prompt when
+`any(tag in prompt.tags for tag in tags)`, a deliberately minimal rule that cycle 2's AND test will
+turn into `all`; and in `list_prompts` a `tag: List[str] = Query(default=[])` parameter (plain
+`str` until cycle 4 brings `TagQuery`) with an `if tag:` step after `search` and before the sort,
+as the spec orders it. `Query` and `List` join the imports. It asked for permission to make it and
+run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission (with a typo) to make the change and run the suite.
+
+
+### Entry 320
+
+**Prompt**
+
+> ys
+
+**What came back**
+
+Claude read the typo as "yes". It added `filter_prompts_by_tags` (with `any`) to `utils.py`, and to
+`list_prompts` the `tag: List[str] = Query(default=[])` parameter, the filter step after `search`,
+and the docstring lines; it wrapped the long `app.utils` import. Suite: 345 passed, coverage 100%.
+Claude corrected its estimate of 296 from the last reply, a miscount: 339 + 6 new tests is 345. It
+then found the `list_prompts` docstring now wrong: it says "a query parameter that is absent or
+empty is ignored", but a probe showed `?tag=` lists 0 prompts, since `[""]` is truthy and no prompt
+carries `""`. Cycle 3 fixes the code. Claude did not stage, and asked me what the docstring should
+say in the meantime, and why. It stopped.
+
+**Why the next prompt changed**
+
+My answer did not fit the question, which asked for wording or a place, not a yes or no.
+
+
+### Entry 321
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude said "yes" does not answer an open question, and narrowed it to one choice: should the
+docstring, in this commit, describe what the code does now or what it will do after cycle 3, and
+why. It pointed to Rule 2 in `CLAUDE.md` and to each commit being process evidence on its own. It
+did nothing else. It stopped.
+
+**Why the next prompt changed**
+
+The narrower question was answerable; I chose and gave the reason.
+
+
+### Entry 322
+
+**Prompt**
+
+> what the code does now, rule 2 says so, but rememeber to update after cycle 3
+
+**What came back**
+
+Claude changed the `list_prompts` docstring to say what the code does now: an absent or empty query
+parameter is ignored "except ``tag``: an empty value is kept and matches no prompt", and the `tag`
+argument says `?tag=` is not dropped, so it matches nothing. To remember the update, it added to
+cycle 3's green change in the plan file (uncommitted working note) that this interim note must be
+reverted. Suite: 345 passed, coverage 100%. It staged `api.py`, `utils.py` and this log, proposed
+the green commit's message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 

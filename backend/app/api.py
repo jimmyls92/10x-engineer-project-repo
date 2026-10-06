@@ -10,9 +10,9 @@ FastAPI with status 422 before the endpoint function runs, so no endpoint
 lists 422 under ``Raises``.
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
+from typing import List, Optional
 
 from app.models import (
     Prompt, PromptCreate, PromptUpdate, PromptPatch,
@@ -21,7 +21,10 @@ from app.models import (
     get_current_time
 )
 from app.storage import storage
-from app.utils import sort_prompts_by_date, filter_prompts_by_collection, search_prompts
+from app.utils import (
+    sort_prompts_by_date, filter_prompts_by_collection, filter_prompts_by_tags,
+    search_prompts,
+)
 from app import __version__
 
 
@@ -62,13 +65,15 @@ def health_check():
 @app.get("/prompts", response_model=PromptList)
 def list_prompts(
     collection_id: Optional[str] = None,
-    search: Optional[str] = None
+    search: Optional[str] = None,
+    tag: List[str] = Query(default=[]),
 ):
-    """List prompts, optionally filtered by collection and search text.
+    """List prompts, optionally filtered by collection, search text and tags.
 
-    The collection filter is applied first, then the search, and the result
-    is sorted by creation date, newest first. A query parameter that is
-    absent or empty is ignored. An unknown collection_id is not an error;
+    The collection filter is applied first, then the search, then the tag
+    filter, and the result is sorted by creation date, newest first. A query
+    parameter that is absent or empty is ignored, except ``tag``: an empty
+    value is kept and matches no prompt. An unknown collection_id is not an error;
     it gives an empty list.
 
     Args:
@@ -77,6 +82,9 @@ def list_prompts(
         search: Optional. Keep only the prompts whose title or description
             contains this text, ignoring case. The prompt content is not
             searched.
+        tag: Optional and repeatable (``?tag=a&tag=b``). Keep only the
+            prompts that carry any of these tags. An empty value (``?tag=``)
+            is not dropped, so it matches nothing.
 
     Returns:
         A ``PromptList`` holding the matching prompts and their count.
@@ -90,6 +98,10 @@ def list_prompts(
     # Search if query provided
     if search:
         prompts = search_prompts(prompts, search)
+
+    # Filter by tags if any were given
+    if tag:
+        prompts = filter_prompts_by_tags(prompts, tag)
     
     # Sort by date (newest first)
     prompts = sort_prompts_by_date(prompts, descending=True)
