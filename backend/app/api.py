@@ -83,7 +83,7 @@ def list_prompts(
             contains this text, ignoring case. The prompt content is not
             searched.
         tag: Optional and repeatable (``?tag=a&tag=b``). Keep only the
-            prompts that carry any of these tags. An empty value (``?tag=``)
+            prompts that carry every one of these tags. An empty value (``?tag=``)
             is not dropped, so it matches nothing.
 
     Returns:

@@ -6875,5 +6875,41 @@ red commit's message and asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 325
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the red tests (`8448b09`). It opened cycle 2's green step and proposed
+the change: `any` becomes `all` in `filter_prompts_by_tags`, and in the same commit the two
+docstrings that say "any" (the helper's summary and `list_prompts`' `tag` argument) say "every",
+since they would otherwise be wrong. It asked for permission to make it and run the suite. It
+stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to make the change and run the suite.
+
+
+### Entry 326
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude changed `any` to `all` in `filter_prompts_by_tags` and "any" to "every one" in its docstring
+and in `list_prompts`' `tag` argument. Suite: 347 passed, coverage 100%. It staged `utils.py`,
+`api.py` and this log, proposed the green commit's message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 
