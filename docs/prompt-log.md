@@ -8199,3 +8199,117 @@ app needs to run. It proposed a commit message and stopped.
 **Why the next prompt changed**
 
 The message was good enough; I approved it as proposed.
+
+
+### Entry 393
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the ruff pin with this log (`7f8f79e`). Lint is ready on a clean clone, so it opened
+step 7, the workflow itself, with its first piece: the Python version. The brief's template
+(`brief.txt:72-73`) uses `'3.10'`, while the tests have been run locally on 3.12, and the pinned
+FastAPI 0.109.0 and Pydantic 2.5.3 need 3.10 to 3.12. It asked which version CI should use.
+
+**Why the next prompt changed**
+
+The table was enough to choose; I chose.
+
+
+### Entry 394
+
+**Prompt**
+
+> 3.12.13
+
+**What came back**
+
+Claude accepted 3.12 as the line, since it is where every local run happened, and named the downsides
+of pinning the exact patch release: CI would never get later 3.12 bug and security fixes, and the run
+depends on `actions/setup-python` still offering that exact build for `ubuntu-latest`. It proposed
+the alternative `'3.12'`, which takes the newest 3.12 patch and still matches the pins, and asked
+which of the two to write.
+
+**Why the next prompt changed**
+
+The downsides convinced me; I took the alternative.
+
+
+### Entry 395
+
+**Prompt**
+
+> 3.12 is fine
+
+**What came back**
+
+Claude recorded `python-version: '3.12'` for the workflow, not written yet. It moved to the next piece
+of step 7: the brief requires the build to fail when coverage drops below 80%, and today
+`pytest --cov=app --cov-report=term-missing` only prints coverage and exits 0 whatever the figure.
+It asked how the coverage run should be made to fail below 80%.
+
+**Why the next prompt changed**
+
+The question was narrow enough; I named the flag.
+
+
+### Entry 396
+
+**Prompt**
+
+> add --cov-fail-under=80 to the pytest command
+
+**What came back**
+
+Claude recorded the flag for the workflow's test command (pytest-cov 4.1.0 supports it) and named
+the downside: the threshold lives only in the workflow, so the verification command in `CLAUDE.md`
+run locally still exits 0 below 80%. It moved to the next piece of step 7, the order of the lint and
+test steps, and asked which should run first and whether they should be separate steps.
+
+**Why the next prompt changed**
+
+I wanted to move faster, so I answered and told Claude to stop asking questions for the rest of the task.
+
+
+### Entry 397
+
+**Prompt**
+
+> lint first, then tests, as separate steps. Stop making questions in this task and just propose
+
+**What came back**
+
+**This restructured the method for the rest of Task 3.3**: Claude stops asking guided questions and
+proposes instead; it said once what that skips (deciding the action versions, the working directory
+and the install command, and how to capture the failed run, myself). It checked the current major
+versions of the two actions on GitHub's API: `actions/checkout` v7.0.1 and `actions/setup-python`
+v7.0.0, both on Node 24, while the brief's template uses v4. It proposed the full
+`.github/workflows/ci.yml` (triggers from the template, Python `'3.12'`, pip cache, install from
+`backend/requirements.txt`, `ruff check .` then the pytest command with `--cov-fail-under=80`, all run
+in `backend/`), with its downsides, and asked for permission to write it.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I approved writing it.
+
+
+### Entry 398
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote `.github/workflows/ci.yml` exactly as proposed. The YAML parses, with `on` as
+`[push, pull_request]`. Run locally in `backend/` in the pinned venv, the lint step's command reports
+"All checks passed!" and the test step's prints "Required test coverage of 80% reached. Total
+coverage: 100.00%" with 360 passed. It proposed a commit message and stopped; the push that would
+give the first real run is a separate step.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
