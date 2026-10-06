@@ -7025,5 +7025,42 @@ commit's message and asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 333
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the red test (`6fc7b20`). It opened cycle 4's green step and proposed
+the change from the spec: `TagQuery` in `models.py` under `Tag`, with a comment on why its pattern
+is optional (so `""` passes and `list_prompts` drops it); `TagQuery` imported in `api.py`; `tag:
+List[TagQuery] = Query(default=[])`; and the `tag` argument in the docstring saying each value
+must be a valid tag or empty. It asked for permission to make it and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to make the change and run the suite.
+
+
+### Entry 334
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `TagQuery` under `Tag` in `models.py` with its comment, imported it in `api.py`, typed
+`tag` as `List[TagQuery]`, and added to the `tag` argument that each value must be a valid tag or
+empty. Suite: 353 passed, coverage 100%. It staged `models.py`, `api.py` and this log, proposed the
+green commit's message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 

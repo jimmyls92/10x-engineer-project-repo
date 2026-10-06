@@ -43,6 +43,10 @@ def get_current_time() -> datetime:
 # tag at its own index, ["body", "tags", <i>], with its own message.
 Tag = Annotated[str, Field(min_length=1, max_length=32, pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$")]
 
+# One value of the ?tag= filter on GET /prompts. The Tag rule made optional,
+# ( ... )?, so "" passes validation and list_prompts can drop it (AC-3.6).
+TagQuery = Annotated[str, Field(max_length=32, pattern=r"^([a-z0-9]+(-[a-z0-9]+)*)?$")]
+
 
 def check_tag_list(tags: List[str]) -> List[str]:
     """Apply the rules on a whole list of tags, once each tag has passed ``Tag``.

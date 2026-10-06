@@ -17,7 +17,7 @@ from typing import List, Optional
 from app.models import (
     Prompt, PromptCreate, PromptUpdate, PromptPatch,
     Collection, CollectionCreate,
-    PromptList, CollectionList, HealthResponse,
+    PromptList, CollectionList, HealthResponse, TagQuery,
     get_current_time
 )
 from app.storage import storage
@@ -66,7 +66,7 @@ def health_check():
 def list_prompts(
     collection_id: Optional[str] = None,
     search: Optional[str] = None,
-    tag: List[str] = Query(default=[]),
+    tag: List[TagQuery] = Query(default=[]),
 ):
     """List prompts, optionally filtered by collection, search text and tags.
 
@@ -83,7 +83,8 @@ def list_prompts(
             searched.
         tag: Optional and repeatable (``?tag=a&tag=b``). Keep only the
             prompts that carry every one of these tags. Empty values are
-            dropped first, so ``?tag=`` alone lists every prompt.
+            dropped first, so ``?tag=`` alone lists every prompt. Each value
+            must be a valid tag or empty.
 
     Returns:
         A ``PromptList`` holding the matching prompts and their count.
