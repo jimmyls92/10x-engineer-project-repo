@@ -7137,5 +7137,43 @@ stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 339
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `CLAUDE.md` and the log (`c2fee09`). It opened US-4 cycle 1's red step and
+proposed `test_list_tags_empty` in a new `TestTags` class in `test_api.py`, after
+`TestCollections`, parametrised over no prompt (AC-4.1) and two untagged prompts (AC-4.5): 200 and
+the whole body `{"tags": [], "total": 0}`. Both fail now with 404, since `/tags` has no route. It
+noted that AC-4.5 only becomes meaningful from cycle 2, when the body stops being fixed. It asked
+for permission to write the test and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to write the test and run the suite.
+
+
+### Entry 340
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added a `TestTags` class at the end of `test_api.py` with `test_list_tags_empty`,
+parametrised over 0 and 2 untagged prompts (AC-4.1, AC-4.5). Suite: 2 failed, 353 passed; both
+cases get 404, as predicted. It staged the test file and this log, proposed the red commit's
+message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 

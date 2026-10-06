@@ -2012,3 +2012,26 @@ class TestCollections:
         stored = client.get(f"/prompts/{prompt_id}").json()
         assert stored["collection_id"] is None
         assert stored["tags"] == ["ai"]
+
+
+class TestTags:
+    """Tests for the tag endpoint."""
+
+    # --- list_tags: success cases ---
+
+    @pytest.mark.parametrize("untagged", [0, 2])
+    def test_list_tags_empty(self, client: TestClient, sample_prompt_data, untagged):
+        """Verify ``GET /tags`` lists nothing when no prompt carries a tag.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture, with no tags.
+            untagged: How many prompts without tags to create first.
+        """
+        for _ in range(untagged):
+            client.post("/prompts", json=sample_prompt_data)
+
+        response = client.get("/tags")
+
+        assert response.status_code == 200
+        assert response.json() == {"tags": [], "total": 0}
