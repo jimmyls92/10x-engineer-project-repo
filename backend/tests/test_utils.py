@@ -217,6 +217,17 @@ class TestFilterPromptsByTags:
 
         assert [p.title for p in result] == ["a", "b"]
 
+    def test_filter_prompts_by_tags_needs_every_tag(self):
+        """Verify a prompt carrying only some of the tags given is dropped."""
+        prompts = [
+            make_prompt("a", tags=["ai"]),
+            make_prompt("b", tags=["ai", "code-review"]),
+        ]
+
+        result = filter_prompts_by_tags(prompts, ["ai", "code-review"])
+
+        assert [p.title for p in result] == ["b"]
+
 
 class TestSearchPrompts:
     """Tests for ``search_prompts``, a case-insensitive match on title or description."""

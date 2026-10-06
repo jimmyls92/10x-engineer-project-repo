@@ -6836,5 +6836,44 @@ the green commit's message and asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 323
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the green change (`be7059d`), closing US-3 cycle 1. It opened cycle 2's
+red step and proposed its tests: a unit test in `TestFilterPromptsByTags` (A `["ai"]`, B `["ai",
+"code-review"]`, `tags=["ai", "code-review"]` gives `[B]`), and AC-3.2 as a fourth case of
+`test_list_prompts_by_tag` (`tag=ai&tag=code-review` gives P1 only). Both fail with `any`: the unit
+test gets `[A, B]`, AC-3.2 gets P2, P1. It asked for permission to write them and run the suite.
+It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to write the tests and run the suite.
+
+
+### Entry 324
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `test_filter_prompts_by_tags_needs_every_tag` to `test_utils.py` and the AC-3.2 case
+(`tag=ai&tag=code-review` gives P1) to `test_list_prompts_by_tag`, whose docstring now says "every
+tag given". Suite: 2 failed, 345 passed. Both fail as expected: the unit test gets `["a", "b"]`
+instead of `["b"]`, and AC-3.2 gets P2, P1. It staged both test files and this log, proposed the
+red commit's message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 

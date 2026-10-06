@@ -485,12 +485,13 @@ class TestPrompts:
         "query, expected",
         [
             ("tag=ai", ["P2", "P1"]),
+            ("tag=ai&tag=code-review", ["P1"]),
             ("tag=rust", []),
             ("tag=ai&tag=ai", ["P2", "P1"]),
         ],
     )
     def test_list_prompts_by_tag(self, client: TestClient, tagged_prompts, query, expected):
-        """Verify ``tag`` keeps the prompts carrying it, newest first.
+        """Verify ``tag`` keeps the prompts carrying every tag given, newest first.
 
         Args:
             client: FastAPI test client fixture.
