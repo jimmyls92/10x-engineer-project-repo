@@ -72,9 +72,8 @@ def list_prompts(
 
     The collection filter is applied first, then the search, then the tag
     filter, and the result is sorted by creation date, newest first. A query
-    parameter that is absent or empty is ignored, except ``tag``: an empty
-    value is kept and matches no prompt. An unknown collection_id is not an error;
-    it gives an empty list.
+    parameter that is absent or empty is ignored. An unknown collection_id is
+    not an error; it gives an empty list.
 
     Args:
         collection_id: Optional. Keep only the prompts filed in this
@@ -83,8 +82,8 @@ def list_prompts(
             contains this text, ignoring case. The prompt content is not
             searched.
         tag: Optional and repeatable (``?tag=a&tag=b``). Keep only the
-            prompts that carry every one of these tags. An empty value (``?tag=``)
-            is not dropped, so it matches nothing.
+            prompts that carry every one of these tags. Empty values are
+            dropped first, so ``?tag=`` alone lists every prompt.
 
     Returns:
         A ``PromptList`` holding the matching prompts and their count.
@@ -98,6 +97,10 @@ def list_prompts(
     # Search if query provided
     if search:
         prompts = search_prompts(prompts, search)
+
+    # FastAPI keeps ?tag= as the value "", which no prompt carries; drop it so
+    # an empty value is ignored like the other parameters (AC-3.6).
+    tag = [x for x in tag if x != ""]
 
     # Filter by tags if any were given
     if tag:

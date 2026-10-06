@@ -6949,5 +6949,43 @@ commit's message and asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 329
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the red tests (`017030a`). It opened cycle 3's green step and proposed
+the change: `tag = [x for x in tag if x != ""]` before `if tag:` in `list_prompts`, with a comment
+on why (AC-3.6, and `Query` keeps `""` as a value); and, as I asked in entry 322, reverting the
+docstring's interim note, so the summary again says an absent or empty parameter is ignored and
+the `tag` argument says empty values are dropped first. It asked for permission to make it and run
+the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to make the change and run the suite.
+
+
+### Entry 330
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `tag = [x for x in tag if x != ""]` before the tag filter, with a comment on why,
+reverted the docstring's interim note (entry 322) and reflowed the summary paragraph. Suite: 350
+passed, coverage 100%. It staged `api.py` and this log, proposed the green commit's message and
+asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 
