@@ -854,7 +854,6 @@ class TestPrompts:
         # Create a prompt first
         create_response = client.post("/prompts", json=sample_prompt_data)
         prompt_id = create_response.json()["id"]
-        original_updated_at = create_response.json()["updated_at"]
         
         # Update it
         updated_data = {
@@ -870,9 +869,6 @@ class TestPrompts:
         assert response.status_code == 200
         data = response.json()
         assert data["title"] == "Updated Title"
-        
-        # The updated_at should be different from original
-        # assert data["updated_at"] != original_updated_at
     
     def test_update_prompt_refreshes_updated_at(
         self, client: TestClient, sample_prompt_data, ticking_clock

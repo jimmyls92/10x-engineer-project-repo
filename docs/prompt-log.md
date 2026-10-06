@@ -7927,4 +7927,200 @@ proposed the commit message. It stopped.
 
 **Why the next prompt changed**
 
-*Pending.*
+The message was good enough; I approved it as proposed.
+
+
+### Entry 379
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the Known traps update (`28f6d74`), closing Task 3.2, and stopped without starting
+Task 3.3, as Rule 0 requires. It reported that this entry stays uncommitted until the next commit,
+and that `Week-3` has not been pushed.
+
+**Why the next prompt changed**
+
+Task 3.2 was closed, so I cleared the session and asked Claude to continue with the next task.
+
+
+### Entry 380
+
+**Prompt**
+
+> continue
+
+**What came back**
+
+Claude re-read Task 3.3 in `brief.txt` (lines 51-74): a workflow at `.github/workflows/ci.yml` that
+triggers on push and pull request, installs dependencies, lints with ruff or flake8, runs tests with
+coverage, fails below 80%, and passes on a clean clone; plus `docs/ci-gate-evidence.md` showing a
+deliberately broken test failing the run. It checked that neither linter is in
+`backend/requirements.txt` and that the repo has no lint configuration. It opened step 1 of the task
+by asking me which linter to use and why.
+
+**Why the next prompt changed**
+
+I could not choose without knowing what a linter is, so I asked for that first.
+
+
+### Entry 381
+
+**Prompt**
+
+> what is exactly a linter and what is the difference between ruff and flake8 (strngths and drawbacks
+
+**What came back**
+
+Claude explained that a linter reads source code without running it and flags likely bugs and style
+breaches (unused imports, undefined names, over-long lines), and that in CI it fails the build when it
+finds any. It compared ruff and flake8 in a table (speed, rule coverage, autofix, configuration,
+maturity, plugins) without recommending either, then asked the step 1 question again.
+
+**Why the next prompt changed**
+
+The comparison was good enough to choose from; I answered step 1.
+
+
+### Entry 382
+
+**Prompt**
+
+> ill go for ruff as its faster, more complete (at least the basic package) and has autofix
+
+**What came back**
+
+Claude accepted ruff and named the downsides it saw in my reasons: speed barely matters on a repo
+this small; autofix must not run in CI, where the job is to report and fail, never to change code;
+ruff changes fast, so its version must be pinned or a clean clone can lint differently from my
+machine. It opened step 2 by asking whether to run ruff locally before it goes into the workflow,
+and why.
+
+**Why the next prompt changed**
+
+The downsides were fair; I answered the step 2 question.
+
+
+### Entry 383
+
+**Prompt**
+
+> yes, otherwise the first CI run would fail on lint
+
+**What came back**
+
+Claude installed ruff 0.16.10 in the pinned Python 3.12 venv (`backend/.venv`, not in
+`requirements.txt` yet) and ran `ruff check .` in `backend/` with no config file. It found 81
+errors: UP006 25, DTZ001 20, UP045 15, I001 7, UP035 6, RET501 2, PLR1711 2, and one each of DTZ003
+(`app/models.py:37`), B008 (`app/api.py:69`), ISC004 (`tests/test_api.py:1498`) and F841
+(`tests/test_api.py:857`). Restricted to the classic `E4,E7,E9,F` set, only the F841 remained. Ruff's
+cache directory ignores itself, so `git status` is unchanged. Claude pointed out which rules contradict
+conventions already written in `CLAUDE.md` and opened step 3 by asking which rule set the CI gate
+should enforce, and why.
+
+**Why the next prompt changed**
+
+The table was enough to choose; I chose, and told Claude to stop asking for reasons on this kind of question.
+
+
+### Entry 384
+
+**Prompt**
+
+> the classic set and forget about reasoning in this kind of questions
+
+**What came back**
+
+Claude took the classic set (`E4,E7,E9,F`) and recorded in its memory that choices among tool or
+configuration options no longer need a reason from me. **This added a constraint** to the method of
+Rule 0b. It named the downside of the classic set: it does not catch the likely bugs flake8-bugbear
+(B) rules find. It showed that the one remaining finding, F841 at `tests/test_api.py:857`
+(`original_updated_at`, assigned and never used because the assertion at the end is commented out),
+is in `test_update_prompt`, a test provided with the course (`ca8696d`), and that `CLAUDE.md` says
+to leave provided tests as they are unless a task asks. It opened step 4 by asking what to do with
+that finding.
+
+**Why the next prompt changed**
+
+Before choosing, I wanted to confirm who wrote the test.
+
+
+### Entry 385
+
+**Prompt**
+
+> this test was written by us or was already in the repo from the initial assignment?
+
+**What came back**
+
+Claude checked the history with `git log` and `git log -L` on the test's lines: `test_update_prompt`,
+including the unused `original_updated_at` and the commented-out assertion, is in the repository's
+first commit (`ca8696d`, by the course author, 2026-01-31). It is a provided test. One later commit
+of ours touched it, comments only: `be9300a` (Module 1) deleted the original
+`# NOTE: This assertion will fail due to Bug #2!` and the `# Uncomment after fix` suffix, but left
+the assertion commented out; the Bug #2 fix was tested instead by a new test,
+`test_update_prompt_refreshes_updated_at`, right below it. Claude asked the step 4 question again.
+
+**Why the next prompt changed**
+
+Knowing it was a provided test with a dead leftover, I chose to change it.
+
+
+### Entry 386
+
+**Prompt**
+
+> erase the comments in the test to comply with the linter
+
+**What came back**
+
+Claude did not edit the file yet. It pointed out that F841 flags the assignment at
+`tests/test_api.py:857`, not a comment: ruff ignores comments for this rule, so deleting the two
+comment lines (`:873-874`) alone would leave the finding and the lint step red. It named the
+downsides of editing a provided test (`CLAUDE.md` says to leave them unless a task asks; here
+Task 3.3's lint step does), and asked which line has to change for F841 to go.
+
+**Why the next prompt changed**
+
+I had aimed at the comment, not the unused variable; I moved to line 857.
+
+
+### Entry 387
+
+**Prompt**
+
+> lets comment the line 857 as it is never used
+
+**What came back**
+
+Claude confirmed that commenting out line 857 clears F841, and named the downside: the test would
+then hold three lines of commented-out code that only point at each other (`:857`, `:873-874`), dead
+code nobody can run, which a stricter rule set (ruff's ERA001) would flag. It proposed the
+alternative of deleting line 857 and the two comment lines at `:873-874`, since the comparison they
+held is already asserted by `test_update_prompt_refreshes_updated_at`, and asked which to apply.
+
+**Why the next prompt changed**
+
+The alternative left no dead code and lost no check; I took it.
+
+
+### Entry 388
+
+**Prompt**
+
+> ok delete the 3 lines
+
+**What came back**
+
+Claude deleted from `test_update_prompt` the unused assignment (`tests/test_api.py:857`) and the
+comment and commented-out assertion at the end of the test, with the blank line before them; the
+comment lines were really `:874-875`, not `:873-874` as it had said. Nothing else in the test changed.
+`ruff check . --select E4,E7,E9,F` now reports "All checks passed!", and the suite still gives 360
+passed. It proposed a commit message for the test change and this log, and stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
