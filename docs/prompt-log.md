@@ -6422,5 +6422,44 @@ commit's message and asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 302
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the green change (`d02aede`), closing US-2 cycle 4. It opened cycle 5's red step
+and proposed one test, as the plan has it: `test_patch_prompt_null_tags` (AC-2.9), a prompt tagged
+`["ai"]` patched with `{"tags": null}`: 422, `loc` `["body", "tags"]`, the spec's exact
+`reject_null` message, and GET still shows `["ai"]`. It fails now with a 500, since `Prompt(tags=
+None)` raises inside `patch_prompt`. It checked that `test_prompt_patch_empty_body_valid` dumps
+`"tags": None` only as a default, which the validator does not touch. It asked for permission to
+write the test and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to write the test and run the suite.
+
+
+### Entry 303
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `test_patch_prompt_null_tags` (AC-2.9). In the Python 3.12 venv: 1 failed, 336
+passed. It fails as expected: `Prompt` raises "Input should be a valid list" inside `patch_prompt`,
+a 500. It staged the test file and this log, proposed the red commit's message and asked for
+approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 

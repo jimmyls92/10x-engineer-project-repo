@@ -1342,6 +1342,26 @@ class TestPrompts:
 
         assert response.status_code == 422
 
+    def test_patch_prompt_null_tags(self, client: TestClient, sample_prompt_data):
+        """Verify ``"tags": null`` on PATCH is a 422 that keeps the stored tags.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        created = client.post("/prompts", json={**sample_prompt_data, "tags": ["ai"]}).json()
+
+        response = client.patch(f"/prompts/{created['id']}", json={"tags": None})
+
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["body", "tags"]
+        assert error["msg"] == (
+            "Value error, tags cannot be null; send a value or omit the field "
+            "to keep the current one"
+        )
+        assert client.get(f"/prompts/{created['id']}").json()["tags"] == ["ai"]
+
     def test_patch_prompt_validation_before_lookup(self, client: TestClient):
         """Verify the order of checks: body 422 before path 404, path 404 before body 400.
 
