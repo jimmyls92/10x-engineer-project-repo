@@ -6,9 +6,11 @@
 
 PromptLab is an internal tool for AI engineers: a place to keep prompt templates, group them into
 collections, and find them again. Think "Postman for prompts". A prompt has a title, a body that may
-contain template variables such as `{{code}}`, an optional description, and an optional collection it
-belongs to. Collections are flat named groups; a prompt belongs to at most one. Template variables
-are stored as plain text: the service does not parse them or fill them in.
+contain template variables such as `{{code}}`, an optional description, an optional collection it
+belongs to, and up to ten tags. Collections are flat named groups; a prompt belongs to at most one.
+Tags cut across collections: a prompt about reviewing Python code can be tagged both `code-review`
+and `python`. Template variables are stored as plain text: the service does not parse them or fill
+them in.
 
 The service is a FastAPI application with **in-memory storage** — everything lives in a dictionary in
 the server process and is lost when it stops. That is deliberate for now; swapping in a database is a
@@ -33,16 +35,25 @@ later module.
 - **Non-destructive collection deletion.** Deleting a collection keeps its prompts: each one is
   unfiled (its `collection_id` is cleared) and its `updated_at` is left as it was, since the
   client did not edit it.
+- **Tags.** A prompt carries a list of tags, set on create, `PUT` or `PATCH` and kept in the order
+  sent. A tag is 1–32 lowercase letters and digits, with single hyphens between them
+  (`code-review`, not `Code Review` or `-ai`); a prompt has at most 10, none repeated. `PUT`
+  without `tags` clears them, `PATCH` without `tags` keeps them, and `"tags": []` clears them on
+  either. `GET /tags` lists every tag in use, sorted by name, with how many prompts carry it; it is
+  computed from the stored prompts, so a tag no prompt carries any more disappears.
 - **Filtering and search.** `GET /prompts?collection_id=` returns only the prompts in that
   collection; an unknown id gives an empty list, not an error. `?search=` keeps the prompts whose
-  title or description contains the text, ignoring case. The prompt body is not searched. The two
-  parameters can be combined.
+  title or description contains the text, ignoring case. The prompt body is not searched. `?tag=`
+  keeps the prompts that carry the tag; repeat it (`?tag=ai&tag=python`) to keep only the prompts
+  that carry **every** tag given. An unknown tag gives an empty list. All three parameters can be
+  combined.
 - **Newest-first ordering.** Prompt lists are always sorted by creation date, newest first. The
   order is fixed; no parameter changes it.
 - **Input validation.** A title must be 1–200 characters, the body must not be empty, a description
-  is at most 500 characters and a collection name is 1–100 characters. A body that breaks a rule is
-  rejected with `422` and a per-field error before it reaches storage; `PATCH` applies the same
-  rules to the fields it carries.
+  is at most 500 characters, tags follow the rules above and a collection name is 1–100 characters.
+  A body that breaks a rule is rejected with `422` and a per-field error before it reaches storage;
+  `PATCH` applies the same rules to the fields it carries. A `?tag=` value that is not a valid tag
+  is also rejected with `422`.
 - **Health check and interactive API docs.** `GET /health` returns `{"status": "healthy"}` and the
   service version. FastAPI generates Swagger UI (`/docs`) and ReDoc (`/redoc`) pages from the code,
   where every endpoint can be tried from the browser.
@@ -79,7 +90,7 @@ pip install -r requirements.txt
 
 ## Quick start guide
 
-From installation to a stored, searchable prompt in five steps.
+From installation to a stored, tagged, searchable prompt in five steps.
 
 > **The commands below are for a POSIX shell** (bash, zsh, Git Bash). In Windows PowerShell, `curl`
 > is an alias for `Invoke-WebRequest`, `\` does not continue a line, and the quotes inside the JSON
@@ -129,23 +140,23 @@ curl -X POST http://localhost:8000/collections \
 The response is `201` with the new collection. Copy its `id`: the next step needs it.
 
 ```json
-{"name":"Code review","description":"Prompts for reviewing pull requests","id":"6227466d-0d9e-4917-9b15-cd4bddbbd73e","created_at":"2026-09-28T18:50:29.143284"}
+{"name":"Code review","description":"Prompts for reviewing pull requests","id":"39bb6d01-c454-4f7a-9da7-bb1afc88f4e6","created_at":"2026-10-06T13:37:21.739605"}
 ```
 
-### 4. Save a prompt in it
+### 4. Save a tagged prompt in it
 
 Replace `<collection-id>` with the id from step 3:
 
 ```bash
 curl -X POST http://localhost:8000/prompts \
   -H "Content-Type: application/json" \
-  -d '{"title": "Review a diff", "content": "Review this diff and list any bugs: {{diff}}", "collection_id": "<collection-id>"}'
+  -d '{"title": "Review a diff", "content": "Review this diff and list any bugs: {{diff}}", "collection_id": "<collection-id>", "tags": ["code-review", "python"]}'
 ```
 
 The response is `201` with the stored prompt. The server has added its `id` and both timestamps:
 
 ```json
-{"title":"Review a diff","content":"Review this diff and list any bugs: {{diff}}","description":null,"collection_id":"6227466d-0d9e-4917-9b15-cd4bddbbd73e","id":"74a8dd4c-bd33-4762-b606-e174dc3e9a69","created_at":"2026-09-28T18:50:29.156637","updated_at":"2026-09-28T18:50:29.156642"}
+{"title":"Review a diff","content":"Review this diff and list any bugs: {{diff}}","description":null,"collection_id":"39bb6d01-c454-4f7a-9da7-bb1afc88f4e6","tags":["code-review","python"],"id":"6f037c0a-2822-40d3-ba78-a78a88fe72c1","created_at":"2026-10-06T13:37:22.617241","updated_at":"2026-10-06T13:37:22.617241"}
 ```
 
 ### 5. Find it again
@@ -157,12 +168,22 @@ curl "http://localhost:8000/prompts?search=review"
 ```
 
 ```json
-{"prompts":[{"title":"Review a diff","content":"Review this diff and list any bugs: {{diff}}","description":null,"collection_id":"6227466d-0d9e-4917-9b15-cd4bddbbd73e","id":"74a8dd4c-bd33-4762-b606-e174dc3e9a69","created_at":"2026-09-28T18:50:29.156637","updated_at":"2026-09-28T18:50:29.156642"}],"total":1}
+{"prompts":[{"title":"Review a diff","content":"Review this diff and list any bugs: {{diff}}","description":null,"collection_id":"39bb6d01-c454-4f7a-9da7-bb1afc88f4e6","tags":["code-review","python"],"id":"6f037c0a-2822-40d3-ba78-a78a88fe72c1","created_at":"2026-10-06T13:37:22.617241","updated_at":"2026-10-06T13:37:22.617241"}],"total":1}
 ```
 
-`curl "http://localhost:8000/prompts?collection_id=<collection-id>"` lists the collection's prompts
-in the same shape. Your ids and timestamps will differ. Storage is in memory, so restarting the
-server empties it.
+`curl "http://localhost:8000/prompts?tag=code-review"` and
+`curl "http://localhost:8000/prompts?collection_id=<collection-id>"` list the same prompt in the same
+shape. To see which tags are in use:
+
+```bash
+curl http://localhost:8000/tags
+```
+
+```json
+{"tags":[{"name":"code-review","prompt_count":1},{"name":"python","prompt_count":1}],"total":2}
+```
+
+Your ids and timestamps will differ. Storage is in memory, so restarting the server empties it.
 
 ---
 
@@ -177,7 +198,7 @@ API=http://localhost:8000
 | Method | Endpoint | What it does | Example |
 |---|---|---|---|
 | `GET` | `/health` | Service status and version | `curl $API/health` |
-| `GET` | `/prompts` | List prompts, newest first. Optional `?collection_id=` and `?search=` | `curl "$API/prompts?search=review"` |
+| `GET` | `/prompts` | List prompts, newest first. Optional `?collection_id=`, `?search=` and repeatable `?tag=` | `curl "$API/prompts?tag=code-review&tag=python"` |
 | `GET` | `/prompts/{id}` | Fetch one prompt; 404 if it does not exist | `curl $API/prompts/<id>` |
 | `POST` | `/prompts` | Create a prompt; 201 with the created prompt | `curl -X POST $API/prompts -H "Content-Type: application/json" -d '{"title": "Review a diff", "content": "List bugs in: {{diff}}"}'` |
 | `PUT` | `/prompts/{id}` | **Full** replacement: an omitted field is reset | `curl -X PUT $API/prompts/<id> -H "Content-Type: application/json" -d '{"title": "Review a diff", "content": "List bugs in: {{diff}}"}'` (no `collection_id`, so the prompt is unfiled) |
@@ -187,14 +208,17 @@ API=http://localhost:8000
 | `GET` | `/collections/{id}` | Fetch one collection; 404 if it does not exist | `curl $API/collections/<id>` |
 | `POST` | `/collections` | Create a collection; 201 with the created collection | `curl -X POST $API/collections -H "Content-Type: application/json" -d '{"name": "Code review"}'` |
 | `DELETE` | `/collections/{id}` | Delete a collection and **unfile** its prompts | `curl -X DELETE $API/collections/<id>` |
+| `GET` | `/tags` | List the tags in use, sorted by name, with each one's prompt count | `curl $API/tags` |
 
-`search` matches case-insensitively against a prompt's title and description. `GET /prompts` always
-sorts by creation date, newest first; it is not a client-controlled parameter.
+`search` matches case-insensitively against a prompt's title and description. `tag` keeps the prompts
+that carry every tag given; an empty `?tag=` is ignored. `GET /prompts` always sorts by creation date,
+newest first; it is not a client-controlled parameter.
 
 **Status codes.** A missing addressed resource is `404`. A body that names a collection which does not
-exist is `400`. A body that breaks a field constraint — an empty title, a title over 200 characters —
-is `422`, produced by validation before the handler runs. `PATCH` also answers `422` to an explicit
-`null` title or content, before it looks up the prompt.
+exist is `400`. A body that breaks a field constraint — an empty title, a title over 200 characters,
+a tag such as `"Python"`, 11 tags or a repeated tag — is `422`, produced by validation before the
+handler runs. `PATCH` also answers `422` to an explicit `null` title, content or tags, before it
+looks up the prompt. On `GET /prompts`, a `?tag=` value that is not a valid tag is `422` too.
 
 ---
 

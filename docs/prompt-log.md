@@ -7820,4 +7820,27 @@ reference and this log and proposed the commit message. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 374
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the line references (`a531e52`) and went on to the README, already accepted in
+entry 372. It started the server from the 3.12 venv and re-ran the quick start with a tagged
+prompt, pasting the responses as they came back. README changes: tags in the overview; a new
+**Tags** bullet in the Features list (rules, PUT/PATCH behaviour, `GET /tags`); `?tag=` in
+*Filtering and search* and *Input validation*; quick-start steps 4-5 save a tagged prompt, show
+`tags` in every response and add `GET /tags`; the endpoint summary has `?tag=` and a `GET /tags`
+row; the status-code paragraph lists the tag 422 cases. It checked the `?tag=a&tag=b`, empty and
+unknown-tag examples against the server. It staged the README and this log and proposed the
+commit message. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
