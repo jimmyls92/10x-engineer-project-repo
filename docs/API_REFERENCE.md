@@ -18,7 +18,7 @@ with curl against a local server, and each response shown is the one that came b
 
 **None.** No endpoint requires a token, key or session, and no request header is checked.
 
-CORS is open: `api.py:35-41` allows every origin, method and header, with credentials allowed. Any web
+CORS is open: `api.py:38-44` allows every origin, method and header, with credentials allowed. Any web
 page can call the API from a browser.
 
 ## Error codes and response formats
@@ -72,8 +72,8 @@ When a request has more than one problem, only the first check that fails is rep
    `title` returns 422, not 404. On `PATCH`, a `null` `title` or `content` is part of this step:
    `PATCH /prompts/nope` with `{"title": null}` returns 422, not 404, and
    `{"title": null, "collection_id": "nope"}` returns 422, not 400.
-2. **404**: the prompt in the path is looked up next (`api.py:173`, `:221`).
-3. **400**: the `collection_id` is checked next (`api.py:178`, `:229`). `PUT /prompts/nope` with a
+2. **404**: the prompt in the path is looked up next (`api.py:190`, `:240`).
+3. **400**: the `collection_id` is checked next (`api.py:195`, `:248`). `PUT /prompts/nope` with a
    valid body and an unknown `collection_id` returns 404, not 400.
 
 ## Data models
@@ -438,5 +438,5 @@ Both are current behaviour, described as the code does it, and are **not fixed**
 
 | Issue | Where | Effect |
 |---|---|---|
-| **An empty `collection_id` is handled inconsistently** | `api.py:140`, `:178`, `:229` | `POST` and `PUT` test truthiness, so `""` is stored without a check. `PATCH` tests `is not None`, so `""` is looked up and rejected with 400. |
-| **A prompt with `collection_id: ""` cannot be listed by collection** | `api.py:87` | `GET /prompts?collection_id=` treats the empty value as absent and returns every prompt, so there is no way to select only the prompts stored with `""`. |
+| **An empty `collection_id` is handled inconsistently** | `api.py:156`, `:195`, `:248` | `POST` and `PUT` test truthiness, so `""` is stored without a check. `PATCH` tests `is not None`, so `""` is looked up and rejected with 400. |
+| **A prompt with `collection_id: ""` cannot be listed by collection** | `api.py:95` | `GET /prompts?collection_id=` treats the empty value as absent and returns every prompt, so there is no way to select only the prompts stored with `""`. |

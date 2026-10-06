@@ -7762,4 +7762,62 @@ commit message. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 371
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `CLAUDE.md` and the log (`895d51b`). It opened the next part of Task 3.2, documenting
+tags in the README and `docs/API_REFERENCE.md` (C2.2), and asked where to start. It stopped.
+
+**Why the next prompt changed**
+
+I chose not to work through the docs step by step. **Restructured:** Claude proposes the changes and I review them.
+
+
+### Entry 372
+
+**Prompt**
+
+> Again we dont want to follow this detail here. Just let me know what changes you propose
+
+**What came back**
+
+Claude read `README.md` and `docs/API_REFERENCE.md` in full and checked their code references.
+Findings beyond the three tag changes: no sample prompt response shows `tags`, although the field
+has existed since Module 1, so every recorded prompt response is incomplete; the API reference
+says query parameters never cause a 422, which `?tag=` now does; and its `api.py` line references
+are stale after the tagging changes (`:35-41` is now `:38-44`, `:173` `:192`, `:221` `:242`,
+`:178` `:195`, `:229` `:248`, `:140` `:156`, `:87` `:95`). It proposed the changes section by
+section for both files, re-recording every example against a running server, in three commits:
+the stale line references, the README, and the API reference. It asked for acceptance. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I accepted it.
+
+
+### Entry 373
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude started with the first of the three commits. It mapped each `api.py` reference in
+`docs/API_REFERENCE.md` from `baacb4b` to the same statement today and updated five places: CORS
+`:35-41` to `:38-44`; the 404 lookup `:173`, `:221` to `:190`, `:240`; the 400 check `:178`, `:229`
+to `:195`, `:248`; Known issues `:140` to `:156` and `:87` to `:95`. It noted that the Known traps
+in `CLAUDE.md` cite the same old lines, and left them for a separate decision. It staged the API
+reference and this log and proposed the commit message. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
