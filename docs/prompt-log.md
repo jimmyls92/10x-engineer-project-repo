@@ -6151,5 +6151,43 @@ asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 288
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the red tests (`a63a1b8`). It opened the green step and proposed the change from
+the spec: a `Tag` type in `models.py` (`Annotated[str, Field(min_length=1, max_length=32,
+pattern=...)]`), `Annotated` added to the `typing` import, and `PromptBase.tags` typed
+`List[Tag]`, with the docstring's `tags` line saying what a tag may be. It asked for permission to
+write it and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to make the change and run the suite.
+
+
+### Entry 289
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `Annotated` to the `typing` import, defined `Tag` above `PromptBase` with a comment on
+why it is a type of its own (each bad tag reported at its own index), typed `PromptBase.tags` as
+`List[Tag]`, and said in the docstring what a tag may be. In the Python 3.12 venv: 327 passed,
+coverage 100%. It staged `models.py` and this log, proposed the green commit's message and asked
+for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 

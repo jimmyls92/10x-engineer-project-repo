@@ -7,7 +7,7 @@ rejected with status 422.
 """
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Annotated, Optional, List
 from pydantic import BaseModel, Field, field_validator
 from uuid import uuid4
 
@@ -39,6 +39,11 @@ def get_current_time() -> datetime:
 
 # ============== Prompt Models ==============
 
+# A type of its own, not a validator on the list, so Pydantic reports each bad
+# tag at its own index, ["body", "tags", <i>], with its own message.
+Tag = Annotated[str, Field(min_length=1, max_length=32, pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$")]
+
+
 class PromptBase(BaseModel):
     """Fields a client supplies for a prompt, with their constraints.
 
@@ -53,15 +58,17 @@ class PromptBase(BaseModel):
         collection_id: Optional identifier of the collection the prompt is
             filed in. Defaults to ``None``. The model does not check that
             the collection exists; the create and update endpoints do.
-        tags: Optional list of tag strings, kept in the order sent. Defaults
-            to a new empty list.
+        tags: Optional list of tags, kept in the order sent. Defaults to a
+            new empty list. Each tag is 1 to 32 characters of lowercase
+            letters and digits, with single hyphens between them, so
+            ``"code-review"`` is valid and ``"Python"`` or ``"-ai"`` is not.
     """
 
     title: str = Field(..., min_length=1, max_length=200)
     content: str = Field(..., min_length=1)
     description: Optional[str] = Field(None, max_length=500)
     collection_id: Optional[str] = None
-    tags: List[str] = Field(default_factory=list)
+    tags: List[Tag] = Field(default_factory=list)
 
 
 class PromptCreate(PromptBase):
