@@ -169,10 +169,10 @@ class PromptPatch(BaseModel):
     collection_id: Optional[str] = None
     tags: Optional[List[Tag]] = None
 
-    @field_validator("title", "content")
+    @field_validator("title", "content", "tags")
     @classmethod
     def reject_null(cls, value, info):
-        """Refuse an explicit null for ``title`` or ``content``.
+        """Refuse an explicit null for ``title``, ``content`` or ``tags``.
 
         Pydantic runs this only for keys the body carries, so an omitted field
         is still left alone. It runs while the body is validated, before
