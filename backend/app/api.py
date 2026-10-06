@@ -238,6 +238,7 @@ def patch_prompt(prompt_id: str, prompt_data: PromptPatch):
         content=changes.get("content", existing.content),
         description=changes.get("description", existing.description),
         collection_id=changes.get("collection_id", existing.collection_id),
+        tags=existing.tags,
         created_at=existing.created_at,
         updated_at=get_current_time() if changes else existing.updated_at
     )
