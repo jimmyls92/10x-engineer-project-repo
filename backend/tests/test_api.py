@@ -845,6 +845,28 @@ class TestPrompts:
         assert response.json() == {"detail": "Collection not found"}
         assert client.get(f"/prompts/{created['id']}").json()["tags"] == ["ai"]
 
+    @pytest.mark.parametrize("method", ["PUT", "PATCH"])
+    def test_update_prompt_invalid_tag_keeps_tags(
+        self, client: TestClient, sample_prompt_data, method
+    ):
+        """Verify a bad tag sent on an edit is a 422 that keeps the stored tags.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+            method: The editing method, PUT or PATCH.
+        """
+        created = client.post("/prompts", json={**sample_prompt_data, "tags": ["ai"]}).json()
+
+        response = client.request(
+            method,
+            f"/prompts/{created['id']}",
+            json={"title": "New", "content": "New text.", "tags": ["Python"]},
+        )
+
+        assert response.status_code == 422
+        assert client.get(f"/prompts/{created['id']}").json()["tags"] == ["ai"]
+
     @pytest.mark.parametrize(
         "body, field, msg",
         [
@@ -1307,6 +1329,18 @@ class TestPrompts:
 
         assert response.status_code == 200
         assert client.get(f"/prompts/{created['id']}").json()["tags"] == []
+
+    def test_patch_prompt_invalid_tag_not_found(self, client: TestClient):
+        """Verify a bad tag on PATCH to an unknown id is a 422, not a 404.
+
+        The body is validated before ``patch_prompt`` looks the id up.
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.patch("/prompts/nope", json={"tags": ["Python"]})
+
+        assert response.status_code == 422
 
     def test_patch_prompt_validation_before_lookup(self, client: TestClient):
         """Verify the order of checks: body 422 before path 404, path 404 before body 400.

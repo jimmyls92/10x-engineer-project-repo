@@ -6345,5 +6345,47 @@ and asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 298
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the green change (`df1bb5c`), closing US-2 cycle 3. It opened cycle 4's red step
+and proposed its tests: `test_update_prompt_invalid_tag_keeps_tags`, parametrised over PUT (on
+arrival, since `PromptUpdate` inherits `Tag`) and PATCH (AC-2.7: 422, and GET still shows
+`["ai"]`), and `test_patch_prompt_invalid_tag_not_found` (AC-2.8: 422, not 404). The PATCH cases
+fail because `PromptPatch.tags` is still `List[str]`: 200 and 404. It asked for permission to write
+them and run the suite. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to write the tests and run the suite.
+
+
+### Entry 299
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `test_update_prompt_invalid_tag_keeps_tags`, parametrised over PUT and PATCH (AC-2.7),
+and `test_patch_prompt_invalid_tag_not_found` (AC-2.8). In the Python 3.12 venv: 2 failed, 334
+passed; the PUT case passed on arrival. The PATCH case failed for a different reason from the one
+Claude (and the plan) had given: not 200 with `["Python"]` stored, but a 500. `PromptPatch` lets
+`"Python"` through, then `patch_prompt` builds a `Prompt`, which since cycle 1 inherits `Tag`, and
+its `ValidationError` escapes the endpoint (the test client re-raises it). Nothing is stored either
+way. AC-2.8 failed as planned: 404. Claude corrected its claim, proposed the red commit's message
+and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 
