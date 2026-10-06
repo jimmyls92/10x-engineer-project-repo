@@ -186,6 +186,7 @@ def update_prompt(prompt_id: str, prompt_data: PromptUpdate):
         content=prompt_data.content,
         description=prompt_data.description,
         collection_id=prompt_data.collection_id,
+        tags=prompt_data.tags,
         created_at=existing.created_at,
         updated_at=get_current_time()
     )
