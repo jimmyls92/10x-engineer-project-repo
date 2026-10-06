@@ -8124,3 +8124,41 @@ passed. It proposed a commit message for the test change and this log, and stopp
 **Why the next prompt changed**
 
 The message was good enough; I approved it as proposed.
+
+
+### Entry 389
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the test change with this log (`a2a6a88`). It opened step 5 by pointing out that the
+rule set chosen in entry 384 exists only in the command line it typed: a clean clone running plain
+`ruff check` would use ruff 0.16.10's wider defaults and fail on 80 findings. It asked where the rule
+set should be written down.
+
+**Why the next prompt changed**
+
+The question was narrow enough; I named the file.
+
+
+### Entry 390
+
+**Prompt**
+
+> ruff.toml in backend/
+
+**What came back**
+
+Claude wrote `backend/ruff.toml` with `[lint] select = ["E4", "E7", "E9", "F"]` and a comment saying
+why ruff's wider defaults are not used. Plain `ruff check` (no `--select`) now passes both from
+`backend/` and as `ruff check backend` from the repo root, and `--show-settings` confirms the settings
+path is that file. It named one downside: a second config file to keep in mind if a `pyproject.toml`
+is ever added, since ruff would then use whichever is closest. It proposed a commit message and
+stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.

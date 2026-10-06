@@ -1,0 +1,4 @@
+[lint]
+# The classic pyflakes/pycodestyle core. Ruff's wider defaults contradict
+# conventions in CLAUDE.md (typing imports, naive UTC timestamps).
+select = ["E4", "E7", "E9", "F"]
