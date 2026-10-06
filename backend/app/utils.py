@@ -46,7 +46,9 @@ def filter_prompts_by_tags(prompts: List[Prompt], tags: List[str]) -> List[Promp
     """Keep the prompts that carry every one of the given tags.
 
     The match on each tag is exact. A tag that no prompt carries is not an
-    error; it matches nothing.
+    error; it matches nothing. A tag repeated in ``tags`` counts once. An
+    empty ``tags`` keeps every prompt, although ``GET /prompts`` only calls
+    this when at least one tag is given.
 
     Args:
         prompts: The prompts to filter. The list itself is not modified.

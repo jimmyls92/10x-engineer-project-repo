@@ -7062,5 +7062,44 @@ green commit's message and asked for approval. It stopped.
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 335
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the green change (`d2fcdd0`), closing US-3's four cycles; suite 353 passed,
+coverage 100%. It re-read the slice's docstrings against the code: `list_prompts` and the `utils`
+module docstring are accurate, but `filter_prompts_by_tags` leaves out two quirks the conventions
+say a docstring states: a tag repeated in `tags` counts once (the spec's own wording, AC-3.9), and
+an empty `tags` keeps every prompt, since `all()` of nothing is true (`list_prompts` never passes
+one). It proposed adding both as a small docstring commit and asked for permission. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to add them and run the suite.
+
+
+### Entry 336
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added the two quirks to `filter_prompts_by_tags`' docstring: a repeated tag counts once, and
+an empty `tags` keeps every prompt, though `GET /prompts` only calls it with at least one tag. It
+checked both claims by calling the helper in the venv (`[]` kept `a` and `b`; `["ai", "ai"]` kept
+`a`). Suite: 353 passed, coverage 100%. It staged `utils.py` and this log, proposed the commit
+message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 
