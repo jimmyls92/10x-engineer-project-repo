@@ -8541,3 +8541,597 @@ commit for `CLAUDE.md` and this log, followed by a push, and stopped.
 **Why the next prompt changed**
 
 The message was good enough; I approved the commit and the push.
+
+
+### Entry 411
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude re-ran lint ("All checks passed!") and the suite (360 passed), committed the state update with
+this log (`68132b7`) and pushed (`81d514d..68132b7`). CI run 37494734851 on `68132b7` succeeded.
+Task 3.3 is closed; Claude stopped without starting Task 3.4, as Rule 0 requires. This entry stays
+uncommitted until the next commit.
+
+**Why the next prompt changed**
+
+Task 3.3 was closed; after clearing the session I asked Claude to continue with the next task.
+
+
+### Entry 412
+
+**Prompt**
+
+> continue
+
+**What came back**
+
+Claude read Task 3.4 and criterion C2.8 in `brief.txt`: `backend/Dockerfile` (base image,
+dependencies, code, port, CMD), a root `docker-compose.yml` (service, port mapping, environment
+variables, hot reload) and a README section; the image must build from committed files with no
+manual steps, and the container must serve the API. It checked that Docker 29.5.2 is installed and
+that `backend/main.py` runs uvicorn on port 8000. It laid out six steps (base image; what to copy
+and in which order; port and CMD; compose; build and check; README) and asked the first question:
+which base image, given that `requirements.txt` pins need Python 3.10-3.12. Since Task 3.3 was
+proposed rather than guided from entry 397, it noted I can ask for the same here.
+
+**Why the next prompt changed**
+
+I did not know the image tags to choose from, so I asked for options.
+
+
+### Entry 413
+
+**Prompt**
+
+> propose some image tags
+
+**What came back**
+
+Claude listed four tags with pros and cons and no recommendation, as Rule 0b point 6 requires:
+`python:3.12-slim`, `python:3.12-alpine`, `python:3.12` (full Debian), and `python:3.11-slim`. It
+asked me to pick one.
+
+**Why the next prompt changed**
+
+The options were enough to choose; I picked one.
+
+
+### Entry 414
+
+**Prompt**
+
+> python:3.12-slim
+
+**What came back**
+
+Claude gave its recommendation now that I had chosen: the same tag, since it matches CI and the
+venv and needs no compiler for the pinned wheels; no second option to choose between. It opened step
+2, split into its smallest piece: which files in `backend/` the image needs in order to serve the
+API, naming each and saying why.
+
+**Why the next prompt changed**
+
+The question was narrow enough to answer in one line.
+
+
+### Entry 415
+
+**Prompt**
+
+> app, main.py, requirements.txt in; the rest out
+
+**What came back**
+
+Claude accepted the split and named two downsides: `app/` holds a `__pycache__/` of Windows-built
+bytecode, which belongs out (left to a later step on how exclusions are enforced); and
+`requirements.txt` also pins test and lint tools (`pytest`, `pytest-cov`, `httpx`, `ruff`) that
+the server never uses, so they would be installed into the image. It asked whether to accept that
+or split the file. Per my earlier instruction (entry 384), it did not ask me to justify the choice.
+
+**Why the next prompt changed**
+
+One decision was left open; I answered it.
+
+
+### Entry 416
+
+**Prompt**
+
+> install all requirements
+
+**What came back**
+
+Claude recorded the decision: the image installs all of `requirements.txt`, test and lint tools
+included, and `ci.yml` stays unchanged. It opened the next piece of step 2, the order of the
+Dockerfile instructions: it explained in brief that Docker caches each instruction as a layer and
+rebuilds from the first one whose input changed, then asked me to put four instructions in order
+(copy `requirements.txt`, install dependencies, copy `app/` and `main.py`, set the working
+directory) and say why.
+
+**Why the next prompt changed**
+
+The question gave a worked shape; I answered with an order and a reason.
+
+
+### Entry 417
+
+**Prompt**
+
+> D, B, A and C because first we need to set up the environment (by copying and installing requirements.txt) and then we need to copy the app and main and set up the working directory (app)
+
+**What came back**
+
+Claude confirmed that D before B before A holds, and said the placement of C needed another look
+without giving the answer. It narrowed the question to what `WORKDIR` does: it sets the directory
+in which every later instruction runs, so it asked where `COPY requirements.txt .` puts the file
+when no `WORKDIR` has run yet, and where the container's `CMD` would then look for `main.py`. The
+rebuild question (only `api.py` edited) was left for the following exchange.
+
+**Why the next prompt changed**
+
+The narrowed question showed me the flaw in my order; I moved C first. Narrowed: the open question on order became one question about `WORKDIR` alone.
+
+
+### Entry 418
+
+**Prompt**
+
+> C, D, B, A, otherwise files land in / not /app
+
+**What came back**
+
+Claude confirmed the order C, D, B, A: `WORKDIR /app` first, so the copied files and the
+container's start directory are all `/app`. It asked the rebuild question held over from entry
+417: after editing only `api.py`, which of the four layers Docker reuses from cache and which it
+reruns, with the reason.
+
+**Why the next prompt changed**
+
+The question was clear enough to answer directly.
+
+
+### Entry 419
+
+**Prompt**
+
+> C, D, B cached; A reruns because only the code changed
+
+**What came back**
+
+Claude confirmed it: the slow `pip install` layer is reused, and only the code copy reruns. That is
+the reason to copy `requirements.txt` on its own before the code. It opened the last piece of step 2,
+held over from entry 415: `COPY app/` would also bring in `app/__pycache__/`, and asked how to keep
+it (and anything like it) out of the image, naming the mechanism and where it lives.
+
+**Why the next prompt changed**
+
+The hint was enough to name it; I also chose to keep the step to the Dockerfile only.
+
+
+### Entry 420
+
+**Prompt**
+
+> .dockerignore but lets not do this in this section is just about setting up the docker file
+
+**What came back**
+
+Claude accepted deferring `.dockerignore` and named the downsides: `app/__pycache__/` is copied
+into the image (harmless, but not from the repository), and the whole `backend/`, `.venv/`
+included, is sent to Docker as build context on each build, which only slows it. It set the point
+aside for step 5 (build and check). It opened step 3, stating as settled that the port is 8000
+(`backend/main.py:10`), and asked what command `CMD` should run to start the API, and on which host
+the server must listen for requests from outside the container to reach it.
+
+**Why the next prompt changed**
+
+The question pointed at `main.py`; I answered with it. Restructured: I narrowed the step to the Dockerfile and deferred `.dockerignore`.
+
+
+### Entry 421
+
+**Prompt**
+
+> python main.py, host 0.0.0.0 so it's reachable outside
+
+**What came back**
+
+Claude confirmed the host: `0.0.0.0` listens on every interface, while `127.0.0.1` would only accept
+connections from inside the container. Before accepting `python main.py`, it ran it in the pinned
+venv (`backend/.venv`, uvicorn 0.27.0): it printed "WARNING: You must pass the application as an
+import string to enable 'reload' or 'workers'." and exited with code 1. uvicorn's `run()` exits when
+`reload=True` is given an app object rather than an import string
+(`.venv/Lib/site-packages/uvicorn/main.py:572-578`), and `main.py:10` does exactly that. Claude
+corrected the choice directly, since a container that exits fails C2.8, and asked how to make the
+container's start command work, using the warning as the clue.
+
+**Why the next prompt changed**
+
+My command failed in the pinned environment; I tried another.
+
+
+### Entry 422
+
+**Prompt**
+
+> uvicorn?
+
+**What came back**
+
+Claude said the direction was right but not specific enough to write into `CMD`. It narrowed the
+question with a template to fill in, `uvicorn <module>:<variable> --host <host> --port <port>`,
+explained that `<module>:<variable>` is the import string the warning asked for, and pointed to
+`main.py:7` (`from app.api import app`) as where to find both parts.
+
+**Why the next prompt changed**
+
+The template showed what to fill in; I filled part of it. Narrowed: the open question became a template with blanks.
+
+
+### Entry 423
+
+**Prompt**
+
+> api:app --host 0.0.0.0
+
+**What came back**
+
+Claude confirmed `app` as the variable and `0.0.0.0` as the host. It noted that the port was left
+out, which works only because uvicorn's default is 8000, and that the downside is the port being
+implicit in the one file the reader checks it in. It narrowed the module question: with `WORKDIR
+/app` and `app/` copied into it, the file is `/app/app/api.py` and the container starts in `/app`,
+so it asked whether Python can find a module `api` from there, and if not, what dotted path
+reaches it.
+
+**Why the next prompt changed**
+
+The tree showed `api.py` sits inside `app/`; I answered with the folder. Narrowed: the question became the module path alone.
+
+
+### Entry 424
+
+**Prompt**
+
+> app
+
+**What came back**
+
+Claude said the answer was ambiguous: `app` alone, as in `uvicorn app:app`, imports the package
+`app`, which runs `app/__init__.py`, and that file defines only a docstring and `__version__`
+(`backend/app/__init__.py:1-3`), not a FastAPI object. It narrowed with one more fill-in: the
+dotted path is `<package>.<module>`, and asked for it, using `main.py:7` as the model.
+
+**Why the next prompt changed**
+
+I combined the parts, but in the wrong order. Narrowed: a fill-in of two parts, package and module.
+
+
+### Entry 425
+
+**Prompt**
+
+> app:app.api
+
+**What came back**
+
+Claude said the parts were right but the sides of the colon were swapped: uvicorn reads it as
+"import module `app` and take its attribute `app.api`", which does not exist. As this was the fourth
+exchange on the same blank, it showed the mapping rule rather than another hint: an import line
+`from X import Y` becomes the import string `X:Y` (module path left of the colon, variable right),
+and asked me to apply it to `main.py:7`.
+
+**Why the next prompt changed**
+
+The rule made the mapping clear; I wrote the full command. Restructured: after repeated narrowing, a rule to apply instead of a blank to fill.
+
+
+### Entry 426
+
+**Prompt**
+
+> uvicorn app.api:app --host 0.0.0.0 --port 8000
+
+**What came back**
+
+Claude confirmed the command, and stated as settled that it goes into `CMD` in exec form (a JSON
+array), so uvicorn runs as the container's main process and receives the stop signal. It asked the
+question left open since entry 422: now that `CMD` calls uvicorn directly, does `main.py` still
+need to be copied into the image.
+
+**Why the next prompt changed**
+
+The question was a yes-or-no; I answered it.
+
+
+### Entry 427
+
+**Prompt**
+
+> out, uvicorn doesn't need it
+
+**What came back**
+
+Claude confirmed: only `requirements.txt` and `app/` are copied. With every part of the Dockerfile
+worked through (entries 412-427), it showed the full `backend/Dockerfile` it would write, with one
+comment explaining why `CMD` calls uvicorn rather than `python main.py`, and asked permission to
+write the file.
+
+**Why the next prompt changed**
+
+The file matched what we had worked out; I approved it.
+
+
+### Entry 428
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote `backend/Dockerfile` as shown, without building or committing it; the build is checked
+in step 5, before any commit. It opened step 4, `docker-compose.yml`, with its smallest piece, hot
+reload: the image holds a copy of `app/` made at build time, so it asked what the compose file must
+add for an edit to `api.py` on my machine to reach the running container.
+
+**Why the next prompt changed**
+
+The `WORKDIR` clue gave the container side; I answered.
+
+
+### Entry 429
+
+**Prompt**
+
+> volumes, ./backend/app to /app/app
+
+**What came back**
+
+Claude confirmed the bind mount, `./backend/app:/app/app` under `volumes`, relative to the root
+where the compose file lives; it hides the image's copy of `app/` and shows my files instead. It
+asked the second half of hot reload: with the new file now visible inside the container, does the
+uvicorn process already running (started by the Dockerfile's `CMD`) serve the edited code, and if
+not, what must change.
+
+**Why the next prompt changed**
+
+I did not know how a running server picks up new code, and said so.
+
+
+### Entry 430
+
+**Prompt**
+
+> in the compose I guess but I dont really know
+
+**What came back**
+
+Claude answered the first part directly: no, the running process keeps serving the code it imported
+at startup until it restarts. It split the rest into its smallest piece and asked only for the
+mechanism: `main.py:10` already passes uvicorn an option that watches the files and restarts the
+server on a change; which option is it, and how is it written as a command-line flag. Where it goes
+(Dockerfile or compose) was left as the next question.
+
+**Why the next prompt changed**
+
+I did not understand the question and asked for options. Narrowed: the question became the uvicorn option alone, with `main.py:10` as the clue.
+
+
+### Entry 431
+
+**Prompt**
+
+> I dont know, give me options. I dont really get teh question
+
+**What came back**
+
+Claude restated the question more simply. It quoted `main.py:10`, `uvicorn.run(app, host="0.0.0.0",
+port=8000, reload=True)`, and laid out its three keyword arguments as options, each with what it
+does and its command-line flag (`--host`, `--port`, `--reload`), without saying which one watches the
+files. It asked me to pick that one.
+
+**Why the next prompt changed**
+
+With the options laid out I could pick. Restructured: an open question became a choice among three options.
+
+
+### Entry 432
+
+**Prompt**
+
+> reload=True
+
+**What came back**
+
+Claude confirmed it: `reload=True`, written `--reload` on the command line. It asked the held-over
+question of where the flag goes, explaining that compose can replace the Dockerfile's `CMD` for one
+service with its `command:` key: should `--reload` be in the image's own `CMD`, or only in the
+command compose runs, given that the brief asks for hot reload "for development".
+
+**Why the next prompt changed**
+
+The question was clear; I answered it.
+
+
+### Entry 433
+
+**Prompt**
+
+> compose only, reload is just for development
+
+**What came back**
+
+Claude confirmed it: the image's `CMD` stays without `--reload`, and compose's `command:` adds it.
+For the next piece, environment variables, it searched `backend/app` for `environ`, `getenv` and
+`BaseSettings`: the app reads no environment variable (only CORS is configured, hard-coded to
+`["*"]` at `api.py:40`). Since this is a configuration pick, it laid out options with what each does
+and its downside, without a recommendation: `PYTHONUNBUFFERED=1`, `PYTHONDONTWRITEBYTECODE=1`, and
+making the app read a variable of its own (for example the CORS origins), and asked which to set.
+
+**Why the next prompt changed**
+
+The options were enough to choose; I picked two.
+
+
+### Entry 434
+
+**Prompt**
+
+> PYTHONUNBUFFERED=1 and PYTHONDONTWRITEBYTECODE=1
+
+**What came back**
+
+Claude gave its recommendation now that I had chosen: the same two, adding one benefit of
+`PYTHONDONTWRITEBYTECODE=1` specific to our setup, that with the bind mount the container would
+otherwise write Linux bytecode into `backend/app/__pycache__/` on my machine. It stated the port
+mapping `8000:8000` and the service name `backend` (the brief's word) as settled, showed the full
+`docker-compose.yml` (build context `./backend`, ports, `environment`, the `volumes` bind mount,
+and `command:` with `--reload`) and asked permission to write it.
+
+**Why the next prompt changed**
+
+The file matched what we had worked out; I approved it.
+
+
+### Entry 435
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote `docker-compose.yml` at the repo root as shown, without running it. It opened step 5,
+build and check, and asked what result would prove C2.8's "the container serves the API", naming the
+request to send and the response to expect.
+
+**Why the next prompt changed**
+
+The question was clear; I answered it.
+
+
+### Entry 436
+
+**Prompt**
+
+> GET /health, expect 200 with status healthy
+
+**What came back**
+
+Claude checked it against `api.py:49-60`: `/health` returns `{"status": "healthy", "version":
+"0.1.0"}` with 200. It named the downside: the endpoint touches no storage (its docstring says so),
+so it proves the server answers but no prompt route. It found that both `docker-compose` and
+`docker compose` are installed (Compose v5.1.4), but the Docker engine is not running ("failed to
+connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine"). It asked me to start
+Docker Desktop and say when it is up, and listed the commands it would then run.
+
+**Why the next prompt changed**
+
+I started Docker Desktop and added `GET /prompts` to cover a storage-backed route.
+
+
+### Entry 437
+
+**Prompt**
+
+> send GET /prompts
+
+**What came back**
+
+Claude waited for the engine (29.5.2) to come up, then ran `docker-compose up --build -d`: exit 0,
+image `10x-engineer-project-repo-backend` built in five steps, container started. `GET /health`
+returned `200 OK` with `{"status":"healthy","version":"0.1.0"}`, and `GET /prompts` returned `200 OK`
+with `{"prompts":[],"total":0}`. `docker-compose ps` showed the container "Up" on
+`0.0.0.0:8000->8000/tcp`; the logs showed "Started reloader process [1] using StatReload" and both
+requests. Listing the image (`docker run --rm --entrypoint ls`) showed `/app` holds only `app/` and
+`requirements.txt`, and `/app/app/__pycache__/` is there, as expected without `.dockerignore`.
+Claude corrected its own claim from entry 420: the build context was 124.62 kB, not the 64 MB
+`.venv`, because BuildKit sends only the files the `COPY` lines name; so the only cost of having no
+`.dockerignore` is the `__pycache__/` in the image. The stack is still running. It asked whether to
+add `.dockerignore` now that the effect is confirmed.
+
+**Why the next prompt changed**
+
+Seeing `__pycache__/` in the image settled it; I asked for the file.
+
+
+### Entry 438
+
+**Prompt**
+
+> do it
+
+**What came back**
+
+Claude wrote `backend/.dockerignore` (`**/__pycache__`, `.venv`, `.pytest_cache`, `.ruff_cache`,
+`.coverage`; the `**/` prefix is needed because a bare name matches only at the context root) and
+rebuilt: exit 0, `.dockerignore` loaded, and steps 2-4 (`WORKDIR`, `COPY requirements.txt`,
+`pip install`) were `CACHED`, with only `COPY app/` rerun, as I had predicted in entry 419. The image's
+`/app/app` no longer holds `__pycache__/`; `GET /health` returned 200 and the container was Up. It
+asked how to prove that hot reload works, naming the action and what to observe.
+
+**Why the next prompt changed**
+
+I was not sure the check was required, so I asked.
+
+
+### Entry 439
+
+**Prompt**
+
+> is this need for the assignment?
+
+**What came back**
+
+Claude answered from `brief.txt`: Task 3.4's checklist requires hot reload to be in the compose file,
+but C2.8 grades only that the image builds from committed files, the container serves the API,
+`docker-compose up --build` works and the README explains Docker usage; no criterion asks for
+proof that reload fires. The risk of skipping is that the README would claim hot reload without
+it being seen; uvicorn's StatReload polls file times, so it should work through the bind mount,
+but that is untested. It asked whether to check it or skip it.
+
+**Why the next prompt changed**
+
+Knowing it was optional but untested, I chose to check it.
+
+
+### Entry 440
+
+**Prompt**
+
+> check
+
+**What came back**
+
+Claude edited `__version__` in `backend/app/__init__.py` on the host to `"0.1.0-reload-check"`:
+`GET /health` then returned `"version":"0.1.0-reload-check"` and the logs showed "StatReload
+detected changes in 'app/__init__.py'. Reloading..." and a new server process. It set the value
+back, saw `"0.1.0"` again after a second reload, and restored the file with `git checkout` because
+the edit had turned its CRLF line endings into LF (content unchanged). Hot reload works through the
+bind mount. Step 5 is done. It proposed the first of two commits, the Dockerfile with
+`.dockerignore`, and stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 441
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude ran lint ("All checks passed!") and the suite (360 passed, coverage 100.00%) in
+`backend/.venv`, then committed `backend/Dockerfile`, `backend/.dockerignore` and this log. It
+proposed the second commit, `docker-compose.yml` alone, and stopped.
+
+**Why the next prompt changed**
+
+*Pending.*
