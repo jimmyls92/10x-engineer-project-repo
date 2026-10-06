@@ -103,12 +103,14 @@ class PromptPatch(BaseModel):
             to clear it.
         collection_id: Optional. If sent, a collection identifier, or
             ``null`` to unfile the prompt.
+        tags: Optional. If sent, a list of tag strings.
     """
 
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     content: Optional[str] = Field(None, min_length=1)
     description: Optional[str] = Field(None, max_length=500)
     collection_id: Optional[str] = None
+    tags: Optional[List[str]] = None
 
     @field_validator("title", "content")
     @classmethod
