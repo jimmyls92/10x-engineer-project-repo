@@ -1,7 +1,8 @@
 """Utility functions for PromptLab.
 
-The list helpers sort, filter and search prompts for ``GET /prompts``. None
-of them modifies the list it is given. The two text helpers,
+The list helpers sort, filter and search prompts for ``GET /prompts``, and
+``count_tags`` counts the tags in use for ``GET /tags``. None of them
+modifies the list it is given. The two text helpers,
 ``validate_prompt_content`` and ``extract_variables``, are not called by
 the API or the tests.
 """

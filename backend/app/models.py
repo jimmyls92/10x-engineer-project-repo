@@ -2,8 +2,8 @@
 
 Defines the request bodies the API accepts, the stored records it returns,
 and the list and health responses. Validation constraints declared here are
-enforced by FastAPI before an endpoint runs; a body that breaks one is
-rejected with status 422.
+enforced by FastAPI before an endpoint runs; a body or query value that
+breaks one is rejected with status 422.
 """
 
 from datetime import datetime
@@ -317,7 +317,8 @@ class TagSummary(BaseModel):
 
     Attributes:
         name: The tag.
-        prompt_count: How many stored prompts carry the tag.
+        prompt_count: How many stored prompts carry the tag; always at least
+            1, since a tag no prompt carries is not listed.
     """
 
     name: str
@@ -342,8 +343,8 @@ class PromptList(BaseModel):
     """Response body for ``GET /prompts``.
 
     Attributes:
-        prompts: The prompts that passed the request's collection and
-            search filters, most recently created first.
+        prompts: The prompts that passed the request's collection, search
+            and tag filters, most recently created first.
         total: Number of prompts in ``prompts``, counted after filtering,
             not the number stored.
     """

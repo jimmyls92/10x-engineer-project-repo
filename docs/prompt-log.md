@@ -7294,5 +7294,43 @@ and this log, proposed the green commit's message and asked for approval. It sto
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 347
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the green change (`af28a65`), completing all 17 cycles of the plan;
+suite 360 passed, coverage 100%. It re-read the docstrings against the code and proposed one
+docstring commit with four edits: `PromptList` (the filters now include tags; owed from US-3,
+entry 341), the `utils` module docstring (the list helpers now also count tags for `GET /tags`),
+`TagSummary.prompt_count` (at least 1, since a tag no prompt carries is not listed), and the
+`models` module docstring (its constraints now also cover a query value, `TagQuery`). It asked
+for permission to make them. It stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to make the edits and run the suite.
+
+
+### Entry 348
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude made the four docstring edits (`PromptList.prompts`, the `models` and `utils` module
+docstrings, `TagSummary.prompt_count`). Suite: 360 passed, coverage 100%. It staged `models.py`,
+`utils.py` and this log, proposed the commit message and asked for approval. It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 
