@@ -112,6 +112,13 @@ class TestCheckTagList:
             "a prompt can have at most 10 tags; delete a tag before including another"
         )
 
+    def test_check_tag_list_repeated_tag(self):
+        """Verify a tag sent twice raises a ``ValueError`` with the spec's repeat message."""
+        with pytest.raises(ValueError) as exc:
+            check_tag_list(["ai", "ai"])
+
+        assert str(exc.value) == "tags must not repeat a tag"
+
     # --- edge cases ---
 
     def test_check_tag_list_ten_tags_returned_unchanged(self):

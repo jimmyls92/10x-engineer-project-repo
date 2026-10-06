@@ -198,6 +198,21 @@ class TestPrompts:
         assert detail[0]["msg"] == msg
         assert client.get("/prompts").json()["total"] == 0
 
+    def test_create_prompt_repeated_tag(self, client: TestClient, sample_prompt_data):
+        """Verify a tag sent twice on POST is a 422 on the list that stores nothing.
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_prompt_data: Valid prompt payload fixture.
+        """
+        response = client.post("/prompts", json={**sample_prompt_data, "tags": ["ai", "ai"]})
+
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["body", "tags"]
+        assert error["msg"] == "Value error, tags must not repeat a tag"
+        assert client.get("/prompts").json()["total"] == 0
+
     def test_create_prompt_too_many_tags(self, client: TestClient, sample_prompt_data):
         """Verify 11 distinct tags on POST are a 422 on the list that stores nothing.
 

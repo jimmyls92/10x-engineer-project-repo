@@ -6270,5 +6270,44 @@ this log, proposed the green commit's message and asked for approval. It stopped
 
 **Why the next prompt changed**
 
+The message was good enough; I approved it as proposed.
+
+
+### Entry 294
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the green change (`eab539b`), closing US-2 cycle 2. It opened cycle 3's red step
+and proposed its tests: `test_check_tag_list_repeated_tag` in `TestCheckTagList` (`["ai", "ai"]`
+raises `ValueError`, "tags must not repeat a tag") and `test_create_prompt_repeated_tag` (AC-2.4:
+422 at `["body", "tags"]`, "Value error, tags must not repeat a tag", nothing stored). Both fail
+because nothing checks repeats. It asked for permission to write them and run the suite. It
+stopped.
+
+**Why the next prompt changed**
+
+The proposal was good enough; I gave permission to write the tests and run the suite.
+
+
+### Entry 295
+
+**Prompt**
+
+> yyes
+
+**What came back**
+
+Claude read the typo as "yes". It added `test_check_tag_list_repeated_tag` and
+`test_create_prompt_repeated_tag` (AC-2.4). In the Python 3.12 venv: 2 failed, 331 passed. Both
+fail for the expected reason: `check_tag_list` did not raise, and POST returned 201 instead of 422.
+It staged both test files and this log, proposed the red commit's message and asked for approval.
+It stopped.
+
+**Why the next prompt changed**
+
 *Pending.*
 
