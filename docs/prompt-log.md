@@ -9129,8 +9129,25 @@ The message was good enough; I approved it as proposed.
 **What came back**
 
 Claude ran lint ("All checks passed!") and the suite (360 passed, coverage 100.00%) in
-`backend/.venv`, then committed `backend/Dockerfile`, `backend/.dockerignore` and this log. It
+`backend/.venv`, then committed `backend/Dockerfile`, `backend/.dockerignore` and this log (`bb74d4f`). It
 proposed the second commit, `docker-compose.yml` alone, and stopped.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 442
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `docker-compose.yml` with this log. It opened step 6, the README section on Docker
+usage, by asking what a reader needs from it to get the API running with no manual steps beyond
+those written there, naming each item and why.
 
 **Why the next prompt changed**
 

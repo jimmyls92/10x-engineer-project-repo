@@ -1,0 +1,12 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    # Development only: the bind mount shows host edits to the container, and --reload restarts on them.
+    volumes:
+      - ./backend/app:/app/app
+    command: ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
