@@ -269,6 +269,66 @@ This prints the coverage of each module under `app/`, with the line numbers no t
 
 ---
 
+## Docker usage
+
+Docker runs the API without a local Python install. `backend/Dockerfile` builds the image;
+`docker-compose.yml`, at the repository root, runs it for development with hot reload.
+
+### Prerequisites
+
+- **Docker** with **Compose** (Docker Desktop on Windows and macOS), with the engine running.
+
+### Start it
+
+From the repository root:
+
+```bash
+docker-compose up --build
+```
+
+`docker compose up --build` (Compose v2 syntax) does the same. The API is at
+http://localhost:8000, with the same URLs as in **Quick start guide**. Check it:
+
+```bash
+curl http://localhost:8000/health
+# {"status":"healthy","version":"0.1.0"}
+```
+
+### What compose sets up
+
+| Setting | Value | Why |
+|---|---|---|
+| Port | `8000:8000` | Host port 8000 reaches uvicorn in the container |
+| `PYTHONUNBUFFERED=1` | | Logs appear in `docker-compose logs` as each request happens |
+| `PYTHONDONTWRITEBYTECODE=1` | | Stops the container writing `__pycache__/` into your `backend/app/` |
+| Volume | `./backend/app:/app/app` | The container runs your files, not the copy in the image |
+| Command | `uvicorn … --reload` | Restarts the server when a file in `backend/app/` changes |
+
+Only `backend/app/` is mounted. After changing `requirements.txt` or the `Dockerfile`, run
+`docker-compose up --build` again.
+
+### Stop it
+
+`Ctrl+C`, or `docker-compose down` from another terminal. Storage is in memory: every
+stop or reload empties it.
+
+### Run the image without compose
+
+```bash
+docker build -t promptlab backend
+docker run --rm -p 8000:8000 promptlab
+```
+
+This runs the image's own command: no reload and no mounted code. The image starts uvicorn
+directly; see the note on `python main.py` in **Quick start guide**.
+
+### Tests
+
+The image holds only `app/` and `requirements.txt`, not `tests/`. Run the tests locally, as
+in **Development setup**.
+
+---
+
 ## Contributing guidelines
 
 1. **Report a bug or propose a change** by opening an issue on the GitHub repository. Say what you

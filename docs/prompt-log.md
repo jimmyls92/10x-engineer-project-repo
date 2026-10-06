@@ -9145,9 +9145,72 @@ The message was good enough; I approved it as proposed.
 
 **What came back**
 
-Claude committed `docker-compose.yml` with this log. It opened step 6, the README section on Docker
-usage, by asking what a reader needs from it to get the API running with no manual steps beyond
-those written there, naming each item and why.
+Claude committed `docker-compose.yml` with this log (`4c5916f`). It opened step 6, the README
+section, stating as settled the heading `## Docker usage` (the brief's words) and a pointer to the
+existing `python main.py` note (`README.md:111-114`), and asked what a reader must find there to go
+from a fresh clone to a working API with Docker only, each item with a reason.
+
+**Why the next prompt changed**
+
+I preferred to review a proposal rather than list the items myself.
+
+
+### Entry 443
+
+**Prompt**
+
+> Propose me a docker set-up
+
+**What came back**
+
+Claude took this as a request to propose the README section, and said once what that skips: me
+listing what a reader needs before seeing a draft. It proposed `## Docker usage` between
+"Development setup" and "Contributing guidelines", with: prerequisites (Docker with Compose, no
+Python); start with `docker-compose up --build` from the repo root; the check with `GET /health`;
+what compose sets up (port, the two environment variables, the bind mount with `--reload`) and that
+a change to `requirements.txt` needs `--build` again; stopping with `Ctrl+C` or `docker-compose
+down`, and that storage is in memory; running the image alone without reload; and that tests are
+not in the image. It said the image-alone commands had not been run yet and would be checked before
+the section is written, and asked permission to write it.
+
+**Why the next prompt changed**
+
+The draft covered what I needed; I approved the check and the write. Restructured: I asked for a proposal instead of answering the question.
+
+
+### Entry 444
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude stopped the compose stack (`docker-compose down`), then ran the draft's commands for the image
+alone: `docker build -t promptlab backend` built it, `docker run --rm -p 8000:8000 promptlab` started
+uvicorn with no reloader (the log shows "Started server process [1]" and no StatReload line), and
+`GET /health` returned `200 OK` with `{"status":"healthy","version":"0.1.0"}`. It stopped the
+container and removed the `promptlab` image. It wrote `## Docker usage` into `README.md` as drafted,
+between "Development setup" and "Contributing guidelines", and proposed a commit message.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved it as proposed.
+
+
+### Entry 445
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `README.md` with this log. It proposed the edits that close Task 3.4 in
+`CLAUDE.md`: CURRENT STATE (Task 3.4 done with its entries and commits, next Task 3.5, next entry
+number), a correction of the stale next-entry number, and a Known trap that `python main.py` exits
+in the pinned environment, so the Dockerfile and compose call uvicorn directly; and asked permission
+to make them.
 
 **Why the next prompt changed**
 
