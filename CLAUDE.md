@@ -176,7 +176,8 @@ Break every task into small steps — typically 3 to 6. For each step:
      already written in this file (naming, layers, banners, file names, response models) is applied
      by Claude and stated as settled, never turned into a question (Module 3 log, entry 215).
 2. **Stop. Wait for their prompt.** They write it — you do not draft it for them.
-3. **The user always justifies their answer.** If they do not, ask why.
+3. **Do not ask the user to justify an answer.** When a choice looks weak or wrong, challenge it:
+   name the downsides (point 5). (Changed at the user's request, Module 3 log entry 457.)
 4. **If the answer is ambiguous, not specific enough or wrong, narrow it** with comments or questions
    that lead towards a good answer. Never state the answer.
 5. **There is no right or wrong answer, with two exceptions, which you correct directly:** a choice
