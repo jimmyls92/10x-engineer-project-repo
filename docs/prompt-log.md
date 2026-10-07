@@ -9474,3 +9474,165 @@ commit message with only `docs/prompt-log.md` staged, and stopped for approval.
 **Why the next prompt changed**
 
 The message was good enough; I approved the commit and the push.
+
+
+### Entry 459
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude committed the prompt log as the "before" commit, `d962229` ("Log baseline before
+collection-check refactor"), and pushed `Week-3` (`e83b9b8..d962229`). CI run 37638799826 on
+`d962229` succeeded. It opened step 3, the refactor, by asking which lines of the duplicated block
+move into the shared helper and which must stay in each endpoint.
+
+**Why the next prompt changed**
+
+I skipped the line-by-line question and told Claude to write the helper and use it in all three.
+
+
+### Entry 460
+
+**Prompt**
+
+> create a common function in the helper and add it to the 3 (PUT, POST and PATCH)
+
+**What came back**
+
+Claude corrected two points directly, as rules rather than choices. The helper cannot go in
+`utils.py`, because it raises `HTTPException` and nothing below `api.py` may know about HTTP. Each
+guard has to stay at its call site, or the empty-string `collection_id` changes behaviour (POST and
+PUT skip `""`, PATCH looks it up and returns 400), and C2.6 fails a refactor that changes behaviour.
+It added `ensure_collection_exists(collection_id: str) -> None` under a new `Helpers` banner
+(`api.py:49`) and replaced the three copies (`api.py:177`, `:214`, `:265`); no test was touched. Lint
+passed, the suite gave 360 passed with coverage 100%, and the `/openapi.json` schema built from
+`d962229` and from the working tree have the same hash. It proposed a commit with only
+`backend/app/api.py` staged and stopped for approval.
+
+**Why the next prompt changed**
+
+The refactor and the message were good enough; I approved the commit and the push.
+
+
+### Entry 461
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude committed the refactor as the "after" commit, `6a183ec` ("Extract collection check into a
+helper"), and pushed `Week-3` (`d962229..6a183ec`). CI run 37641437421 on `6a183ec` succeeded. It
+opened step 5, `docs/refactor-note.md`, by listing what the brief requires (smell, both hashes,
+confirmation that interface and behaviour are unchanged) and asking what evidence the note should
+give for "behaviour unchanged".
+
+**Why the next prompt changed**
+
+The question was narrow enough to answer directly.
+
+
+### Entry 462
+
+**Prompt**
+
+> the green in test before and after the refactor and also the linter
+
+**What came back**
+
+Claude accepted the green suite on both commits as the main proof, and challenged the linter: it
+checks that the code is well formed (no syntax errors or unused imports), not what the API returns,
+so it is no evidence for behaviour. It added that a green suite proves nothing if the tests were
+changed to fit, and asked how the note can show the tests are the same on both commits, and whether
+those tests reach the three changed call sites at all.
+
+**Why the next prompt changed**
+
+Claude's challenge pointed at the two gaps; I named a tool for each.
+
+
+### Entry 463
+
+**Prompt**
+
+> git diff of tests between commits, and coverage 100%
+
+**What came back**
+
+Claude ran both checks. `git diff --stat d962229 6a183ec -- backend/tests` is empty, and the whole
+diff between the commits is `backend/app/api.py` alone (25 insertions, 11 deletions). Beyond the
+100% coverage, it found the tests that pin each call site's behaviour: the unknown-collection 400 for
+POST, PUT and PATCH (`test_api.py:45`, `:926`, `:1262`), PATCH's empty string looked up and rejected
+(`:1262`, parametrized), and POST and PUT storing `""` unchecked (`:304`, `:1122`). It proposed an
+outline for `docs/refactor-note.md` (smell, commits, change, evidence table including the identical
+`/openapi.json` hash from entry 460, what was not changed) and asked for permission to write it.
+
+**Why the next prompt changed**
+
+The outline covered what the brief asks; I approved writing it.
+
+
+### Entry 464
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude wrote `docs/refactor-note.md` with sections named after the brief: *The smell named*
+(duplication, the three copies at `d962229`, the "three edits, miss one" reason), *The two commit
+hashes* (`d962229`, `6a183ec`, with CI runs), *The refactor* (the helper, why it is in `api.py`, why
+the guards stayed, with a table of their effect on `""`), *Confirmation that the public interface and
+observable behaviour are unchanged* (evidence table: suite, empty test diff, coverage, named tests,
+OpenAPI hash with the command to repeat it, lint as a side check), and *What was not changed* (the
+other repetitions deliberately left). Checking its own claims, it found the README has no *Known
+issues* section and cited only `docs/API_REFERENCE.md`. It proposed a commit with only the note
+staged.
+
+**Why the next prompt changed**
+
+The note and the message were good enough; I approved the commit.
+
+
+### Entry 465
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude committed the note as `d2bddac` ("Add refactor note for collection check") without pushing, leaving the push for the
+state commit. It opened step 6 by proposing the edits to `CLAUDE.md`: CURRENT STATE marks Task 3.5
+done (entries 448-466, commits `d962229`, `6a183ec` and the note) with the next entry number, and
+Rule 0b.3 is amended to my instruction of entry 457 (never ask for reasons; challenge weak choices).
+It asked for permission to make them.
+
+**Why the next prompt changed**
+
+The proposed edits were good enough; I approved them.
+
+
+### Entry 466
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude checked `brief.txt` for a task after 3.5 and found none, so CURRENT STATE now says all five
+tasks are done and the submission comes next (*What You Submit*). It edited `CLAUDE.md`: Task 3.5
+done (entries 448-466, smell, guards, `d962229`, `6a183ec`, `d2bddac`, CI runs), next entry number
+467, and Rule 0b.3 rewritten to "do not ask the user to justify an answer; challenge a weak choice",
+citing entry 457. It re-ran lint and the suite, proposed one commit for `CLAUDE.md` and this log,
+followed by a push, and stopped for approval.
+
+**Why the next prompt changed**
+
+Claude proposed splitting the commit in two, which I accepted.
