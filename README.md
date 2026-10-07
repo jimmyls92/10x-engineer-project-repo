@@ -225,7 +225,7 @@ looks up the prompt. On `GET /prompts`, a `?tag=` value that is not a valid tag 
 ## Development setup
 
 Follow **Prerequisites and installation** first. `requirements.txt` holds the development tools
-(`pytest`, `pytest-cov`, `httpx`) as well as the runtime packages, so that one install is all a
+(`pytest`, `pytest-cov`, `httpx`, `ruff`) as well as the runtime packages, so that one install is all a
 contributor needs. Every command below runs from `backend/` with the virtual environment active.
 
 ### Run the server with auto-reload
@@ -266,6 +266,22 @@ pytest tests/ --cov=app --cov-report=term-missing
 ```
 
 This prints the coverage of each module under `app/`, with the line numbers no test reaches.
+
+### Run the linter
+
+```bash
+ruff check .
+```
+
+Ruff checks only the rule groups `E4`, `E7`, `E9` and `F` (pycodestyle's import, statement and
+syntax-error checks, plus pyflakes), as set in `backend/ruff.toml`.
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request, on Python 3.12. From `backend/` it
+installs `requirements.txt`, runs `ruff check .`, then runs the suite with
+`--cov=app --cov-fail-under=80`, so a lint error, a failing test or coverage under 80% fails the
+build. Run the same two commands locally before pushing.
 
 ---
 
