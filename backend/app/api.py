@@ -44,6 +44,26 @@ app.add_middleware(
 )
 
 
+# ============== Helpers ==============
+
+def ensure_collection_exists(collection_id: str) -> None:
+    """Reject a collection_id from a request body that names no collection.
+
+    Callers decide whether to call it: POST and PUT skip an empty
+    collection_id, PATCH skips only an absent or null one, so the guard stays
+    at each call site.
+
+    Args:
+        collection_id: Identifier taken from the request body.
+
+    Raises:
+        HTTPException: With status 400 if no collection has that identifier.
+    """
+    collection = storage.get_collection(collection_id)
+    if not collection:
+        raise HTTPException(status_code=400, detail="Collection not found")
+
+
 # ============== Health Check ==============
 
 @app.get("/health", response_model=HealthResponse)
@@ -154,10 +174,8 @@ def create_prompt(prompt_data: PromptCreate):
     """
     # Validate collection exists if provided
     if prompt_data.collection_id:
-        collection = storage.get_collection(prompt_data.collection_id)
-        if not collection:
-            raise HTTPException(status_code=400, detail="Collection not found")
-    
+        ensure_collection_exists(prompt_data.collection_id)
+
     prompt = Prompt(**prompt_data.model_dump())
     return storage.create_prompt(prompt)
 
@@ -193,10 +211,8 @@ def update_prompt(prompt_id: str, prompt_data: PromptUpdate):
     
     # Validate collection if provided
     if prompt_data.collection_id:
-        collection = storage.get_collection(prompt_data.collection_id)
-        if not collection:
-            raise HTTPException(status_code=400, detail="Collection not found")
-    
+        ensure_collection_exists(prompt_data.collection_id)
+
     updated_prompt = Prompt(
         id=existing.id,
         title=prompt_data.title,
@@ -246,9 +262,7 @@ def patch_prompt(prompt_id: str, prompt_data: PromptPatch):
     # Validate the collection only when one was actually sent. An explicit null
     # means "unfile", which is not a collection to look up.
     if changes.get("collection_id") is not None:
-        collection = storage.get_collection(changes["collection_id"])
-        if not collection:
-            raise HTTPException(status_code=400, detail="Collection not found")
+        ensure_collection_exists(changes["collection_id"])
 
     updated_prompt = Prompt(
         id=existing.id,
