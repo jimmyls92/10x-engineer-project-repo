@@ -9246,10 +9246,231 @@ The message was good enough; I approved the commit and the push.
 **What came back**
 
 Claude re-ran lint ("All checks passed!") and the suite (360 passed, coverage 100.00%), committed the
-state update with this log and pushed `Week-3`, then reported the CI run on the pushed commit. Task
+state update with this log (`e83b9b8`) and pushed `Week-3` (`68132b7..e83b9b8`). CI run 37516378501
+on `e83b9b8` succeeded. Task
 3.4 is closed; Claude stopped without starting Task 3.5, as Rule 0 requires. This entry stays
 uncommitted until the next commit.
 
 **Why the next prompt changed**
 
-*Pending.*
+The task was closed; after clearing the session I asked to continue with Task 3.5.
+
+
+### Entry 448
+
+**Prompt**
+
+> continue
+
+**What came back**
+
+Claude re-read Task 3.5 and criterion C2.6 in `brief.txt`: one refactor proven behaviour-preserving,
+a named smell, a green commit before and after, `docs/refactor-note.md` with both hashes, and no test
+edited to fit. It laid out the steps (find the smell, the "before" commit, the refactor, the "after"
+commit, the note, state) and opened step 1 by asking me to name one smell in the code, with its
+`file.py:line` and why it is a smell.
+
+**Why the next prompt changed**
+
+I did not know what counts as a code smell, so I asked for a definition before answering.
+
+
+### Entry 449
+
+**Prompt**
+
+> define smell for me to easeally identify it
+
+**What came back**
+
+Claude defined a code smell (a surface sign in working code that it will be hard or risky to change,
+not a bug) and gave a table of common smells with what to look for in the code: duplication, long
+function, long parameter list, primitive obsession, magic values, feature envy. It did not point at
+any place in this repo. Narrowed context: step 1 now asks me to take the table's "what to look
+for" column, scan `backend/app/api.py` only, and name the first smell I find with its `api.py:line`.
+
+**Why the next prompt changed**
+
+I narrowed the search to two smells from the table and asked Claude to check the code for them.
+
+
+### Entry 450
+
+**Prompt**
+
+> Show me if there is any Long Function in the code or any Long parameter list
+
+**What came back**
+
+Claude measured every function in `backend/app/` with Python's `ast` (lines of code after the
+docstring, parameters other than `self`). Long parameter list: none; the most is 3, in `list_prompts`
+(`api.py:66`). Longest functions: `patch_prompt` 25 lines (`api.py:215`), `list_prompts` 22
+(`api.py:66`), `update_prompt` 22 (`api.py:166`); everything else is 9 lines or fewer. It gave the
+numbers without a verdict and asked me to read those three and say whether any of them does more
+than one job, naming the jobs.
+
+**Why the next prompt changed**
+
+The numbers were what I needed; I picked `list_prompts` and proposed a refactor.
+
+
+### Entry 451
+
+**Prompt**
+
+> list_prompts is listering and filtering maybe we could refactor so it calls one unique filtering function
+
+**What came back**
+
+Claude re-read `list_prompts` (`api.py:66-113`) and accepted the two jobs, but noted the answer gave
+no reason why this is a smell. It named the downsides it saw: the filtering is already delegated to
+three helpers in `utils.py` (`api.py:96`, `:100`, `:108`), so a single filtering function could just
+move the same lines elsewhere; of the 22 lines, several are blank or comments; and dropping empty
+`?tag=` values (`api.py:104`) is an HTTP detail, which `utils.py` must not know about (Coding
+standards: one layer per module). It asked me to justify the choice by saying what goes wrong today
+if someone adds a fourth filter to `list_prompts`.
+
+**Why the next prompt changed**
+
+Claude asked for a reason, so I answered with what a fourth filter would cost.
+
+
+### Entry 452
+
+**Prompt**
+
+> I would have to add another parameter, and the filtering line would have to be before the sorting part or it will not be respected.
+
+**What came back**
+
+Claude checked both claims against the code. The new parameter is needed whatever the refactor, since
+the query parameter has to be declared on the route, so it does not support the smell on its own.
+For the ordering claim, it found that every filter helper returns a list comprehension
+(`utils.py:43`, `:61`, `:101`) without saying what that implies, and asked me to work out from
+`utils.py:43` whether a filter placed after the sort would still give a sorted list.
+
+**Why the next prompt changed**
+
+Claude's question pointed at `utils.py`, but I had meant the sort line in `list_prompts`, so I
+clarified.
+
+
+### Entry 453
+
+**Prompt**
+
+> I mean this line in list_prompts
+
+(Selected in the editor: `api.py:111`, `prompts = sort_prompts_by_date(prompts, descending=True)`.)
+
+**What came back**
+
+Claude restated my claim with that line: a new filter has to go above `api.py:111`, or the order is
+not respected. It kept the question open but narrowed it to a worked example: a list already sorted
+`[C, B, A]` (newest first) goes through a filter shaped like `utils.py:43` that keeps C and A. In
+what order do they come out, and is the sort from `api.py:111` lost?
+
+**Why the next prompt changed**
+
+The worked example was narrow enough to answer directly.
+
+
+### Entry 454
+
+**Prompt**
+
+> [C, A], sort not lost, comprehension keeps order
+
+**What came back**
+
+Claude confirmed the answer: a list comprehension keeps the input order, so a filter below
+`api.py:111` would not break the sort. That removed my ordering argument, and the new parameter is
+needed whatever the refactor (entry 452), so `list_prompts` has no reason left for the smell. Claude
+pointed out the risk for C2.6 (the note has to name a smell an assessor will accept) and asked one
+question: keep `list_prompts` with a new reason, or read `update_prompt` (`api.py:166`) and
+`patch_prompt` (`api.py:215`) instead.
+
+**Why the next prompt changed**
+
+My candidate had no reason left, so I asked Claude for stronger options instead of hunting myself.
+
+
+### Entry 455
+
+**Prompt**
+
+> give me some options stronger than this one
+
+**What came back**
+
+Claude said once what this skips: finding the smell myself. It read the prompt and collection
+endpoints in `api.py` and laid out three candidates with pros and cons and no recommendation (Rule
+0b.6): (A) the "collection must exist, else 400" block repeated three times (`api.py:156-159`,
+`:195-198`, `:248-251`); (B) the "get the prompt, else 404" block repeated three times (`:129-131`,
+`:190-192`, `:240-242`); (C) the new `Prompt(...)` built field by field in both `update_prompt` and
+`patch_prompt` (`:200-209`, `:253-262`). For each it named the behaviour risk: A's guards differ
+(truthiness against `is not None`, the known empty-string trap), C would risk the timestamps and
+validation. It asked me to choose one and say why.
+
+**Why the next prompt changed**
+
+The options were enough to decide; I chose A.
+
+
+### Entry 456
+
+**Prompt**
+
+> Go for A
+
+**What came back**
+
+Now that I had chosen, Claude gave its recommendation, as Rule 0b.6 allows: also A, since it is the
+smell an assessor recognises without argument and the risk is contained if each guard stays at its
+call site. As the choices matched, there was nothing to pick between. My answer had no reason, so,
+following Rule 0b.3, Claude asked for one before moving on: what goes wrong today, with the code as it
+is, if the rule "the collection must exist" has to change.
+
+**Why the next prompt changed**
+
+I gave the reason, and added a constraint: no more requests for reasons.
+
+
+### Entry 457
+
+**Prompt**
+
+> I'd have to edit three places, and could miss one. But stop asking reasons just defy my choices when you think they are not good
+
+**What came back**
+
+Claude accepted the reason as the one for the note: a change to the rule means editing three copies,
+and missing one makes the endpoints disagree. It saved my instruction to its memory (never ask why;
+challenge a choice only when it looks weak) and pointed out that it contradicts `CLAUDE.md` Rule 0b.3,
+proposing to amend that rule in the state commit at the end of the task. It then opened step 2, the
+"before" commit: the last commit touching `backend/` is `bb74d4f`, `HEAD` is `e83b9b8` (CI green),
+and only this log is uncommitted. It asked whether the "before" state needs a new commit or can be an
+existing one, and which.
+
+**Why the next prompt changed**
+
+I chose a new commit, to make the "before" state explicit in the history.
+
+
+### Entry 458
+
+**Prompt**
+
+> Lets do another commit just in cse, announcing what we are going to refactor
+
+**What came back**
+
+Claude named a constraint: with no code change pending, a new commit must carry something, or be an
+empty commit (`--allow-empty`). The prompt log (entries 447-458) is uncommitted, so the "before" commit
+can carry it and announce the refactor in its message, with code identical to `e83b9b8`. It ran lint
+in the pinned venv ("All checks passed!") and the suite (360 passed, coverage 100%), then proposed the
+commit message with only `docs/prompt-log.md` staged, and stopped for approval.
+
+**Why the next prompt changed**
+
+The message was good enough; I approved the commit and the push.
