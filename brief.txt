@@ -1,257 +1,219 @@
-AIE 500 — PromptLab  |  Module 3 Project 
+AIE 500 — PromptLab  |  Module 4 Project 
 Page 1 of 6 
-Module 3 Project 
-Production-Ready 
-AIE 500 — PromptLab  |  Competency C2, completed 
+Module 4 Project 
+Vibe Code the Frontend 
+AIE 500 — PromptLab  |  Competency C3, first part 
 Competency 
-C2 — Specification-Driven Development & Automated Quality Engineering 
+C3 — End-to-End AI-Assisted Application Delivery 
 Criteria judged in this module 
-C2.4 – C2.8, plus final judgment on C2.1 and C2.2 from Module 2 
+C3.1 – C3.5 
 What you submit 
-Production-ready backend: tests, a TDD-implemented feature, pipeline, 
-container and a documented refactor 
+The deployed PromptLab application and its repository 
 Does this complete the 
 competency? 
-Yes. C2 is judged complete on this submission. 
+No. C3 is completed at Module 5 with your recorded defense. 
 Attempts 
 Three attempts at this module submission. Attempts are counted per 
 module — needing a second attempt here does not affect any other 
 module. 
  
 Scenario 
-We're preparing for launch. That means real tests, a pipeline that blocks broken code, and 
-containerization. No more “it works on my machine.” 
-Your Module 2 documentation is re-checked here. C2.1 and C2.2 were provisional. After this module's 
-feature work and refactoring, your docs and API reference must still match the code. Update them as 
-you go rather than at the end. 
+Time to make PromptLab usable. You need a React frontend that talks to your real API, one more 
+backend feature to support it, and the whole thing deployed where someone else can reach it. 
+Start preparing for Module 5 now. Your defense asks you to explain code we choose, and much of it 
+will be code you generate this module. As you build, spend a few minutes reading back anything the AI 
+produced that you didn't examine closely. 
 Tasks 
-Task 3.1 — Comprehensive test suite 
-Reach 80% coverage or higher, measured with pytest-cov. 
-□ tests/test_api.py — all endpoints, error cases (404, 400, 422), edge cases, query parameters 
-□ tests/test_storage.py — CRUD operations, persistence within a session, edge cases 
-□ tests/test_utils.py — all utility functions and error conditions 
-□ tests/test_models.py — validation, defaults, serialization 
-Every endpoint in your specs and API reference needs at least one test for the success path and one for 
-a documented failure case. Coverage reached by tests that execute code without asserting anything 
-does not meet C2.5. 
-Task 3.2 — Implement one spec feature using TDD 
+Task 4.1 — Write the frontend spec → specs/frontend.md 
+Before you generate any React, specify it. C3.1 checks that your project structure follows a specification, 
+so the specification has to exist first. 
+□ Screens and their purpose 
+□ Component inventory — each component, its responsibility and its props 
+□ Which API endpoint each screen consumes 
+□ State management approach 
+□ Loading, error and empty state behaviour 
+□ The organizing principle of your folder structure, stated in one sentence 
+Task 4.2 — Implement the second spec feature using TDD 
 
-AIE 500 — PromptLab  |  Module 3 Project 
+AIE 500 — PromptLab  |  Module 4 Project 
 Page 2 of 6 
-Pick one feature from your Module 2 specs — Prompt Versioning or Tagging System. You'll implement 
-the other in Module 4. 
-Work in strict order, committing at each step: 
-1. Commit a failing test first 
-2. Commit the minimum implementation to pass it 
-3. Refactor while tests stay green 
-4. Repeat until the feature meets its spec 
-Your commit history is the only evidence for C2.4, and C2.4 is MUST PASS. Do not squash your history 
-— if the ordering can't be seen, the criterion cannot be Met. A test committed first that asserts nothing 
-capable of failing does not count. 
-Task 3.3 — GitHub Actions CI → .github/workflows/ci.yml 
-□ Triggers on push and pull request 
-□ Sets up the Python environment and installs dependencies 
-□ Runs linting (ruff or flake8) 
-□ Runs tests with coverage 
-□ Fails the build if coverage drops below 80% 
-□ Passes on a clean clone of your repository 
-Also required: docs/ci-gate-evidence.md — proof your pipeline fails when it should. Break a test on 
-purpose, push it, capture the failed run, then revert. A pipeline that runs tests but doesn't fail the build 
-when they fail does not gate anything, and this is a common late discovery. 
-name: CI 
-  
-on: [push, pull_request] 
-  
-jobs: 
-  test: 
-    runs-on: ubuntu-latest 
-    steps: 
-      - uses: actions/checkout@v4 
-      - name: Set up Python 
-        uses: actions/setup-python@v4 
-        with: 
-          python-version: '3.10' 
-      # ... install, lint, test with coverage, enforce threshold 
-Task 3.4 — Docker configuration 
-□ backend/Dockerfile — appropriate base image, dependencies installed, code copied, correct port 
-exposed, proper CMD 
-□ docker-compose.yml in the project root — backend service, port mapping, environment variables, hot 
-reload for development 
-□ README section explaining Docker usage 
+Implement the Module 2 spec you didn't build in Module 3 — Prompt Versioning or Tagging System, 
+whichever is left — plus any endpoints your frontend spec needs that don't exist yet. 
+□ Failing test committed before implementation, feature by feature 
+□ Suite passes against your deployed configuration, not just locally 
+□ Tests exercise your logic, not the framework 
+Time budget (C3.5): the increment from starting this backend work to your first passing endpoint must 
+be completed within 4 hours, evidenced by commit timestamps. Commit as you go — batching 
+everything into one commit at the end means the timestamps prove nothing, which is a Not Yet 
+regardless of how fast you actually were. 
+Task 4.3 — Set up the React project 
+cd frontend 
+npm create vite@latest . -- --template react 
+npm install 
+□ Vite + React initialized 
+□ Folder structure matching specs/frontend.md 
+□ Styling solution chosen and applied — CSS modules, Tailwind, whatever you specified 
+□ Template directories you aren't using removed — leftover scaffolding counts against C3.1 
+Task 4.4 — Build the components 
+Every component in your spec should exist as its own module. Keep backend and frontend concerns 
+separate. 
+Layout: Layout.jsx, Header.jsx, Sidebar.jsx 
+Prompts: PromptList.jsx, PromptCard.jsx, PromptForm.jsx, PromptDetail.jsx 
+Collections: CollectionList.jsx, CollectionForm.jsx 
+Shared: Button.jsx, Modal.jsx, SearchBar.jsx, LoadingSpinner.jsx, ErrorMessage.jsx 
+Task 4.5 — API integration 
+□ src/api/client.js — base URL, fetch wrapper, consistent error handling 
+□ src/api/prompts.js — getPrompts, getPrompt, createPrompt, updatePrompt, deletePrompt 
+□ src/api/collections.js — getCollections, createCollection, deleteCollection 
+□ CORS configured on the backend and the API base set via environment variable 
+The frontend must consume your real backend (C3.3 — MUST PASS). A UI running on mocked or 
+hard-coded data does not meet this criterion no matter how good it looks. 
+Task 4.6 — Full CRUD flow end to end 
+□ View all prompts on the dashboard 
+□ Open a prompt to see details 
 
-AIE 500 — PromptLab  |  Module 3 Project 
+AIE 500 — PromptLab  |  Module 4 Project 
 Page 3 of 6 
-The image must build from what is committed, with no manual steps, and the container must actually 
-serve the API. 
-Task 3.5 — Documented refactor → docs/refactor-note.md 
-This is not a general tidy-up checklist. You need one refactor you can prove was behaviour-preserving. 
-□ Name the code smell you're removing — duplication, long function, primitive obsession, whatever it is 
-□ Commit the state before the refactor with the suite green 
-□ Perform the refactor 
-□ Commit the state after with the suite green 
-□ Write docs/refactor-note.md: the smell named, the two commit hashes, and confirmation that the 
-public interface and observable behaviour are unchanged 
-Do not edit tests to accommodate the refactor. The tests are what prove behaviour didn't change; 
-changing them removes the evidence. 
-Other cleanup — type hints, dead code, better names — is welcome, but it isn't what C2.6 assesses. 
+□ Create a prompt via the form 
+□ Edit an existing prompt 
+□ Delete a prompt with confirmation 
+□ Create and manage collections 
+□ Filter prompts by collection 
+□ Search works 
+Task 4.7 — UX polish 
+□ Loading states for every async operation 
+□ User-visible error messages — API failures must surface, not disappear 
+□ Empty states 
+□ Responsive on mobile 
+□ Keyboard accessibility 
+□ Form validation with feedback 
+Task 4.8 — Deploy it → docs/deployment.md 
+Deployment is required, not a bonus. C3.4 asks whether a second person could deploy or run your 
+application using only what you committed. 
+□ Application deployed and reachable, or runnable via a documented container command 
+□ docs/deployment.md with every step, every environment variable, and how secrets are handled 
+□ Nothing configured by hand that isn't written down 
+□ No secrets, credentials or API keys committed — this gets your submission returned immediately 
+Test this by handing the instructions to someone who has never seen your project, or by starting from a 
+fresh clone yourself. 
 What You Submit 
-□ Coverage ≥ 80%, with meaningful assertions 
-□ One spec feature implemented with visible test-first commit history — MUST PASS 
-□ .github/workflows/ci.yml passing on a clean clone — MUST PASS 
-□ docs/ci-gate-evidence.md showing the pipeline failing on a broken test 
-□ backend/Dockerfile and docker-compose.yml that build and run 
-□ docs/refactor-note.md with named smell and before/after commits 
-□ Documentation and API reference updated to match the code after this module's changes 
+□ specs/frontend.md 
+□ Second spec feature implemented test-first, suite green against deployed config 
+□ Commit timestamps showing the 4-hour increment 
+□ React frontend matching the spec, with unused scaffolding removed 
+□ All CRUD operations working against the real backend — MUST PASS 
+□ Loading, error and empty states handled 
+□ Deployed application plus docs/deployment.md 
 □ Your GitHub repository link, a brief summary, and any known issues 
+
+AIE 500 — PromptLab  |  Module 4 Project 
+Page 4 of 6 
 Verification 
-pytest tests/ -v --cov=app --cov-report=term-missing 
-docker-compose up --build 
-git push origin main    # confirm CI passes, then confirm it fails when it should 
+# Terminal 1 
+cd backend && python main.py 
+  
+# Terminal 2 
+cd frontend && npm run dev 
+Then verify against your deployed instance, not just localhost. 
  
  
 
-AIE 500 — PromptLab  |  Module 3 Project 
-Page 4 of 6 
+AIE 500 — PromptLab  |  Module 4 Project 
+Page 5 of 6 
 What This Module Is Judged Against 
 Generated from PromptLab Criterion Set v2.1 (see the PromptLab Grading Rubric). Do not edit here — changes must be made in the 
 rubric and regenerated. 
 These are the exact criteria your assessor works through for this submission. Nothing is hidden and 
 nothing is judged on impression. Read the right-hand column first — if your work matches one of those 
 patterns, the criterion comes back Not Yet. 
-The last two criteria below carry over from Module 2. They were judged provisionally then and 
-receive their final judgment on this submission, against the final state of your code. 
 What is checked 
 What earns “Met” 
 Common mistakes to avoid 
-C2.4 — Your tests came 
+C3.1 — Your structure 
+follows your spec 
+Evidence: specs/frontend.md, 
+frontend/src/ 
+Every component in your frontend spec 
+exists as its own module, and you can state 
+the organizing principle of your folder 
+structure in one sentence. Backend and 
+frontend concerns stay separate. 
+– Vite template directories left in unused. 
+– Specified components missing or 
+merged with no explanation. 
+– Concerns tangled across modules. 
+C3.2 — Your backend 
+increment was built test-
 first 
 Evidence: Commit history for 
-your Module 3 feature 
+your Module 4 feature; test run 
+against deployed config 
+The second spec feature, and any 
+endpoints your frontend needs, show a 
+failing test before implementation in 
+commit history. The suite passes against 
+your deployed configuration, not just 
+locally. 
+– Tests added once the feature was 
+finished. 
+– A suite that passes locally but not 
+against the deployed config. 
+– Tests that exercise FastAPI rather than 
+your own logic. 
+C3.3 — Your app runs end 
+to end 
+Evidence: Deployed app or 
+documented container run; 
+frontend/, backend/ 
 MUST PASS 
-For each part of the feature, a commit 
-containing a failing test precedes the 
-commit containing its implementation. The 
-Red-Green-Refactor rhythm is visible. 
-– All tests in one commit after the code. 
-– Squashed history, so ordering can't be 
-seen. 
-– Tests committed first that assert nothing 
-capable of failing. 
-C2.5 — Spec, tests and 
-code line up 
-Evidence: tests/, coverage 
-report, specs/ 
-Coverage ≥ 80% measured with pytest-cov. 
-Every endpoint in your specs and API 
-reference has at least one passing test for 
-the success path and one for a documented 
-failure case. Storage, utils and model 
-validation are covered. 
-– Endpoints built but not tested, or tested 
-but not specified. 
-– Coverage reached by tests that run code 
-without asserting anything. 
-– Failure cases specified but never tested. 
-C2.6 — Your refactor 
-changed nothing visible 
-Evidence: docs/refactor-
-note.md, before/after commits 
-A named code smell removed, the two 
-commit hashes given, suite green on both 
-sides, public interface and observable 
-behaviour unchanged. 
-– Not naming the smell, or fixing 
-something other than the one named. 
-– Changing behaviour at the same time. 
-– Editing tests to accommodate the 
-refactor instead of using them to check it. 
-C2.7 — Your pipeline 
-actually gates 
+The deployed application completes its 
+core journeys: list prompts, view detail, 
+create, edit, delete with confirmation, 
+manage collections, filter by collection, 
+search. The frontend consumes your real 
+API. Loading and empty states present, and 
+API failures produce visible user-facing 
+messages. 
+– A frontend running on mocked or hard-
+coded data. 
+– A core journey breaking partway 
+through. 
+– API errors producing a blank screen or 
+nothing at all. 
+C3.4 — Someone else could 
+deploy it 
 Evidence: 
-.github/workflows/ci.yml, run 
-logs, docs/ci-gate-evidence.md 
-MUST PASS 
-Triggers on push and pull request, runs 
-linting and tests with coverage, fails the 
-build below 80%, passes on a clean clone, 
-and demonstrably fails when a test is 
-deliberately broken. 
-– A workflow file with no successful run 
-recorded. 
-– A pipeline that runs tests but doesn't fail 
-the build when they fail. 
-– Passing locally but failing on a clean 
-clone because config was never 
-committed. 
-C2.8 — Your container 
-builds and runs 
-Evidence: backend/Dockerfile, 
-docker-compose.yml, build 
-output 
-The image builds from committed files with 
-no manual steps. The container serves the 
-API. docker-compose up --build brings up a 
-working local environment, and the 
-README explains Docker usage. 
-– An image that builds but a container that 
-exits or serves nothing. 
-– A Dockerfile depending on files not in 
-the repository. 
-– A build needing undocumented manual 
-steps. 
-C2.1 — Your specs are 
-specific enough 
-Evidence: specs/prompt-
-versions.md, specs/tagging-
-system.md 
-Each spec has overview and goals, user 
-stories with acceptance criteria, data 
-model changes, API endpoints with request 
-and response shapes, and specified error 
-conditions and edge cases. Every endpoint 
-– Requirements that name a feature 
-without describing behaviour. 
-– Specifying the happy path and leaving 
-errors unstated. 
-
-AIE 500 — PromptLab  |  Module 3 Project 
-Page 5 of 6 
-What is checked 
-What earns “Met” 
-Common mistakes to avoid 
-Provisional until Module 3 
-has at least one acceptance criterion you 
-could write a test from directly. 
-– Criteria you can't test, like “handles 
-input correctly”. 
-C2.2 — Your docs match 
-your code 
-Evidence: README.md, 
-docstrings in models.py / api.py 
-/ storage.py / utils.py, 
-docs/API_REFERENCE.md 
-Provisional until Module 3 
-Docstrings on every function and class 
-across all four source modules, with 
-parameters, returns and exceptions 
-matching the implementation. API 
-reference documents every endpoint that 
-exists — including PATCH and your Module 
-3 feature — with request examples, sample 
-responses and error formats. README 
-setup steps work on a clean clone. 
-– API reference describing an earlier draft 
-of the spec. 
-– Docs not updated after Module 3's 
-feature work. 
-– Setup steps missing an environment 
-variable or dependency. 
-– Docstrings that restate the function 
-name. 
+docs/deployment.md, 
+committed configuration 
+A second person can deploy or run 
+PromptLab using only what's committed. 
+Every step, environment variable and 
+secrets-handling approach is documented. 
+– Deployment relying on something you 
+configured by hand and never wrote 
+down. 
+– Instructions missing environment 
+variables. 
+– Only a running instance, with no 
+reproducible path to it. 
+C3.5 — You worked inside 
+the time budget 
+Evidence: Commit timestamps 
+for the Module 4 backend 
+increment 
+Scaffolding to first passing endpoint 
+completed within the budget stated in this 
+module's tasks, shown by commit 
+timestamps. 
+– Going over with no blocker documented. 
+– Committing everything in one batch, so 
+timestamps prove nothing. 
+– Committing unfinished work to hit the 
+time and finishing later. 
  
  
 
-AIE 500 — PromptLab  |  Module 3 Project 
+AIE 500 — PromptLab  |  Module 4 Project 
 Page 6 of 6 
 Where the Rules Live 
 This file contains the tasks and criteria for this module only. Everything else lives in Getting Started: 
