@@ -9888,4 +9888,43 @@ submit in state") and pushed `Week-3`. The CI result on that commit is recorded 
 
 **Why the next prompt changed**
 
-*Pending.*
+CI ran green on `255f1f4` (run 37662489558). I decided to commit the tagging plan too and close the module.
+
+
+### Entry 478
+
+**Prompt**
+
+> add the tagging plan and with this we close the assigment
+
+and, while Claude was working:
+
+> push the branch
+
+**What came back**
+
+Claude read `docs/tagging-tdd-plan.md` (80 lines, no secrets) before committing it. It flagged two
+points. The plan said "**Not committed.**", which would become false, so Claude changed only that
+sentence to say the plan was kept out of git during Task 3.2 (entry 232) and committed at the close
+of Module 3. And a plan committed after the code could look as if it was written afterwards; the
+file was last modified on 2026-10-06 at 11:49, before the last tagging commit (`efbd01d`, 15:41), so
+the commit message says it is unchanged since the task. It updated `CLAUDE.md` (the Task 3.2 note
+about the plan; CURRENT STATE: Module 3 closed, next Module 4; next entry number 479) and, following
+Rule 5, showed the two commit messages before committing and pushing.
+
+**Why the next prompt changed**
+
+The messages were good enough; I approved both commits and the push.
+
+
+### Entry 479
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude ran lint and the suite, committed the plan as `7fd57ea` ("Add the tagging TDD cycle plan") and the state
+with this log ("Record Module 3 as closed in state"), and pushed `Week-3`. Module 3 is closed;
+Module 4 starts at entry 1 of its own log.
