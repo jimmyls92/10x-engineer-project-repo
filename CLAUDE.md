@@ -43,12 +43,12 @@ Entry numbers cited below, unless marked otherwise, are from **Module 2's log** 
   (`models.py:220`, `:269`) and `datetime.utcnow()` (`models.py:37`). No Module 2 task covers them;
   docstrings describe them as they are.
 - **`Storage.update_prompt` does not check that `prompt.id` equals `prompt_id`** (entry 30,
-  `storage.py:66`). Unreachable today, since PUT and PATCH copy `existing.id` (`api.py:201`, `:254`);
+  `storage.py:66`). Unreachable today, since PUT and PATCH copy `existing.id` (`api.py:217`, `:268`);
   any new code that replaces a prompt must do the same.
 - **An empty-string `collection_id` is handled inconsistently** (entry 37). POST and PUT store `""`
-  unchecked (`api.py:156`, `:195` test truthiness); PATCH looks it up and returns 400 (`api.py:248`,
+  unchecked (`api.py:176`, `:213` test truthiness); PATCH looks it up and returns 400 (`api.py:264`,
   `is not None`). The docstrings describe it; any spec or doc touching `collection_id` must too.
-  A consequence (entry 50): `GET /prompts?collection_id=` ignores the empty value (`api.py:95`), so
+  A consequence (entry 50): `GET /prompts?collection_id=` ignores the empty value (`api.py:115`), so
   prompts stored with `""` cannot be listed by collection. Stated in the API reference's Known issues.
 - **`PATCH` rejects a null `title` or `content` with 422** (fixed in `158eb0b`, entries 53-71;
   `reject_null` in `models.py`). It runs while the body is validated, **before** the 404 and 400

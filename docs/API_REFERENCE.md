@@ -76,8 +76,8 @@ When a request has more than one problem, only the first check that fails is rep
    `PATCH /prompts/nope` with `{"title": null}` returns 422, not 404, and
    `{"title": null, "collection_id": "nope"}` returns 422, not 400. The same holds for tags:
    `PATCH /prompts/nope` with `{"tags": ["Marketing"]}` returns 422, not 404.
-2. **404**: the prompt in the path is looked up next (`api.py:190`, `:240`).
-3. **400**: the `collection_id` is checked next (`api.py:195`, `:248`). `PUT /prompts/nope` with a
+2. **404**: the prompt in the path is looked up next (`api.py:208`, `:256`).
+3. **400**: the `collection_id` is checked next (`api.py:213`, `:264`). `PUT /prompts/nope` with a
    valid body and an unknown `collection_id` returns 404, not 400.
 
 ## Data models
@@ -529,5 +529,5 @@ Both are current behaviour, described as the code does it, and are **not fixed**
 
 | Issue | Where | Effect |
 |---|---|---|
-| **An empty `collection_id` is handled inconsistently** | `api.py:156`, `:195`, `:248` | `POST` and `PUT` test truthiness, so `""` is stored without a check. `PATCH` tests `is not None`, so `""` is looked up and rejected with 400. |
-| **A prompt with `collection_id: ""` cannot be listed by collection** | `api.py:95` | `GET /prompts?collection_id=` treats the empty value as absent and returns every prompt, so there is no way to select only the prompts stored with `""`. |
+| **An empty `collection_id` is handled inconsistently** | `api.py:176`, `:213`, `:264` | `POST` and `PUT` test truthiness, so `""` is stored without a check. `PATCH` tests `is not None`, so `""` is looked up and rejected with 400. |
+| **A prompt with `collection_id: ""` cannot be listed by collection** | `api.py:115` | `GET /prompts?collection_id=` treats the empty value as absent and returns every prompt, so there is no way to select only the prompts stored with `""`. |
