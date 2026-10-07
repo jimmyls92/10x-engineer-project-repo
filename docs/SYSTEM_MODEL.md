@@ -5,6 +5,10 @@ tied to the file and line it was read from, so it can be checked rather than tru
 
 Line references are to the repository state at the time of writing; paths are relative to `backend/`.
 
+> **Module 1 snapshot.** Written in Module 1 (last updated in `1abef67`), before `PATCH` and the
+> tagging feature existed, so it says there is no `PATCH` and has no tags. For the current API, see
+> `docs/API_REFERENCE.md`.
+
 > **Status.** Written stage by stage as the exploration proceeds. Section headings follow the module
 > brief's own checklist. All six checklist sections are now written.
 
