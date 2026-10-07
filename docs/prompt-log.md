@@ -9636,3 +9636,256 @@ followed by a push, and stopped for approval.
 **Why the next prompt changed**
 
 Claude proposed splitting the commit in two, which I accepted.
+
+
+### Entry 467
+
+**Prompt**
+
+> go ahead with two commits
+
+**What came back**
+
+Claude committed the Rule 0b.3 change alone as `9c05697` ("Stop asking the user to justify
+answers"), then the CURRENT STATE update with this log as `d13f79e` ("Record Task 3.5 as done in
+state"), and pushed `Week-3` (`6a183ec..d13f79e`). CI run 37642890851 on `d13f79e` succeeded. Task 3.5 is
+closed; Claude stopped without starting the submission, as Rule 0 requires. This entry stays
+uncommitted until the next commit.
+
+**Why the next prompt changed**
+
+Task 3.5 was closed; I asked to start the submission.
+
+
+### Entry 468
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude checked the brief's *What You Submit* list against the repo: coverage 100%, the TDD history
+(Task 3.2), CI green on `d13f79e`, `docs/ci-gate-evidence.md`, `backend/Dockerfile` and
+`docker-compose.yml`, `docs/refactor-note.md`, and every one of the 12 routes in `api.py` listed in
+the README's endpoint table and with its own section in `docs/API_REFERENCE.md` (including
+`GET /tags`). What remains is the repository link, the summary and the known issues; following
+`docs/module-2-submission.md`, they go in `docs/module-3-submission.md`. It opened the first step by
+asking which known issues the submission should list, drawing on CURRENT STATE's *Known traps* and
+the API reference's *Known issues*.
+
+**Why the next prompt changed**
+
+Restructured: before choosing known issues, I asked for a full check that the docs match the code.
+
+
+### Entry 469
+
+**Prompt**
+
+> First please check that all the documentation is in aligment with the code and we are correctly covering the "Waht to submit" section
+
+**What came back**
+
+Claude re-read the brief's criteria (C2.1, C2.2, C2.5) and found one problem it had caused itself:
+the refactor inserted 20 lines above the endpoints, so `api.py` line citations in
+`docs/API_REFERENCE.md:79-80`, `:532-533` and in `CLAUDE.md`'s Known traps now point at docstring
+lines. It confirmed that every function, class and module has a docstring and that all 12 routes are
+in the README and the API reference. A background agent audited the rest; Claude verified its main
+findings in the source before reporting them:
+
+- `utils.py:5-7` says the two text helpers are not called "by the API or the tests", but
+  `tests/test_utils.py:17`, `:22`, `:327` test them (a false docstring, C2.2).
+- `main.py:3` says "Run with: python main.py", which exits with code 1 under the pinned uvicorn
+  (Known traps); the README already says so.
+- `models.py:131-134` (`PromptUpdate`) says omitted optional fields reset to `None`; `tags` resets to
+  `[]` (`models.py:116`).
+- `specs/tagging-system.md:6` and `specs/prompt-versions.md:6` still say "to be implemented in Module
+  3 or 4"; Tagging is implemented, and Prompt Versioning has no route or test, which reads as a C2.5
+  gap unless the status says it is Module 4 work.
+- Smaller points: `check_tag_list`'s docstring names `TagList`, a name `models.py:295` redefines;
+  `prompt-versions.md` cites pre-tagging line numbers and says tagging does not exist yet; both specs
+  cite Module 2 log entries without saying so; the README's dev tools omit `ruff` and CI;
+  `docs/SYSTEM_MODEL.md` is a Module 1 snapshot whose disclaimer covers only line numbers.
+
+It confirmed as correct: status codes, messages, order of checks and tag rules in the API
+reference, the README setup and Docker sections, a success and a failure test for every implemented
+endpoint, and the counts in the notes. It asked which findings to fix before the submission.
+
+**Why the next prompt changed**
+
+The list was clear; I told Claude to go ahead.
+
+
+### Entry 470
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude read "go ahead" as all of the findings and fixed them, docs and docstrings only, with no
+behaviour or test changed:
+
+- **Docstrings:** `utils.py` now says only `tests/test_utils.py` uses the two text helpers;
+  `main.py` says `python main.py` exits with code 1 under the pinned uvicorn and points to
+  `uvicorn app.api:app --reload`; `PromptUpdate` says omitted `tags` reset to `[]`;
+  `check_tag_list` explains that the `TagList` response model reuses the annotation's name.
+- **Line numbers** shifted by the refactor: `docs/API_REFERENCE.md:79-80`, `:532-533` and
+  `CLAUDE.md`'s Known traps, each checked against the current `api.py`.
+- **Specs:** the tagging status says implemented in Module 3 (ending at `efbd01d`) and that its line
+  numbers are pre-implementation; the versions status says not implemented, planned for Module 4,
+  with lines from `1c9cc88` (checked there); both say their decision entries are Module 2's log on
+  `Week-2`; E-15 notes tagging now exists.
+- **README:** `ruff` added to the dev tools, new *Run the linter* and *Continuous integration*
+  sections matching `ruff.toml` and `ci.yml`.
+- **`docs/SYSTEM_MODEL.md`:** a note that it is a Module 1 snapshot (`1abef67`), pointing to the API
+  reference.
+
+Lint passed and the suite gave 360 passed. It proposed five commits, one per kind of fix, with this
+log left for the submission commit, and stopped for approval.
+
+**Why the next prompt changed**
+
+The fixes and messages were good enough; I approved the five commits and the push.
+
+
+### Entry 471
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude made the five commits: `16c5b18` (docstrings), `b48eaae` (line references), `12dc288` (spec
+status lines), `519a375` (README lint and CI), `d93d28d` (SYSTEM_MODEL note), and pushed `Week-3`
+(`d13f79e..d93d28d`). CI run 37660486164 on `d93d28d` succeeded. It went back to the submission's
+first step: which known issues the assessor should be told about.
+
+**Why the next prompt changed**
+
+I chose to list every one.
+
+
+### Entry 472
+
+**Prompt**
+
+> put all of them
+
+**What came back**
+
+Claude re-checked each issue against the code before listing it: the provided tests still use
+`time.sleep` (`test_api.py:866`, `:1178`) and accept 404 or 500 (`:754`); `/openapi.json` still
+shows PATCH's `title` and `content` as nullable; the suite prints 506 warnings, mostly deprecations;
+the README warns against Python 3.13. It accepted "all" for the product issues, following
+`docs/module-2-submission.md`, and challenged one part: some Known traps are working notes, not
+issues (never push to `main`, run in the pinned venv, start Docker Desktop first, Compose and a
+local uvicorn sharing port 8000), and listing them as defects would read as problems in the app. It
+proposed putting those where they explain something instead (the branch line, the verification
+setup, the README), added the `TagList` name reuse found in the audit, and opened step 2: my
+one-line summary of the module.
+
+**Why the next prompt changed**
+
+I asked Claude to propose the summary instead of writing it myself.
+
+
+### Entry 473
+
+**Prompt**
+
+> Propose something that summarizes this assigment
+
+**What came back**
+
+Claude said once what this skips (my own wording of the summary) and proposed a line in the style of
+Module 2's, covering the five tasks in order: `360 tests/100% cov; TDD tagging; CI gate; Docker;
+refactor note`. It gave a longer alternative naming the evidence files, and asked which to use.
+
+**Why the next prompt changed**
+
+Both were fine; I chose the longer one.
+
+
+### Entry 474
+
+**Prompt**
+
+> the longer one
+
+**What came back**
+
+Claude took the longer summary and opened step 3, writing `docs/module-3-submission.md`. It
+proposed the outline of `docs/module-2-submission.md`: a header (branch, repository link, summary,
+process evidence), *What is submitted* (each brief item and where it is), *Verification* filled from
+a fresh clean clone of `Week-3` (install the pins, `ruff`, `pytest` with coverage, `docker-compose up
+--build` and `GET /health`), and *Known issues* (the twelve of entry 472). It asked for permission to
+run the clean-clone checks and write the file.
+
+**Why the next prompt changed**
+
+The outline was good enough; I approved the checks and the file.
+
+
+### Entry 475
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude cloned `Week-3` fresh from GitHub at `d93d28d` (into a short temp path, since git refused the
+long scratchpad path with "'$GIT_DIR' too big"), built a Python 3.12.13 venv from the pins (FastAPI
+0.109.0, Pydantic 2.5.3, uvicorn 0.27.0), and ran `ruff check .` (all passed) and the suite with
+`--cov-fail-under=80` (360 passed, 100.00%). With Docker running and port 8000 free, `docker-compose
+up --build` from the clone built and started the container; `/health` returned
+`{"status":"healthy","version":"0.1.0"}` and `/prompts`, `/tags` 200. It stopped the stack, removed
+the image and the clone, and wrote `docs/module-3-submission.md`: header (repo, branch, my summary,
+process evidence), *What is submitted* (each brief item with its file, commits or CI runs),
+*Verification* (the clean-clone results), and the twelve *Known issues*. Checking its own line
+numbers, it corrected the `TagList` lines to `models.py:90` and `:298`. It proposed one commit for
+the file, then a state commit with the log.
+
+**Why the next prompt changed**
+
+The file and the message were good enough; I approved the commit.
+
+
+### Entry 476
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the submission note as `b5145a0` ("Add the Module 3 submission note"), without
+pushing. It opened step 4 by proposing the CURRENT STATE edits in `CLAUDE.md` (submission written,
+the docs fixes and their commits, next entry number) and one commit with this log, then a push, and
+asked for permission.
+
+**Why the next prompt changed**
+
+The edits and the message were good enough; I approved them.
+
+
+### Entry 477
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude edited CURRENT STATE in `CLAUDE.md` (Module 3 ready to submit, the note `b5145a0`, the docs
+fixes, next: the user submits on the course platform; next entry number 478), re-ran lint and the
+suite (all passed; 360 passed), committed `CLAUDE.md` with this log ("Record Module 3 as ready to
+submit in state") and pushed `Week-3`. The CI result on that commit is recorded in the next entry.
+
+**Why the next prompt changed**
+
+*Pending.*
