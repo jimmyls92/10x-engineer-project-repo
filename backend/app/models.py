@@ -55,8 +55,10 @@ TagQuery = Annotated[str, Field(max_length=TAG_MAX_LENGTH, pattern=rf"^({TAG_PAT
 def check_tag_list(tags: List[str]) -> List[str]:
     """Apply the rules on a whole list of tags, once each tag has passed ``Tag``.
 
-    Attached to the ``TagList`` type, so every model whose ``tags`` field is
-    a ``TagList`` applies the list rules from this one place.
+    Attached to the ``TagList`` annotation defined below it, so every
+    request model whose ``tags`` field uses that annotation applies the list
+    rules from this one place. The ``TagList`` response model further down
+    reuses the name, so at module level ``TagList`` is the response model.
 
     Args:
         tags: The tags sent, each already a valid ``Tag``.
@@ -130,8 +132,9 @@ class PromptUpdate(PromptBase):
 
     Carries the ``PromptBase`` fields only. Because the whole prompt is
     replaced, an optional field left out of the body is reset to its
-    default of ``None`` rather than kept; omitting ``collection_id``
-    unfiles the prompt.
+    default rather than kept: ``None`` for ``description`` and
+    ``collection_id``, an empty list for ``tags``. Omitting
+    ``collection_id`` unfiles the prompt.
     """
 
 

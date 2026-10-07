@@ -4,7 +4,7 @@ The list helpers sort, filter and search prompts for ``GET /prompts``, and
 ``count_tags`` counts the tags in use for ``GET /tags``. None of them
 modifies the list it is given. The two text helpers,
 ``validate_prompt_content`` and ``extract_variables``, are not called by
-the API or the tests.
+the API; only ``tests/test_utils.py`` uses them.
 """
 
 from typing import List
