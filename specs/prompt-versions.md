@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Feature** | Track the version history of a prompt's content |
-| **Status** | Specified in Module 2 (Task 2.5); to be implemented in Module 3 or 4 |
-| **Decisions** | Worked through one at a time in `docs/prompt-log.md`, entries 97-128 |
+| **Status** | Specified in Module 2 (Task 2.5); **not implemented yet**, planned for Module 4. No route or test exists. Line numbers cited below are from the end of Module 2 (`1c9cc88`); the tagging feature has since moved them |
+| **Decisions** | Worked through one at a time in Module 2's `docs/prompt-log.md` (branch `Week-2`), entries 97-128 |
 | **Code it touches** | `backend/app/models.py`, `backend/app/api.py`, `backend/app/utils.py`, `backend/tests/test_api.py` |
 
 Requirements are numbered: **BR** business, **FR** functional, **NFR** non-functional, **AC**
@@ -402,7 +402,7 @@ No new endpoint returns 400: neither takes a body.
 | **E-12** | The version's timestamps | Naive UTC, serialised like every other timestamp in the API, for example `"2026-09-30T09:58:11.270045"`. Tests compare them with `datetime.fromisoformat`, or as strings, since they are copies of values already returned (FR-1, FR-2). |
 | **E-13** | The server restarts | All prompts and their histories are lost (NFR-2). |
 | **E-14** | Prompts stored with an empty-string `collection_id` | No effect on versions. `collection_id` is not versioned (see *Known traps* in `CLAUDE.md` for the existing behaviour). |
-| **E-15** | A tag-only edit, once the tagging feature (`specs/tagging-system.md`) exists | No version (FR-3): tags are not content. `updated_at` is still refreshed. Mirrors tagging E-9; the test is written by whichever of the two features is built second. |
+| **E-15** | A tag-only edit (tagging, `specs/tagging-system.md`, exists since Module 3) | No version (FR-3): tags are not content. `updated_at` is still refreshed. Mirrors tagging E-9; the test is written by whichever of the two features is built second, which is this one. |
 
 ---
 

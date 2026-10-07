@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Feature** | Tag prompts for organization |
-| **Status** | Specified in Module 2 (Task 2.5); to be implemented in Module 3 or 4 |
-| **Decisions** | Worked through one at a time in `docs/prompt-log.md`, entries 138-176 |
+| **Status** | Specified in Module 2 (Task 2.5); **implemented in Module 3** (Task 3.2), test-first, ending at `efbd01d`. Line numbers cited below describe the code before the feature was built; `backend/app/` has the current ones |
+| **Decisions** | Worked through one at a time in Module 2's `docs/prompt-log.md` (branch `Week-2`), entries 138-176 |
 | **Code it touches** | `backend/app/models.py`, `backend/app/api.py`, `backend/app/utils.py`, `backend/tests/test_api.py` |
 
 Requirements are numbered: **BR** business, **NG** non-goal, **NFR** non-functional, **AC**
