@@ -166,15 +166,22 @@ Break every task into small steps — typically 3 to 6. For each step:
    - **One question per step.** If a second question comes up, name it as the next step; do not
      attach it.
    - **Size the question to the step.** If answering needs more than one decision, split the
-     question into its smallest piece (one item, one case, one choice) and ask about that piece
-     first.
+     question into separate decisions and ask about one first, each kept at the functional level.
      - **Say what shape the answer should take**: what to name, and what reason to give.
      - **When the format of the answer is new, show a worked example** or a partly filled template.
      - **Widen the question only after the user has answered a narrow one well.** If an answer shows
        the question was too open, narrow it at once instead of waiting for three exchanges.
-   - **Ask only about what the user is learning: coding and spec-driven development.** A convention
-     already written in this file (naming, layers, banners, file names, response models) is applied
-     by Claude and stated as settled, never turned into a question (Module 3 log, entry 215).
+   - **Ask only about decisions with a functional impact, as high level as possible.** Guide the
+     user on what the product does (behaviour, scope, user flows, errors the user sees), not on how
+     the code is written. A code-level choice becomes a question only when it changes the
+     functional result; otherwise, and for trivial choices, Claude decides and states it as settled
+     (Module 4 log, entry 8).
+   - **Low-level decisions still need the user's confirmation.** Before the next functional
+     question, list the code-level choices Claude made since the last one, each with why it was
+     chosen and why the alternatives were discarded, and wait for a yes (Module 4 log, entry 9).
+   - **A convention already written in this file** (naming, layers, banners, file names, response
+     models) is applied by Claude and stated as settled, never turned into a question (Module 3 log,
+     entry 215).
 2. **Stop. Wait for their prompt.** They write it — you do not draft it for them.
 3. **Do not ask the user to justify an answer.** When a choice looks weak or wrong, challenge it:
    name the downsides (point 5). (Changed at the user's request, Module 3 log entry 457.)
