@@ -113,7 +113,47 @@ Good enough; I approved the commit.
 **What came back**
 
 Claude committed this log on `Week-4` ("Start the Module 4 prompt log"), with this entry in it. Next
-step: update CURRENT STATE in `CLAUDE.md` for Module 4.
+step: update CURRENT STATE in `CLAUDE.md` for Module 4. It proposed the new rows (Module 4 on
+`Week-4`, Module 3 closed at `83852ee`, Task 4.1 next) and asked for permission.
+
+**Why the next prompt changed**
+
+I approved the edit and **added a constraint** on the teaching method.
+
+### Entry 8
+
+**Prompt**
+
+> yes. Regarding the teaching method (rule 0b), dont enter into the specificities of the code, guide me on deciding the functional part but dont enter into code specificities unless a decision on how we write the code impacts the functional. Try to stay as high level as possible with your questions, making me decide only in things that have an impact and not on tirival things.
+
+**What came back**
+
+Claude updated `CLAUDE.md`. CURRENT STATE: Module 4 on `Week-4`, Module 3 closed at `83852ee`, current
+task Task 4.1 (not started), next entry 9. Rule 0b: the bullet "ask only about coding and spec-driven
+development" became "ask only about decisions with a functional impact, as high level as possible";
+code-level and trivial choices are decided by Claude and stated as settled, unless they change the
+functional result. The "size the question" bullet no longer splits into the smallest piece, only into
+separate functional decisions. Uncommitted; it proposed two commits, one for the rule and one for
+the state.
+
+**Why the next prompt changed**
+
+I approved both and **added a constraint**: the low-level decisions Claude settles still need my
+confirmation, with the reasons.
+
+### Entry 9
+
+**Prompt**
+
+> yes, only add one thing, the low level decisions that you made between functional/high level decissions, require my confirmation, and explanation on why, and why other choices where discarted
+
+**What came back**
+
+Claude's first reply to this prompt was stopped by a safety classifier and withheld; nothing in it
+ran. On the retry, Claude added a bullet to Rule 0b: before the next functional question, Claude
+lists the code-level choices it made since the last one, each with why it was chosen and why the
+alternatives were discarded, and waits for a yes. It then made the two approved commits, the rule
+change first, then the state with this log; CURRENT STATE gives 10 as the next entry.
 
 **Why the next prompt changed**
 
