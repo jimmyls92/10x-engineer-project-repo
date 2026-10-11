@@ -1357,4 +1357,52 @@ and asked to start the servers.
 
 **Why the next prompt changed**
 
+Good enough; I approved starting the servers.
+
+### Entry 72
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude started the backend and the dev server (both answered), and, without asking first, added
+sample data through the API so the screens had content to check: one collection ("Marketing") and
+two prompts, one long enough to test wrapping. It said so, since the data lives only in memory and
+goes when the backend stops. It handed me the mobile and keyboard checklists.
+
+**Why the next prompt changed**
+
+I ran both checklists.
+
+### Entry 73
+
+**Prompt**
+
+> everything passed
+
+**What came back**
+
+All four mobile checks (iPhone SE in device mode) and all five keyboard checks passed, so Task 4.7
+needed no code change. Claude stopped both servers, marked Task 4.7 as done in CURRENT STATE, and
+proposed committing the state and this log. It stopped, as Rule 0 asks at the end of a task.
+
+**Why the next prompt changed**
+
+Good enough; I approved the commit.
+
+### Entry 74
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the state and this log ("Record Task 4.7 as done in state"), without pushing, and
+stopped: Task 4.8 or Task 4.2 is next, at my choice.
+
+**Why the next prompt changed**
+
 Pending.
