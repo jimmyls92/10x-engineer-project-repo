@@ -155,8 +155,8 @@ callbacks through props.
 | Component | Responsibility | Props |
 |---|---|---|
 | `CollectionsPage` | The Collections screen. Holds the collection list, which window is open and the success message; makes every API call of the screen | — |
-| `CollectionList` | A row per collection with Delete, or the empty-state message | `collections`, `onDelete`, `onCreate` |
-| `CollectionForm` | Name and description fields, field checks, errors inside the form | `onSave`, `onCancel` |
+| `CollectionList` | A row per collection with Delete, or the loading, error or empty state | `collections`, `status`, `onDelete`, `onCreate` |
+| `CollectionForm` | Name and description fields, field checks, errors inside the form | `onSave`, `onCancel`, `busy`, `error` |
 
 ### Shared
 

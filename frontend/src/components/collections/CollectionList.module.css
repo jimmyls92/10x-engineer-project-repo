@@ -1,0 +1,41 @@
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 12rem;
+}
+
+.name {
+  font-weight: 600;
+}
+
+.description {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.notice {
+  padding: 1.5rem 0;
+  color: var(--muted);
+}
+
+.notice p {
+  margin: 0 0 0.75rem;
+}

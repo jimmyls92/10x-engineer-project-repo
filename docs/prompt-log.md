@@ -995,4 +995,40 @@ API") and asked whether to build step 4, the Collections screen.
 
 **Why the next prompt changed**
 
+Good enough; I approved step 4.
+
+### Entry 53
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude built the Collections screen on the real API with the Prompts screen's pattern:
+`CollectionsPage` (state and API calls, reload after create or delete, 404 on delete reloads),
+`CollectionList` (rows with name, description and Delete; loading, error and empty states) and
+`CollectionForm` (name 1-100 and description up to 500 checked before sending, as
+`models.py:245-246`). The delete confirmation uses the agreed wording, with the collection's name
+in the window title. The spec's prop lists were updated (`status`, `busy`, `error`). Lint and build
+passed. It listed two visible choices for confirmation and proposed the commit.
+
+**Why the next prompt changed**
+
+Good enough; I confirmed both choices and the commit.
+
+### Entry 54
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed step 4 with the spec update and this log ("Build the Collections screen on the
+real API") and asked whether to run step 5: start the backend and the dev server and go through
+every C3.3 journey.
+
+**Why the next prompt changed**
+
 Pending.
