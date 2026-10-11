@@ -17,9 +17,9 @@ work.** It is how a new session resumes without reading everything.
 |---|---|
 | **Current module** | **Module 4** — branch `Week-4`. Brief: `brief.txt`, from `Module_4_Project_Full_Stack_Frontend.pdf` (`88f9ed3`). Where the brief and this file conflict, **the brief rules**. |
 | **Previous module** | **Module 3: closed on `Week-3`** (`83852ee`, pushed); its log, entries 1-480, and the submission note `docs/module-3-submission.md` are on that branch. Module 2 is on `Week-2` (`1c9cc88`, log entries 1-198). |
-| **Current task** | **Task 4.1 — Write the frontend spec → `specs/frontend.md`. Not started.** Set-up done (entries 1-9): `Week-4` created from `83852ee`, brief regenerated (`88f9ed3`), log restarted (`4093f09`), Rule 0b narrowed to functional decisions, with code-level choices confirmed (entries 8-9). `Week-4` is not pushed yet. |
+| **Current task** | **Task 4.1 is done** (entries 11-38): `specs/frontend.md`, scope limited to C3.3's journeys (no tag or version UI, entry 13), two screens (Prompts, Collections), drop-down detail at every width, Apply-based filter with a status line, edits via `PATCH` so tags survive (entry 35), CSS Modules, React Router. **Next: Task 4.2**, Prompt Versioning on the backend, test-first, within the 4-hour budget (C3.5): commit the first failing test early, the clock runs from its timestamp. No new endpoint is needed for the frontend. Set-up (entries 1-10): `Week-4` from `83852ee`, brief `88f9ed3`, log restarted `4093f09`, Rule 0b narrowed (entries 8-9), `Week-4` pushed at `b8b39bb`. |
 | **Log file to append to** | `docs/prompt-log.md` |
-| **Next entry number** | 10 |
+| **Next entry number** | 39 |
 
 Entry numbers cited below, unless marked otherwise, are from **Module 2's log** (on `Week-2`).
 
