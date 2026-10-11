@@ -1,0 +1,21 @@
+.status {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+
+.notice {
+  padding: 1.5rem 0;
+  color: var(--muted);
+}
+
+.notice p {
+  margin: 0 0 0.75rem;
+}

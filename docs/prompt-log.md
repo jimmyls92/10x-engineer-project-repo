@@ -955,4 +955,44 @@ asked whether to build step 3, the Prompts screen.
 
 **Why the next prompt changed**
 
+Good enough; I approved step 3.
+
+### Entry 51
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude built the Prompts screen on the real API: `PromptsPage` (all state and API calls; list
+reloaded with the applied filter after each save or delete; a 404 also reloads it), `SearchBar`
+(a form, so Enter applies), `PromptList` (status line; loading, error and both empty states),
+`PromptCard` (row toggles the detail, `aria-expanded`), `PromptDetail` (fetches by id, converts the
+API's naive UTC timestamps to local time) and `PromptForm` (field checks with the API's limits,
+sends exactly title, content, description and collection_id, empty values as null). Oxlint flagged
+a `setState` called synchronously inside an effect; Claude split the first load from the reload so
+the effect only starts a request, and the warning cleared. It also made the detail-error handler
+stable, since `PromptDetail` refetches when it changes and an error pop-up would otherwise trigger
+a refetch loop. The spec's prop lists were updated to match. A CORS preflight for `PATCH` from
+`http://localhost:5173` returned 200 with PATCH allowed. Lint and build passed; the screen has not
+yet been clicked through in a browser (step 5). It listed its code-level choices for confirmation.
+
+**Why the next prompt changed**
+
+Good enough; I confirmed the choices and the commit.
+
+### Entry 52
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed step 3 with the spec update and this log ("Build the Prompts screen on the real
+API") and asked whether to build step 4, the Collections screen.
+
+**Why the next prompt changed**
+
 Pending.

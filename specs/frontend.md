@@ -145,10 +145,10 @@ callbacks through props.
 |---|---|---|
 | `PromptsPage` | The Prompts screen. Holds the applied filter, the prompt list, the collections, which prompt is open, which window is open and the success message; makes every API call of the screen | — |
 | `SearchBar` | Search box, collection drop-down, Apply and Clear all. Keeps what the user types until Apply | `collections`, `onApply`, `onClear` |
-| `PromptList` | Status line, then a `PromptCard` per prompt, or the empty-state message | `prompts`, `appliedFilter`, `openId`, `onToggle`, `onEdit`, `onDelete`, `onCreate` |
-| `PromptCard` | One row: title, Edit and Delete; renders `PromptDetail` underneath when open | `prompt`, `isOpen`, `onToggle`, `onEdit`, `onDelete` |
-| `PromptDetail` | Fetches the prompt by id and shows all its fields, with its own loading state; a failed fetch is reported through `onError` | `promptId`, `onError` |
-| `PromptForm` | Create and edit fields, field checks, and errors shown inside the form | `prompt` (absent when creating), `collections`, `onSave`, `onCancel` |
+| `PromptList` | Status line, then a `PromptCard` per prompt, or the empty-state message | `prompts`, `status`, `collections`, `appliedFilter`, `openId`, `onToggle`, `onEdit`, `onDelete`, `onCreate`, `onDetailError` |
+| `PromptCard` | One row: title, Edit and Delete; renders `PromptDetail` underneath when open | `prompt`, `collections`, `isOpen`, `onToggle`, `onEdit`, `onDelete`, `onDetailError` |
+| `PromptDetail` | Fetches the prompt by id and shows all its fields, with its own loading state; a failed fetch is reported through `onError` | `promptId`, `collections` (to name its collection), `onError` |
+| `PromptForm` | Create and edit fields, field checks, and errors shown inside the form | `prompt` (absent when creating), `collections`, `onSave`, `onCancel`, `busy`, `error` |
 
 ### Collections
 
