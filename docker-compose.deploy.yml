@@ -1,0 +1,24 @@
+# Runs PromptLab as deployed: the API and the built frontend, with no reload or
+# bind mount. Start it with:
+#   docker compose -f docker-compose.deploy.yml up --build
+# then open http://localhost:8080. docker-compose.yml stays the development setup.
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      # Must match the address the browser opens the frontend at, or every request is blocked.
+      - CORS_ORIGINS=http://localhost:8080
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # The address the browser calls the API at, written into the app when it is built.
+        VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend

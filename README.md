@@ -290,6 +290,10 @@ build. Run the same two commands locally before pushing.
 Docker runs the API without a local Python install. `backend/Dockerfile` builds the image;
 `docker-compose.yml`, at the repository root, runs it for development with hot reload.
 
+**To deploy the whole app** (API and web frontend), use `docker-compose.deploy.yml` instead, as
+described in [`docs/deployment.md`](docs/deployment.md): one command, then open
+http://localhost:8080.
+
 ### Prerequisites
 
 - **Docker** with **Compose** (Docker Desktop on Windows and macOS), with the engine running.

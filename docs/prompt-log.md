@@ -1405,4 +1405,150 @@ stopped: Task 4.8 or Task 4.2 is next, at my choice.
 
 **Why the next prompt changed**
 
+I chose the next task.
+
+---
+
+## Task 4.8 — Deploy it → `docs/deployment.md`
+
+### Entry 75
+
+**Prompt**
+
+> task 4.8
+
+**What came back**
+
+Claude read the brief's deployment wording: Task 4.8 accepts "deployed and reachable, or runnable
+via a documented container command", and C3.3 and C3.4 take "deployed app or documented container
+run" as evidence, while the scenario asks for the app "deployed where someone else can reach it".
+It laid out the first decision, where the app runs, with the downsides of each and no
+recommendation: a public host (a real address, but accounts, free-tier sleep, and data that resets
+on every restart since storage is in memory) or a container setup run with one documented command
+(no accounts, but nothing to visit without running it). It noted the existing `docker-compose.yml`
+is development-only (bind mount, `--reload`) and has no frontend. It asked which.
+
+**Why the next prompt changed**
+
+I chose the container option.
+
+### Entry 76
+
+**Prompt**
+
+> docker-compose option
+
+**What came back**
+
+Claude checked the tools (Docker 29.5.2, Compose v5.1.4) and the README's `## Docker usage`
+section, which documents the current compose file as development with hot reload (Task 3.4). It
+proposed the code-level choices for confirmation: a separate `docker-compose.deploy.yml`, leaving
+Task 3.4's dev file and its README section true; the backend from the existing `backend/Dockerfile`
+without reload or bind mount; a new `frontend/Dockerfile` that builds the app with Node and serves
+the static files with nginx, sending every path to `index.html` so `/collections` survives a reload;
+ports 8080 (app) and 8000 (API); `VITE_API_BASE_URL` and `CORS_ORIGINS` set in the compose file
+with matching defaults; a `frontend/.dockerignore`. One command: `docker compose -f
+docker-compose.deploy.yml up --build`.
+
+**Why the next prompt changed**
+
+Good enough; I confirmed the choices.
+
+### Entry 77
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote `frontend/Dockerfile` (Node 24 build stage, `npm ci`, `VITE_API_BASE_URL` as a build
+argument that stops the build when empty, then `nginx:1.27-alpine` serving `dist`),
+`frontend/nginx.conf` (every path falls back to `index.html`), `frontend/.dockerignore`
+(`node_modules`, `dist`, `.env*`) and `docker-compose.deploy.yml` (backend with
+`CORS_ORIGINS=http://localhost:8080`; frontend built with `VITE_API_BASE_URL=http://localhost:8000`,
+port 8080). `docker compose -f docker-compose.deploy.yml up --build -d` built both images and
+started both containers. Checks: API health OK; `/` and a direct `/collections` both 200 from
+nginx; the built bundle contains `http://localhost:8000`; the API returns
+`access-control-allow-origin: http://localhost:8080` for the deployed app and nothing for
+`localhost:5173`; a frontend build without the argument fails with "Build argument
+VITE_API_BASE_URL is required". It asked me to run the C3.3 checklist against
+`http://localhost:8080`.
+
+**Why the next prompt changed**
+
+I went through checks 1-8 on the deployed app.
+
+### Entry 78
+
+**Prompt**
+
+> im at 9
+
+**What came back**
+
+Claude stopped only the API container (`docker compose ... stop backend`): the API no longer
+answered and the app on 8080 still did. My message did not say whether checks 1-8 passed, so it
+asked me to confirm that along with the result of check 9.
+
+**Why the next prompt changed**
+
+I confirmed all nine.
+
+### Entry 79
+
+**Prompt**
+
+> 1 to 9 passed, I see exactly that
+
+**What came back**
+
+All nine C3.3 checks passed against the containerised deployment on `localhost:8080`. Claude took
+the containers down (`docker compose -f docker-compose.deploy.yml down`) and proposed the contents
+of `docs/deployment.md` for confirmation before writing it: prerequisites, the one command, the two
+addresses, a table of every environment variable and build argument, how to run on another host or
+port, secrets handling, how to stop it, and what is not persisted. It also proposed a pointer from
+the README and a fresh-clone run as the brief suggests.
+
+**Why the next prompt changed**
+
+Good enough; I approved writing the document.
+
+### Entry 80
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote `docs/deployment.md` with the agreed sections: prerequisites, deploy (clone,
+`git checkout Week-4`, one command, the three addresses, two `curl` checks), environment variables
+(`CORS_ORIGINS` at start, `VITE_API_BASE_URL` at build, `PYTHONUNBUFFERED`; they must agree), another
+host or port, secrets (none; `frontend/.env` git-ignored and kept out of the image; never pass a
+secret to the frontend), stop and reset (data in memory only), troubleshooting (five symptoms). It
+added a paragraph to the README's `## Docker usage` pointing to the document. Checking the README
+for the link, it found the README never describes the frontend (overview, prerequisites, quick
+start are backend-only), and recorded that as a known trap to fix before submitting. It noted the
+fresh-clone run needs the commit first, and that the document's `git clone` from GitHub only works
+once `Week-4` is pushed.
+
+**Why the next prompt changed**
+
+Good enough; I approved the commit and the push before the fresh-clone check.
+
+### Entry 81
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude ran ruff and the suite in the pinned venv before pushing, committed ("Add the container
+deployment and its guide (Task 4.8)"), and pushed `Week-4`. The results of the CI run and of the
+fresh-clone check follow in the reply and the next entry.
+
+**Why the next prompt changed**
+
 Pending.
