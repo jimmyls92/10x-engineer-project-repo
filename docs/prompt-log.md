@@ -1545,9 +1545,48 @@ Good enough; I approved the commit and the push before the fresh-clone check.
 
 **What came back**
 
-Claude ran ruff and the suite in the pinned venv before pushing, committed ("Add the container
-deployment and its guide (Task 4.8)"), and pushed `Week-4`. The results of the CI run and of the
-fresh-clone check follow in the reply and the next entry.
+Claude ran ruff (passed), the suite (373 passed, coverage 100%) and Oxlint before pushing, committed
+`d98f450` ("Add the container deployment and its guide (Task 4.8)"), and pushed `Week-4`
+(`b8b39bb..d98f450`). CI run 38161943563 on `d98f450` succeeded. Fresh-clone check, following
+`docs/deployment.md` word for word: the first clone into the session's scratch folder failed with
+"Filename too long" (Windows path limit on `.git/hooks/...`), so Claude removed it and cloned into a
+short folder (`%LOCALAPPDATA%\Temp\plclone`) instead; `git checkout Week-4` gave `d98f450`, and
+`docker compose -f docker-compose.deploy.yml up --build` built and started both containers. The
+doc's checks passed: health `healthy`, the app 200, a direct `/collections` 200, the API allowing
+`http://localhost:8080`, and a create through the API 201. The fresh-clone containers were left
+running for me to look at.
+
+**Why the next prompt changed**
+
+Good enough; I approved the clean-up and closing the task.
+
+### Entry 82
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude took the fresh-clone containers down, deleted the temporary clone folder, marked Task 4.8 as
+done in CURRENT STATE (listing what is left for Module 4: Task 4.2, the README's frontend gap, the
+submission note). My approval covered the commit but not its message, which Claude had not shown,
+so it showed the message and waited before committing (Rule 5).
+
+**Why the next prompt changed**
+
+Good enough; I approved the message.
+
+### Entry 83
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the state and this log ("Record Task 4.8 as done in state"), without pushing, and
+stopped, as Rule 0 asks at the end of a task.
 
 **Why the next prompt changed**
 
