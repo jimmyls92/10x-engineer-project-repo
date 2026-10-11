@@ -1263,4 +1263,98 @@ asks at the end of a task.
 
 **Why the next prompt changed**
 
+I chose the next task.
+
+---
+
+## Task 4.6 — Full CRUD flow end to end
+
+### Entry 67
+
+**Prompt**
+
+> let's go for 4.6
+
+**What came back**
+
+Claude mapped Task 4.6's eight items to the browser checks of entries 55-57: all eight passed
+there. It pointed out that those checks ran before the CORS change (`3257878`), which now decides
+whether the browser may read the API's answers, so they no longer prove the current code works. It
+asked whether to start both servers again and repeat the checklist.
+
+**Why the next prompt changed**
+
+Good enough; I approved re-running the checks.
+
+### Entry 68
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude started the backend (port 8000, `CORS_ORIGINS` unset) and the dev server (port 5173). Checks:
+`/health` healthy, the dev server answered 200, and a request with `Origin: http://localhost:5173`
+got `access-control-allow-origin: http://localhost:5173` back. It handed me the same nine checks.
+
+**Why the next prompt changed**
+
+I went through the checklist again.
+
+### Entry 69
+
+**Prompt**
+
+> 1 to 8 passed, ready for 9
+
+**What came back**
+
+Claude stopped the backend. PowerShell reported one "process not found" error for the second
+process it targeted, which had already ended with its parent; it was then reported stopped anyway,
+and `localhost:8000/health` no longer answered. The background task reported exit code 127, as
+expected for a killed process. It asked me to press Apply and report.
+
+**Why the next prompt changed**
+
+I ran check 9.
+
+### Entry 70
+
+**Prompt**
+
+> I see exactly that
+
+**What came back**
+
+All nine checks passed again with the CORS change in place. Claude stopped the dev server, marked
+Task 4.6 as done in CURRENT STATE, noting the checks were local and C3.3 still needs the deployed
+run (Task 4.8), and proposed committing the state and this log. It stopped, as Rule 0 asks at the
+end of a task.
+
+**Why the next prompt changed**
+
+Good enough; I approved the commit and chose the next task in the same prompt.
+
+---
+
+## Task 4.7 — UX polish
+
+### Entry 71
+
+**Prompt**
+
+> yes, go with task 4.7 and commit first
+
+**What came back**
+
+Claude committed the state and log ("Record Task 4.6 as done in state"), then mapped Task 4.7's six
+items to what exists: loading states, visible error messages, empty states and form validation are
+built and four of them were seen in the browser checks; **responsive on mobile** and **keyboard
+accessibility** are in the code (wrapping layouts, `<dialog>`, real buttons, labelled fields) but
+were never checked. It proposed checking those two in the browser, with a short checklist for each,
+and asked to start the servers.
+
+**Why the next prompt changed**
+
 Pending.
