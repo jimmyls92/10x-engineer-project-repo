@@ -162,12 +162,12 @@ callbacks through props.
 
 | Component | Responsibility | Props |
 |---|---|---|
-| `Button` | Every button, with a disabled state used while a request runs | `variant`, `disabled`, `onClick`, `children` |
+| `Button` | Every button, with a disabled state used while a request runs | `variant`, `type`, `disabled`, `onClick`, `children` |
 | `Modal` | The floating window that hosts forms, confirmations and error pop-ups | `title`, `onClose`, `children` |
-| `ConfirmDialog` | Delete / Cancel confirmation, used for prompts and collections | `message`, `onConfirm`, `onCancel`, `busy` |
+| `ConfirmDialog` | Delete / Cancel confirmation, used for prompts and collections; shows the item's details, the spinner while deleting and a failed delete | `title`, `message`, `children`, `onConfirm`, `onCancel`, `busy`, `error`, `resource` |
 | `LoadingSpinner` | Spinning icon with a short label naming the operation | `label` |
-| `ErrorMessage` | A plain-language error message with the status code underneath | `error` |
-| `SuccessMessage` | Message confirming that a save or delete worked | `message` |
+| `ErrorMessage` | A plain-language error message with the status code underneath | `error`, `resource` ("prompt" or "collection") |
+| `SuccessMessage` | Message confirming that a save or delete worked; disappears after 4 seconds or on its close button | `message`, `onClose` |
 
 ### Differences from the component list in Task 4.4
 
@@ -275,6 +275,12 @@ language, with the status code underneath** when there is one (entry 30):
 
 The form's own field checks catch empty or too-long fields before anything is sent, so a `422`
 should only reach the user when the client and server rules disagree.
+
+### Success messages
+
+After a save or delete, a success message appears above the list. **It disappears by itself after
+4 seconds**, or sooner with its close button; a new message replaces the previous one, and screen
+readers announce it (entries 47-48).
 
 ### Empty states
 

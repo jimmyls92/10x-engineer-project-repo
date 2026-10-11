@@ -877,4 +877,82 @@ stays on screen.
 
 **Why the next prompt changed**
 
+I answered the question.
+
+### Entry 47
+
+**Prompt**
+
+> stays until user closes it
+
+**What came back**
+
+Claude named the downsides: an old message stays in view while the user works on, and could be
+read as the result of a later action; and every save costs an extra click. It proposed, for
+confirmation, that a new message replaces the previous one (so only the latest result is ever shown)
+and that leaving the screen clears it. It listed the step's code-level choices: `Modal` built on
+the browser's `<dialog>` element (keyboard focus stays inside, Escape closes it, which Task 4.7's
+keyboard accessibility needs; Escape in a form acts as Cancel); `ErrorMessage` holding the
+plain-language table from the spec, chosen by status, with the resource name passed in; and
+`LoadingSpinner` with a text label read by screen readers. It asked whether to build step 2 with
+these.
+
+**Why the next prompt changed**
+
+The downsides changed my mind. **Restructured** the success-message behaviour.
+
+### Entry 48
+
+**Prompt**
+
+> Lets change it for "dissapears itself after a few seconds"
+
+**What came back**
+
+Claude recorded it and named the downside: a user who looks away can miss the message. It proposed,
+for confirmation, 4 seconds, a close button to dismiss it sooner, a new message replacing the
+previous one, and the message announced to screen readers so it is not missed by them. The other
+choices from entry 47 (`<dialog>` for `Modal`, `ErrorMessage` holding the plain-language table,
+labelled spinner) stood. It asked whether to build step 2.
+
+**Why the next prompt changed**
+
+Good enough; I approved building step 2.
+
+### Entry 49
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude's first attempt, one shell command writing all twelve files, failed to parse ("unexpected
+EOF while looking for matching `''") and wrote nothing; it wrote the files one by one instead. It
+built the six shared components, each with a CSS Module: `Button`, `Modal` (`<dialog>`, Escape asks
+the parent to close), `ConfirmDialog` (spinner and error inside the window, Escape ignored while
+deleting), `LoadingSpinner` (`role="status"`), `ErrorMessage` (the spec's plain-language table,
+`role="alert"`) and `SuccessMessage` (4 s timer, close button). Building them needed props the spec
+did not list, so it updated the spec's inventory to match: `Button` `type` (Enter submits a form),
+`ConfirmDialog` `title`, `children`, `error`, `resource`, `ErrorMessage` `resource`,
+`SuccessMessage` `onClose`; and added a *Success messages* paragraph (entries 47-48). Lint and build
+passed; nothing renders these components yet.
+
+**Why the next prompt changed**
+
+Good enough; I approved the commit.
+
+### Entry 50
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed step 2 with the spec update and this log ("Add the shared UI components"), and
+asked whether to build step 3, the Prompts screen.
+
+**Why the next prompt changed**
+
 Pending.
