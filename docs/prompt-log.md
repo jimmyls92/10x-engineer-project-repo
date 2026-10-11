@@ -1031,4 +1031,70 @@ every C3.3 journey.
 
 **Why the next prompt changed**
 
+Claude has no browser here, so I take the clicking; I approved starting both servers.
+
+### Entry 55
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude started the backend (`uvicorn app.api:app`, port 8000, in the pinned venv) and the Vite dev
+server (port 5173) in the background. Checks: `/health` returned `{"status":"healthy"}`, and both
+`/` and `/collections` on the dev server returned 200. It handed me the nine-item checklist from
+entry 54 to go through in the browser, and noted that check 9 needs the backend stopped, which it
+will do when I reach it.
+
+**Why the next prompt changed**
+
+I went through the checklist in the browser.
+
+### Entry 56
+
+**Prompt**
+
+> 1 to 8 passed, ready for 9
+
+**What came back**
+
+Claude stopped the backend process (its background task then reported exit code 127, the expected
+result of being killed) and confirmed `localhost:8000/health` no longer answered. The dev server kept
+running. It asked me to press Apply on the Prompts screen and report what appears.
+
+**Why the next prompt changed**
+
+I ran check 9.
+
+### Entry 57
+
+**Prompt**
+
+> exactly that
+
+**What came back**
+
+All nine checks passed in the browser against the local backend. Claude stopped the dev server,
+marked Task 4.4 as done in CURRENT STATE (noting that step 1 already covered most of Task 4.5,
+leaving the CORS setting for deployment), and proposed committing the state and this log. It
+stopped, as Rule 0 asks at the end of a task.
+
+**Why the next prompt changed**
+
+Good enough; I approved the commit but not a push.
+
+### Entry 58
+
+**Prompt**
+
+> commit, no need for push
+
+**What came back**
+
+Claude committed CURRENT STATE and this log ("Record Task 4.4 as done in state") and did not push;
+`Week-4` stays ahead of `origin/Week-4`.
+
+**Why the next prompt changed**
+
 Pending.
