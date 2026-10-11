@@ -716,4 +716,103 @@ frontend spec"). It stopped there, as Rule 0 asks at the end of a task.
 
 **Why the next prompt changed**
 
+I had no 4-hour block for Task 4.2. **Restructured** the task order.
+
+---
+
+## Task 4.3 — Set up the React project
+
+### Entry 39
+
+**Prompt**
+
+> I dont have 4 hours now, what if we jump to task 4.3?
+
+**What came back**
+
+Claude checked the brief: nothing orders the tasks, and C3.5 times only the backend increment, so
+building the frontend first does not touch the 4-hour clock. The frontend needs no endpoint from
+Task 4.2 (the spec says so). Two caveats: the versioning open decisions can still be settled
+without the clock running, and Task 4.2's "suite passes against your deployed configuration" will
+come after deployment work anyway. Node 24.16.0 and npm 11.13.0 are installed. It asked for
+permission to switch CURRENT STATE to Task 4.3 and run the brief's scaffold command in `frontend/`.
+
+**Why the next prompt changed**
+
+Good enough; I approved both.
+
+### Entry 40
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude switched CURRENT STATE to Task 4.3, with Task 4.2 postponed. The brief's command,
+`npm create vite@latest . -- --template react`, ran create-vite 9.2.1 and stopped with "Operation
+cancelled": `frontend/` was not empty (it held `.gitkeep`) and the tool could not ask whether to
+overwrite without a terminal. Claude re-ran it with `--overwrite --no-immediate --no-interactive`,
+which replaced `.gitkeep` with the template, then ran `npm install` (24 packages, 0
+vulnerabilities) and `npm run build` (built). The template is React 19.2 and Vite 8.3, with
+Oxlint as its linter. Template files the spec removes: `src/App.css`, `src/assets/` (three images),
+`public/icons.svg`; `README.md` is the template's. `.gitignore` already ignores `node_modules`
+and `dist`. It proposed committing the untouched scaffold on its own, before any cleanup.
+
+**Why the next prompt changed**
+
+Good enough; I confirmed Oxlint and the commit.
+
+### Entry 41
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the scaffold as `30aaac1` ("Scaffold the React app with Vite"), 17 files. It then
+proposed the next step's code-level choices for confirmation: remove the template files and its
+`README.md`, reduce `App.jsx` and `index.css` to the app's own minimum, install React Router (named
+in the spec's stack), and create the spec's folders with the screen and layout files as minimal
+components, so the structure exists and the app builds (Git does not keep empty folders).
+
+**Why the next prompt changed**
+
+Good enough; I confirmed the four choices.
+
+### Entry 42
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude removed `src/App.css`, `src/assets/`, `public/` (which also held the Vite logo used as
+favicon) and the template `README.md`; set the page title to PromptLab; reduced `index.css` to
+global variables and a reset; installed `react-router-dom` 7.18; and created the spec's folders with
+`Layout`, `Header` (two `NavLink`s, Prompts and Collections) and the two screens, each showing its
+name. `App.jsx` maps `/` and `/collections`. `npm run build` and `npm run lint` (Oxlint, exit 0)
+passed. `src/api/` is empty, so Git does not keep it until Task 4.5. It proposed one commit for the
+cleanup and skeleton, since `App.jsx` belongs to both.
+
+**Why the next prompt changed**
+
+Good enough; I approved the commit.
+
+### Entry 43
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude marked Task 4.3 as done in CURRENT STATE, with Task 4.4 next unless Task 4.2 starts first,
+and committed the skeleton with this log and the state ("Replace the Vite demo with the app
+skeleton"). It stopped, as Rule 0 asks at the end of a task.
+
+**Why the next prompt changed**
+
 Pending.
