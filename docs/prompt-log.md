@@ -815,4 +815,66 @@ skeleton"). It stopped, as Rule 0 asks at the end of a task.
 
 **Why the next prompt changed**
 
+I chose the next task.
+
+---
+
+## Task 4.4 — Build the components
+
+### Entry 44
+
+**Prompt**
+
+> task 4.4
+
+**What came back**
+
+Claude proposed an order for confirmation: build Task 4.5's API layer first (`client.js`,
+`prompts.js`, `collections.js`, `.env.example`), then the shared components, then the Prompts
+screen, then the Collections screen, each step committed on its own. Reason: the screens own their
+API calls (spec), so built before the API layer they would need placeholder data, the kind C3.3
+rejects; the alternative, presentational components first and wiring later, rewrites each screen
+twice. It noted CORS is already open to every origin (`api.py:37-43`), to be revisited for
+deployment in Task 4.5.
+
+**Why the next prompt changed**
+
+Good enough; I confirmed the order.
+
+### Entry 45
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote step 1, the API layer: `src/api/client.js` (base URL from `VITE_API_BASE_URL`, one
+`request()` wrapper, an `ApiError` with `status` and `detail`, `status` null when the server was not
+reached, `null` returned for a 204), `prompts.js` (the five functions, `updatePrompt` with PATCH)
+and `collections.js` (three functions), plus `frontend/.env.example` and `.env` added to
+`frontend/.gitignore` (the template ignored only `*.local`). Lint and build passed. It listed its
+code-level choices for confirmation: the dev server falls back to `http://localhost:8000` but a
+production build without the variable stops at start-up with a message naming `.env.example`;
+`ApiError` keeps the API's raw `detail` so the screens can choose the plain message (spec); and
+`.env` is ignored so a local value is never committed.
+
+**Why the next prompt changed**
+
+Good enough; I confirmed the choices and the commit.
+
+### Entry 46
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed step 1 with this log ("Add the API client layer"). Opening step 2, the shared
+components, it raised the one functional point the spec leaves open: how long a success message
+stays on screen.
+
+**Why the next prompt changed**
+
 Pending.
