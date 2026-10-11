@@ -10,6 +10,8 @@ FastAPI with status 422 before the endpoint function runs, so no endpoint
 lists 422 under ``Raises``.
 """
 
+import os
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
@@ -23,7 +25,7 @@ from app.models import (
 from app.storage import storage
 from app.utils import (
     sort_prompts_by_date, filter_prompts_by_collection, filter_prompts_by_tags,
-    search_prompts, count_tags,
+    search_prompts, count_tags, parse_cors_origins,
 )
 from app import __version__
 
@@ -34,11 +36,14 @@ app = FastAPI(
     version=__version__
 )
 
-# CORS middleware
+# CORS: browsers may call the API only from the frontend's own addresses, read
+# from CORS_ORIGINS (comma-separated) so a deployment sets its address without a
+# code change; unset, only the local Vite dev server is allowed. Credentials stay
+# off because PromptLab has no logins or cookies to send.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=parse_cors_origins(os.getenv("CORS_ORIGINS")),
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

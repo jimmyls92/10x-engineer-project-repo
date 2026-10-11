@@ -28,6 +28,81 @@ class TestHealth:
         assert "version" in data
 
 
+class TestCors:
+    """Tests for the CORS policy: only the frontend's address may call the API.
+
+    These run with ``CORS_ORIGINS`` unset, as in CI, so the allowed origin is the
+    default, the local Vite dev server.
+    """
+
+    ALLOWED = "http://localhost:5173"
+    OTHER = "https://some-other-site.example.com"
+
+    def test_cors_preflight_allows_frontend_origin(self, client: TestClient):
+        """Verify a preflight from the frontend's origin is accepted for PATCH.
+
+        Args:
+            client: Test client for the API.
+        """
+        response = client.options(
+            "/prompts/any-id",
+            headers={"Origin": self.ALLOWED, "Access-Control-Request-Method": "PATCH"},
+        )
+
+        assert response.status_code == 200
+        assert response.headers["access-control-allow-origin"] == self.ALLOWED
+        assert "PATCH" in response.headers["access-control-allow-methods"]
+
+    def test_cors_preflight_rejects_other_origin(self, client: TestClient):
+        """Verify a preflight from any other origin is refused.
+
+        Args:
+            client: Test client for the API.
+        """
+        response = client.options(
+            "/prompts",
+            headers={"Origin": self.OTHER, "Access-Control-Request-Method": "POST"},
+        )
+
+        assert response.status_code == 400
+        assert "access-control-allow-origin" not in response.headers
+
+    def test_cors_get_from_frontend_origin_is_readable(self, client: TestClient):
+        """Verify a simple request from the frontend's origin is marked readable.
+
+        Args:
+            client: Test client for the API.
+        """
+        response = client.get("/prompts", headers={"Origin": self.ALLOWED})
+
+        assert response.status_code == 200
+        assert response.headers["access-control-allow-origin"] == self.ALLOWED
+
+    def test_cors_get_from_other_origin_is_not_readable(self, client: TestClient):
+        """Verify a simple request from another origin gets no permission header.
+
+        The server still answers; the browser is what withholds the response
+        from the page, because the header is missing.
+
+        Args:
+            client: Test client for the API.
+        """
+        response = client.get("/prompts", headers={"Origin": self.OTHER})
+
+        assert response.status_code == 200
+        assert "access-control-allow-origin" not in response.headers
+
+    def test_cors_does_not_allow_credentials(self, client: TestClient):
+        """Verify the API never invites the browser to send cookies.
+
+        Args:
+            client: Test client for the API.
+        """
+        response = client.get("/prompts", headers={"Origin": self.ALLOWED})
+
+        assert "access-control-allow-credentials" not in response.headers
+
+
 class TestPrompts:
     """Tests for prompt endpoints."""
     

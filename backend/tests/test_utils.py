@@ -17,6 +17,7 @@ from app.utils import (
     extract_variables,
     filter_prompts_by_collection,
     filter_prompts_by_tags,
+    parse_cors_origins,
     search_prompts,
     sort_prompts_by_date,
     validate_prompt_content,
@@ -475,3 +476,36 @@ class TestExtractVariables:
     def test_extract_variables_triple_braces(self):
         """Verify ``{{{name}}}`` gives ``name``, the extra braces left as text."""
         assert extract_variables("{{{name}}}") == ["name"]
+
+
+class TestParseCorsOrigins:
+    """Tests for ``parse_cors_origins``, which reads the ``CORS_ORIGINS`` value."""
+
+    @pytest.mark.parametrize("value", [None, "", "   ", " , ,"])
+    def test_parse_cors_origins_defaults_without_origins(self, value: Optional[str]):
+        """Verify an unset or empty value falls back to the local dev server.
+
+        Args:
+            value: A ``CORS_ORIGINS`` value holding no origin.
+        """
+        assert parse_cors_origins(value) == ["http://localhost:5173"]
+
+    def test_parse_cors_origins_reads_one_origin(self):
+        """Verify a single origin is returned on its own."""
+        assert parse_cors_origins("https://promptlab.example.com") == ["https://promptlab.example.com"]
+
+    def test_parse_cors_origins_splits_trims_and_drops_empty_entries(self):
+        """Verify a comma-separated value is split, trimmed and cleaned of empty entries."""
+        value = " https://a.example.com , ,http://localhost:5173 "
+
+        assert parse_cors_origins(value) == ["https://a.example.com", "http://localhost:5173"]
+
+    def test_parse_cors_origins_removes_trailing_slash(self):
+        """Verify a trailing slash is removed, since browsers send origins without one."""
+        assert parse_cors_origins("https://promptlab.example.com/") == ["https://promptlab.example.com"]
+
+    def test_parse_cors_origins_returns_a_new_default_list(self):
+        """Verify changing the returned default does not change the next call's result."""
+        parse_cors_origins(None).append("https://other.example.com")
+
+        assert parse_cors_origins(None) == ["http://localhost:5173"]

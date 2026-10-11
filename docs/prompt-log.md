@@ -1097,4 +1097,170 @@ Claude committed CURRENT STATE and this log ("Record Task 4.4 as done in state")
 
 **Why the next prompt changed**
 
+I chose the next task.
+
+---
+
+## Task 4.5 — API integration
+
+### Entry 59
+
+**Prompt**
+
+> Lets go for 4.5
+
+**What came back**
+
+Claude checked Task 4.5's list against the code: the three API files and their functions exist
+(`131a3f0`), the base URL comes from `VITE_API_BASE_URL`, and the backend has CORS
+(`api.py:37-43`). The open item is how CORS should be configured. It explained that today the
+backend accepts browser requests from any website, with `allow_credentials=True` alongside `"*"`
+(a preflight from `localhost:5173` echoed that origin back), although the app uses no cookies or
+logins. It named the trade-off: keeping it open needs no deployment setting, but lets any website
+call the API from a visitor's browser; limiting it to the frontend's address through an environment
+variable adds a setting that `docs/deployment.md` must document, and a wrong value breaks the app
+with "Can't reach the server". It noted that CORS does not stop direct calls such as `curl`. It
+asked which websites the deployed API should accept.
+
+**Why the next prompt changed**
+
+The question used a term I did not understand.
+
+### Entry 60
+
+**Prompt**
+
+> what do you mena by "which websites"?
+
+**What came back**
+
+Claude explained the term: a "website" here is the address of the page whose code sends the
+request (its origin), such as `http://localhost:5173` for our dev server or the deployed frontend's
+address. The browser tells the API which page a request comes from, and the backend's CORS setting
+says which pages may read the answer. With "any website", a page on an unrelated site could call
+PromptLab's API from a visitor's browser; with a list, the browser blocks every page not on it. It
+narrowed the question: allow only our frontend's addresses (local and deployed), or any page.
+
+**Why the next prompt changed**
+
+With the term explained, I could decide.
+
+### Entry 61
+
+**Prompt**
+
+> only our frontends address
+
+**What came back**
+
+Claude recorded the decision and raised a risk to a criterion before changing code: C3.5 times the
+Module 4 backend increment by commit timestamps, "scaffolding to first passing endpoint", and a
+backend commit made today, days before the Prompt Versioning work, could be read as the start of
+that clock. Options: change CORS now and state in the evidence that it is Task 4.5 configuration,
+not the versioning increment; or make the change in the Task 4.2 session, inside the 4 hours. It
+asked which.
+
+**Why the next prompt changed**
+
+I did not see what CORS has to do with Task 4.2.
+
+### Entry 62
+
+**Prompt**
+
+> what is exactly CORS and how is related with task 4.2?
+
+**What came back**
+
+Claude explained CORS (Cross-Origin Resource Sharing): browsers block a page from reading a
+response from a different address unless the server's response says that page is allowed; the
+backend's `CORSMiddleware` adds that permission (`api.py:37-43`). Our frontend (`localhost:5173`)
+and API (`localhost:8000`) are different addresses, so without CORS the browser would block every
+call. It stated that CORS has no functional link to Task 4.2: the only link is that both are
+backend code changes in Module 4, and C3.5 dates the Module 4 backend work by its commits. It
+repeated the question: change CORS now or in the Task 4.2 session.
+
+**Why the next prompt changed**
+
+I read the criterion differently. I challenged the risk Claude had raised.
+
+### Entry 63
+
+**Prompt**
+
+> Honestly, if you read the criterion C3.5 and the time stamp note, I think that it is clearly stated that is only related to the backend of task 4.2, dont you think?
+
+**What came back**
+
+Claude re-read both passages in `brief.txt`. Task 4.2's note (line 45) says "the increment from
+starting **this** backend work to your first passing endpoint", inside Task 4.2; C3.5 measures
+"scaffolding to first passing endpoint" within "the budget stated in this module's tasks", the
+same Task 4.2 budget. It agreed: the clock is Task 4.2's, and a CORS change is Task 4.5. It kept
+one residual point, that C3.5's evidence line says "the Module 4 backend increment" without naming
+the task, and proposed covering it at no cost: the CORS commits name Task 4.5. It proposed the
+change test-first and listed the code-level choices for confirmation.
+
+**Why the next prompt changed**
+
+A failing-test commit looked to me like the start of a TDD increment.
+
+### Entry 64
+
+**Prompt**
+
+> but wouldnt this activate the 4 hours clock?
+
+**What came back**
+
+Claude answered no by the brief's wording, since the clock is Task 4.2's and these tests are Task
+4.5's. It agreed a failing backend test is exactly what an assessor scans for as the start of an
+increment, so the misreading risk is real even if the reading is clear. It laid out two ways, with
+no recommendation: keep test-first with two commits whose messages name Task 4.5 and CORS; or
+commit the tests and the change together, since C3.2's test-first rule covers the second spec
+feature and endpoints, and CORS is neither. It asked which.
+
+**Why the next prompt changed**
+
+I chose to avoid any failing backend commit outside Task 4.2.
+
+### Entry 65
+
+**Prompt**
+
+> One commit with the tests and the change together
+
+**What came back**
+
+Claude's first attempt, one shell command with the edit script inline, again failed to parse and
+wrote nothing; it ran the same script from a file instead. Changes: `parse_cors_origins` in
+`utils.py:172` (comma-separated, trimmed, empty entries dropped, trailing slash removed, default
+`http://localhost:5173` when nothing is left); `api.py` passes `os.getenv("CORS_ORIGINS")` through
+it and sets `allow_credentials=False`, with a comment giving both reasons; `TestParseCorsOrigins`
+in `test_utils.py` (5 tests, one parametrized over four empty values) and `TestCors` in
+`test_api.py` (preflight allowed for the frontend, preflight from another origin refused with 400,
+the permission header present only for the frontend, no credentials header). ruff passed; suite
+373 passed, coverage 100%. `docs/API_REFERENCE.md` said CORS was open; Claude rewrote that
+paragraph. `docs/SYSTEM_MODEL.md` also describes open CORS but is marked a Module 1 snapshot, so it
+was left. CURRENT STATE marks Task 4.5 done and gains a known trap: the deployment must set
+`CORS_ORIGINS`. It listed the code-level choices again for confirmation and proposed one commit
+naming Task 4.5.
+
+**Why the next prompt changed**
+
+Good enough; I confirmed the choices and the commit.
+
+### Entry 66
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the CORS change, its tests, the API reference, the state and this log ("Limit CORS
+to the frontend's origins (Task 4.5)"), without pushing. Task 4.5 is done; it stopped, as Rule 0
+asks at the end of a task.
+
+**Why the next prompt changed**
+
 Pending.

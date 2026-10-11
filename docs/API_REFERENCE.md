@@ -18,8 +18,14 @@ with curl against a local server, and each response shown is the one that came b
 
 **None.** No endpoint requires a token, key or session, and no request header is checked.
 
-CORS is open: `api.py:38-44` allows every origin, method and header, with credentials allowed. Any web
-page can call the API from a browser.
+CORS is limited to the frontend's addresses (`api.py:39-50`). The allowed origins come from the
+`CORS_ORIGINS` environment variable, a comma-separated list such as
+`https://promptlab.example.com,http://localhost:5173`; when it is unset or empty, only
+`http://localhost:5173` (the Vite dev server) is allowed (`utils.py:172`). Every
+method and header is allowed; credentials are not, since nothing uses cookies. A browser page on
+any other origin gets no `Access-Control-Allow-Origin` header, so the browser withholds the
+response, and its preflight is refused with 400. CORS only binds browsers: `curl` or a script can
+still call every endpoint.
 
 ## Error codes and response formats
 

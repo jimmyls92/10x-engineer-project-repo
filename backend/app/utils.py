@@ -4,11 +4,17 @@ The list helpers sort, filter and search prompts for ``GET /prompts``, and
 ``count_tags`` counts the tags in use for ``GET /tags``. None of them
 modifies the list it is given. The two text helpers,
 ``validate_prompt_content`` and ``extract_variables``, are not called by
-the API; only ``tests/test_utils.py`` uses them.
+the API; only ``tests/test_utils.py`` uses them. ``parse_cors_origins`` turns
+the ``CORS_ORIGINS`` environment variable into the list of page addresses the
+API accepts browser requests from.
 """
 
-from typing import List
+from typing import List, Optional
 from app.models import Prompt, TagSummary
+
+
+# The Vite dev server's address, so a local frontend works with no setting.
+DEFAULT_CORS_ORIGINS = ["http://localhost:5173"]
 
 
 def sort_prompts_by_date(prompts: List[Prompt], descending: bool = True) -> List[Prompt]:
@@ -161,3 +167,23 @@ def extract_variables(content: str) -> List[str]:
     import re
     pattern = r'\{\{(\w+)\}\}'
     return re.findall(pattern, content)
+
+
+def parse_cors_origins(value: Optional[str]) -> List[str]:
+    """Turn a comma-separated list of origins into the list CORS accepts.
+
+    Each origin is an address such as ``https://promptlab.example.com``.
+    Spaces around entries and empty entries are dropped, and a trailing slash
+    is removed, because the browser sends an origin without one and CORS
+    compares the strings exactly. When the value is absent or holds no
+    origin, ``DEFAULT_CORS_ORIGINS`` is returned.
+
+    Args:
+        value: The raw ``CORS_ORIGINS`` value, or None when it is not set.
+
+    Returns:
+        A new list of origins, in the order given.
+    """
+    origins = [item.strip().rstrip("/") for item in (value or "").split(",")]
+    origins = [origin for origin in origins if origin]
+    return origins or list(DEFAULT_CORS_ORIGINS)
