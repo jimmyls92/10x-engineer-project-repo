@@ -14,7 +14,7 @@ import os
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from app.models import (
     Prompt, PromptCreate, PromptUpdate, PromptPatch,
@@ -25,7 +25,7 @@ from app.models import (
 )
 from app.storage import storage
 from app.utils import (
-    add_version, sort_prompts_by_date, filter_prompts_by_collection, filter_prompts_by_tags,
+    add_version, select_versions, sort_prompts_by_date, filter_prompts_by_collection, filter_prompts_by_tags,
     search_prompts, count_tags, parse_cors_origins,
 )
 from app import __version__
@@ -320,15 +320,27 @@ def delete_prompt(prompt_id: str):
 
 
 @app.get("/prompts/{prompt_id}/versions", response_model=PromptVersionList)
-def list_prompt_versions(prompt_id: str):
-    """List every saved version of a prompt's content, oldest first.
+def list_prompt_versions(
+    prompt_id: str,
+    order: Literal["asc", "desc"] = "asc",
+    limit: Optional[int] = Query(default=None, ge=1),
+):
+    """List the saved versions of a prompt's content.
+
+    The versions are ordered by number first and then cut to ``limit``. Unlike
+    ``GET /prompts``, an empty ``order`` is not ignored: it is rejected with
+    status 422, like any value other than ``asc`` or ``desc``.
 
     Args:
         prompt_id: Identifier of the prompt whose history to list.
+        order: ``asc`` (default) for version 1 first, ``desc`` for the latest
+            first.
+        limit: Optional. Keep at most this many versions, at least 1.
 
     Returns:
-        A ``PromptVersionList`` holding the versions in ascending order of
-        version number, and their count.
+        A ``PromptVersionList`` holding the selected versions, and ``total``,
+        the number of versions the prompt has, counted before the limit is
+        applied. The limit cuts the result rather than filtering it.
 
     Raises:
         HTTPException: With status 404 if no prompt has that identifier.
@@ -337,8 +349,8 @@ def list_prompt_versions(prompt_id: str):
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
 
-    versions = [prompt.versions[n] for n in sorted(prompt.versions)]
-    return PromptVersionList(versions=versions, total=len(versions))
+    versions = select_versions(prompt.versions, order == "desc", limit)
+    return PromptVersionList(versions=versions, total=len(prompt.versions))
 
 
 # ============== Collection Endpoints ==============

@@ -2174,4 +2174,80 @@ are the same value; docstrings mention the versions saved. In `backend/.venv`: 3
 
 **Why the next prompt changed**
 
+Group 2 was green and the message gave the reason, not the diff.
+
+### Entry 115
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed group 2's implementation, not pushed, and set out group 4's red commit for
+confirmation: in `TestPromptVersions`, `test_list_prompt_versions_order_and_limit` (AC-4.1 to
+AC-4.4, plus the default ascending order) and `test_list_prompt_versions_invalid_query`
+(`limit=0`, `order=up`, `order=`: AC-4.5, AC-4.6, AC-4.8), all red today because the endpoint
+ignores both parameters; `TestSelectVersions` unit tests in `test_utils.py`; and a
+`versioned_prompt` fixture in `conftest.py` building a prompt with 5 versions through the API,
+like `tagged_prompts`. It asked permission to write them.
+
+**Why the next prompt changed**
+
+The group 4 tests and the shared fixture followed the existing patterns, so I gave permission.
+
+### Entry 116
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added the `versioned_prompt` fixture to `conftest.py`, two parametrised tests to
+`TestPromptVersions` and `TestSelectVersions` to `test_utils.py`, then ran them: 6 API cases
+fail (AC-4.1, 4.2, 4.3 return the wrong versions; AC-4.5, 4.6, 4.8 return 200 instead of 422);
+the default-ascending and `limit=10` cases pass, since they match today's output, and act as
+regression guards. `test_utils.py` fails to import `select_versions`. Ruff passes. It proposed
+the red commit. Nothing committed.
+
+**Why the next prompt changed**
+
+The red cases failed for the missing parameters, which is what group 4 adds.
+
+### Entry 117
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `e57b633` "Add failing tests for ordering and limiting versions" at 12:41:51,
+not pushed, and set out the implementation's code-level choices for confirmation:
+`select_versions` in `utils.py` after `add_version`, sorting by version number then slicing;
+`list_prompt_versions` takes `order: Literal["asc", "desc"] = "asc"` and `limit: Optional[int] =
+Query(default=None, ge=1)`, so FastAPI gives the spec's 422 messages; the endpoint's docstring
+states that `total` counts before the limit. This commit should stop the clock.
+
+**Why the next prompt changed**
+
+The choices matched the spec and finding 10, so I confirmed them.
+
+### Entry 118
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `select_versions` to `utils.py` (sort by number, then slice; module docstring
+updated) and gave `list_prompt_versions` its `order` (`Literal`) and `limit` (`Query(ge=1)`)
+parameters, with `total` counted before the limit and the docstring saying so. In
+`backend/.venv`: 404 passed, coverage 100%, ruff clean. It proposed the commit that stops the
+C3.5 clock and stopped.
+
+**Why the next prompt changed**
+
 Pending.

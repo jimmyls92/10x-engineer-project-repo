@@ -3,7 +3,8 @@
 The list helpers sort, filter and search prompts for ``GET /prompts``, and
 ``count_tags`` counts the tags in use for ``GET /tags``. None of them
 modifies the list it is given. ``add_version`` returns a prompt's history with
-a new version added when its content changed, as a new dict. The two text helpers,
+a new version added when its content changed, as a new dict, and
+``select_versions`` orders and cuts a history for its list endpoint. The two text helpers,
 ``validate_prompt_content`` and ``extract_variables``, are not called by
 the API; only ``tests/test_utils.py`` uses them. ``parse_cors_origins`` turns
 the ``CORS_ORIGINS`` environment variable into the list of page addresses the
@@ -138,6 +139,27 @@ def add_version(
             version=latest + 1, content=content, created_at=created_at
         )
     return result
+
+
+def select_versions(
+    versions: Dict[int, PromptVersion], descending: bool, limit: Optional[int]
+) -> List[PromptVersion]:
+    """Return a prompt's versions ordered by number, then cut to a limit.
+
+    The order is applied before the limit, so a descending list with a limit
+    keeps the latest versions.
+
+    Args:
+        versions: The history, keyed by version number. It is not modified.
+        descending: Whether the highest version comes first.
+        limit: How many versions to keep from the start of the ordered list,
+            or None to keep them all. A limit above the count keeps them all.
+
+    Returns:
+        A new list of the selected versions.
+    """
+    ordered = [versions[n] for n in sorted(versions, reverse=descending)]
+    return ordered if limit is None else ordered[:limit]
 
 
 def validate_prompt_content(content: str) -> bool:
