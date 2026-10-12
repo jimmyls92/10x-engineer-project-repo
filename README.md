@@ -116,10 +116,8 @@ uvicorn app.api:app --reload
 This must be run **from the `backend/` directory** — the application is imported as
 `app.api`, which only resolves when `backend/` is the working directory.
 
-> **Do not use `python main.py`.** It is the repository's original entry point and it does not start a
-> server: `main.py:10` passes the application object together with `reload=True`, and uvicorn only
-> supports reload for an application given as an import string. `uvicorn app.api:app --reload` is
-> the working equivalent.
+`python main.py`, also from `backend/`, starts the same server with reload. It listens on every
+network interface (`0.0.0.0`), not only on `localhost`.
 
 | What | Where |
 |---|---|
@@ -353,7 +351,7 @@ docker run --rm -p 8000:8000 promptlab
 ```
 
 This runs the image's own command: no reload and no mounted code. The image starts uvicorn
-directly; see the note on `python main.py` in **Quick start guide**.
+directly rather than through `python main.py`, which turns reload on.
 
 ### Tests
 

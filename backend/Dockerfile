@@ -10,5 +10,5 @@ COPY app/ app/
 
 EXPOSE 8000
 
-# Not `python main.py`: main.py:10 passes the app object with reload=True, which uvicorn 0.27.0 rejects and exits.
+# Not `python main.py`: it turns on auto-reload, which a deployed server does not need.
 CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]

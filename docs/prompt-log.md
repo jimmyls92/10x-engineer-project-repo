@@ -2643,4 +2643,116 @@ and stopped, as Rule 0 asks at the end of a task.
 
 **Why the next prompt changed**
 
+Task 4.2 was closed; what was left was the rest of Module 4.
+
+### Entry 140
+
+**Prompt**
+
+> Lets finish module 4
+
+**What came back**
+
+Claude read the brief's *What You Submit* and *Verification* and proposed five steps: (1) any last
+backend change, (2) the deferred citation fix plus the stale status line of
+`specs/prompt-versions.md` (still "not implemented yet"), (3) the README's frontend section, (4)
+`docs/module-4-submission.md` checked on a fresh clone, (5) push and CI. It opened step 1 with one
+finding: the brief's verification starts with `cd backend && python main.py`, which with the
+pinned uvicorn exits with code 1 (Known traps; `backend/main.py` docstring), and a submission is
+returned if the app does not run. It asked how to treat that.
+
+**Why the next prompt changed**
+
+The finding seemed already covered by the README's warning.
+
+### Entry 141
+
+**Prompt**
+
+> I think as it is documented in the README it should be fine, nothing to do here. Wouldnt you agree?
+
+**What came back**
+
+Claude did not fully agree and named the downsides, since this touches a reason for a returned
+submission: the brief's *Verification* block is what an assessor runs, and it does not point to
+the README; the documented workaround is `uvicorn ...`, not the command the brief gives; Module
+4's verification is the first to ask for `python main.py` together with the frontend, so the
+failure is on the assessed path. It noted the fix is small (pass the app as an import string,
+`main.py:13`) and that the Module 2 and 3 submissions documented the issue without fixing it. It
+asked me to choose again with those downsides in view.
+
+**Why the next prompt changed**
+
+Seeing that the brief's own verification fails at its first command changed my mind.
+
+### Entry 142
+
+**Prompt**
+
+> ok, you are right, we should make it work for the verfication
+
+**What came back**
+
+Settled: `python main.py` must start the server. Claude set out the code-level choices for
+confirmation: pass `"app.api:app"` as an import string, keeping `reload=True`, host `0.0.0.0` and
+port 8000; a red test first (`backend/tests/test_main.py`, running `main.py` as `__main__` with
+`uvicorn.run` replaced, asserting it receives a string), then the fix, then a real run of `python
+main.py` against `/health`; afterwards update every current doc that says it fails (`main.py`
+docstring, README `:119` and `:356`, the `backend/Dockerfile` comment, CLAUDE.md's Known trap),
+leaving `docs/SYSTEM_MODEL.md` (a Module 1 snapshot) and earlier submission notes as historical
+records. It asked for confirmation.
+
+**Why the next prompt changed**
+
+The choices fixed the cause and tested it, so I confirmed them.
+
+### Entry 143
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote `backend/tests/test_main.py` (`TestMain.test_main_passes_app_as_import_string`: runs
+`main.py` as `__main__` with `uvicorn.run` replaced and asserts it is called once with
+`"app.api:app"`, host `0.0.0.0`, port 8000, `reload=True`). It fails for the right reason: uvicorn
+receives the `FastAPI` object, not the string. Ruff passes. It proposed committing the test alone.
+
+**Why the next prompt changed**
+
+The test failed on the app object, the actual cause.
+
+### Entry 144
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the red test alone, not pushed, and asked permission for the fix and the doc
+updates confirmed in entry 142, followed by a real `python main.py` run against `/health`.
+
+**Why the next prompt changed**
+
+The plan fixed the brief's first verification command, so I said yes.
+
+### Entry 145
+
+**Prompt**
+
+> yees
+
+**What came back**
+
+Claude changed `backend/main.py` to pass `"app.api:app"` (comment on why; docstring now says the
+command works and that Docker runs without reload, dropping the unused `app` import), and updated
+README `:119` and the Docker note, the `backend/Dockerfile` comment and CLAUDE.md's Known trap.
+Results: 418 passed, coverage 100%, ruff clean; a real `python main.py` logged "Uvicorn running on
+http://0.0.0.0:8000 ... Started reloader process" and `/health` answered
+`{"status":"healthy","version":"0.1.0"}`; the server was stopped. It proposed the commit.
+
+**Why the next prompt changed**
+
 Pending.
