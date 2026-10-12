@@ -3106,4 +3106,36 @@ Claude committed the state and this log ("Record Module 4 as complete in state")
 
 **Why the next prompt changed**
 
+Module 4 was pushed; I needed the text for the submission form.
+
+### Entry 164
+
+**Prompt**
+
+> give me the summary text to paste in the submission
+
+**What came back**
+
+Claude gave a paste-ready text taken from `docs/module-4-submission.md`: repository link and
+branch, a summary of what was built and how it was verified, and the known issues in short form,
+pointing to the note for details. This entry is not yet committed.
+
+**Why the next prompt changed**
+
+The summary text was ready; the log entry for it was not yet on GitHub.
+
+### Entry 165
+
+**Prompt**
+
+> commit and push the log entry
+
+**What came back**
+
+Claude added this entry and, since Rule 5 asks for every message to be approved even when the
+commit itself is requested, proposed the message for `docs/prompt-log.md` and `CLAUDE.md` (entry
+counter) and waited before committing and pushing.
+
+**Why the next prompt changed**
+
 Pending.
