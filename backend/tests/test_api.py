@@ -4,10 +4,13 @@ These tests verify the API endpoints work correctly.
 Students should expand these tests significantly in Week 3.
 """
 
+import os
 from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
+
+from app.utils import parse_cors_origins
 
 
 # The message Pydantic gives for a tag that breaks the ``Tag`` pattern (AC-2.3).
@@ -31,27 +34,30 @@ class TestHealth:
 class TestCors:
     """Tests for the CORS policy: only the frontend's address may call the API.
 
-    These run with ``CORS_ORIGINS`` unset, as in CI, so the allowed origin is the
-    default, the local Vite dev server.
+    The allowed origins are read from ``CORS_ORIGINS`` the same way the app reads
+    them, so the tests hold under any configuration: unset, as in CI, they are
+    the default local Vite dev server; in the deployed configuration, the
+    deployed frontend's address.
     """
 
-    ALLOWED = "http://localhost:5173"
+    ALLOWED = parse_cors_origins(os.getenv("CORS_ORIGINS"))
     OTHER = "https://some-other-site.example.com"
 
     def test_cors_preflight_allows_frontend_origin(self, client: TestClient):
-        """Verify a preflight from the frontend's origin is accepted for PATCH.
+        """Verify a preflight from each configured origin is accepted for PATCH.
 
         Args:
             client: Test client for the API.
         """
-        response = client.options(
-            "/prompts/any-id",
-            headers={"Origin": self.ALLOWED, "Access-Control-Request-Method": "PATCH"},
-        )
+        for origin in self.ALLOWED:
+            response = client.options(
+                "/prompts/any-id",
+                headers={"Origin": origin, "Access-Control-Request-Method": "PATCH"},
+            )
 
-        assert response.status_code == 200
-        assert response.headers["access-control-allow-origin"] == self.ALLOWED
-        assert "PATCH" in response.headers["access-control-allow-methods"]
+            assert response.status_code == 200
+            assert response.headers["access-control-allow-origin"] == origin
+            assert "PATCH" in response.headers["access-control-allow-methods"]
 
     def test_cors_preflight_rejects_other_origin(self, client: TestClient):
         """Verify a preflight from any other origin is refused.
@@ -68,15 +74,16 @@ class TestCors:
         assert "access-control-allow-origin" not in response.headers
 
     def test_cors_get_from_frontend_origin_is_readable(self, client: TestClient):
-        """Verify a simple request from the frontend's origin is marked readable.
+        """Verify a simple request from each configured origin is marked readable.
 
         Args:
             client: Test client for the API.
         """
-        response = client.get("/prompts", headers={"Origin": self.ALLOWED})
+        for origin in self.ALLOWED:
+            response = client.get("/prompts", headers={"Origin": origin})
 
-        assert response.status_code == 200
-        assert response.headers["access-control-allow-origin"] == self.ALLOWED
+            assert response.status_code == 200
+            assert response.headers["access-control-allow-origin"] == origin
 
     def test_cors_get_from_other_origin_is_not_readable(self, client: TestClient):
         """Verify a simple request from another origin gets no permission header.
@@ -98,7 +105,7 @@ class TestCors:
         Args:
             client: Test client for the API.
         """
-        response = client.get("/prompts", headers={"Origin": self.ALLOWED})
+        response = client.get("/prompts", headers={"Origin": self.ALLOWED[0]})
 
         assert "access-control-allow-credentials" not in response.headers
 

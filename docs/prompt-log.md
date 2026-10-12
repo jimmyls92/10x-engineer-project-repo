@@ -2423,4 +2423,121 @@ deployed configuration.
 
 **Why the next prompt changed**
 
+Claude asked what "deployed configuration" should mean; I named the deploy compose file.
+
+### Entry 128
+
+**Prompt**
+
+> it should be "docker-compose.deploy.yml", wouldnt you agree?
+
+**What came back**
+
+Claude agreed with the file but said the answer covers only half the question: the file defines
+two services, and the backend image holds `app/` but not `tests/`, so "the suite against it"
+still needs the service the tests run in and the settings they run with. It also pointed out that
+the tests use FastAPI's in-process client, so they exercise the container's Python, libraries and
+environment, not the running server over the network. It asked which service, and whether its
+environment is used as it is.
+
+**Why the next prompt changed**
+
+Claude narrowed the question to the service and its settings.
+
+### Entry 129
+
+**Prompt**
+
+> yes, use its environment as it is
+
+**What came back**
+
+Settled: the suite runs inside the `backend` service of `docker-compose.deploy.yml`, with its
+environment unchanged. Claude set out the code-level choices for confirmation: `docker compose -f
+docker-compose.deploy.yml run --rm --build -v ./backend/tests:/app/tests:ro backend pytest tests/
+-v`, mounting the tests read-only rather than copying them into the deployed image (which would
+change what is deployed) or adding a test stage to the Dockerfile (more to maintain); `run`
+starts only that service, with the service's environment. It asked permission to run it (Docker
+Desktop must be running).
+
+**Why the next prompt changed**
+
+The run plan used the service's real environment without changing the deployed image.
+
+### Entry 130
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude rebuilt the image and ran the suite inside the `backend` service of
+`docker-compose.deploy.yml` (tests mounted read-only): **415 passed, 2 failed**. The failures are
+`TestCors.test_cors_preflight_allows_frontend_origin` and
+`test_cors_get_from_frontend_origin_is_readable` (`backend/tests/test_api.py:41`, `:70`): they
+hard-code the default origin `http://localhost:5173` (`:38`, and the class docstring says they
+assume `CORS_ORIGINS` unset), while the service sets `CORS_ORIGINS=http://localhost:8080`, so no
+`access-control-allow-origin` header comes back. Every version test passed. This is exactly the
+C3.2 mistake "a suite that passes locally but not against the deployed config". CURRENT STATE
+updated. It asked what these two tests should check so they hold under any configuration.
+
+**Why the next prompt changed**
+
+I wanted to compare the ways out before choosing one.
+**Restructured**: from answering the question to asking for options.
+
+### Entry 131
+
+**Prompt**
+
+> can you propose alternatives with advantages and disadvantages?
+
+**What came back**
+
+Four options with pros and cons and, per Rule 0b point 6, no recommendation until I choose:
+(A) the tests read the allowed origin from `CORS_ORIGINS` with `parse_cors_origins`; (B) the
+tests set their own `CORS_ORIGINS` and rebuild the app, which needs a backend change since CORS is
+configured at import (`api.py:46`); (C) skip the two tests when `CORS_ORIGINS` is set; (D) run
+the deployed suite with `CORS_ORIGINS` unset, which undoes the decision in entry 129.
+
+**Why the next prompt changed**
+
+Option A kept the backend untouched and checked the real deployed value.
+
+### Entry 132
+
+**Prompt**
+
+> I woild go for A as it does not imply changes in the backend and holds under any configuration
+
+**What came back**
+
+Claude gave its recommendation now that I had chosen (Rule 0b point 6): also A, so there was
+nothing to pick between. It set out the code-level choices for confirmation: `TestCors` reads
+the allowed origins with `parse_cors_origins(os.getenv("CORS_ORIGINS"))`; the two failing tests
+check every configured origin, not just the first; the class docstring no longer claims the
+variable is unset; then the suite runs both locally and in the deploy `backend` service. It
+asked permission to make the change and run both.
+
+**Why the next prompt changed**
+
+The choices matched option A, so I confirmed them.
+
+### Entry 133
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude changed `TestCors` in `backend/tests/test_api.py`: `ALLOWED` is now
+`parse_cors_origins(os.getenv("CORS_ORIGINS"))`, the two failing tests loop over every configured
+origin, the credentials test uses the first, and the class docstring says the tests follow the
+setting. Results: locally 417 passed, coverage 100%, ruff clean; in the deploy `backend` service
+(it printed `CORS_ORIGINS=http://localhost:8080`) **417 passed**. It proposed the commit.
+
+**Why the next prompt changed**
+
 Pending.
