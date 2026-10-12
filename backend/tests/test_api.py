@@ -2432,3 +2432,67 @@ class TestPromptVersions:
             response.json()["updated_at"]
         ) > datetime.fromisoformat(created["updated_at"])
         assert client.get(f"/prompts/{created['id']}/versions").json()["total"] == 1
+
+    # --- list_prompt_versions: order and limit ---
+
+    @pytest.mark.parametrize(
+        "query, expected",
+        [
+            ("", [1, 2, 3, 4, 5]),
+            ("?order=desc", [5, 4, 3, 2, 1]),
+            ("?limit=2", [1, 2]),
+            ("?order=desc&limit=2", [5, 4]),
+            ("?limit=10", [1, 2, 3, 4, 5]),
+        ],
+        ids=["default-asc", "AC-4.1-desc", "AC-4.2-limit", "AC-4.3-desc-limit", "AC-4.4-limit-over"],
+    )
+    def test_list_prompt_versions_order_and_limit(
+        self, client: TestClient, versioned_prompt, query, expected
+    ):
+        """Verify ``order`` sorts the versions before ``limit`` cuts them (AC-4.1 to AC-4.4).
+
+        ``total`` stays the full count whatever the limit.
+
+        Args:
+            client: FastAPI test client fixture.
+            versioned_prompt: Id of a prompt with 5 versions.
+            query: The query string sent.
+            expected: The version numbers expected, in order.
+        """
+        response = client.get(f"/prompts/{versioned_prompt}/versions{query}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert [v["version"] for v in data["versions"]] == expected
+        assert data["total"] == 5
+
+    @pytest.mark.parametrize(
+        "query, field, msg",
+        [
+            ("limit=0", "limit", "Input should be greater than or equal to 1"),
+            ("order=up", "order", "Input should be 'asc' or 'desc'"),
+            ("order=", "order", "Input should be 'asc' or 'desc'"),
+        ],
+        ids=["AC-4.5-limit-zero", "AC-4.6-order-up", "AC-4.8-order-empty"],
+    )
+    def test_list_prompt_versions_invalid_query(
+        self, client: TestClient, versioned_prompt, query, field, msg
+    ):
+        """Verify an invalid ``order`` or ``limit`` is rejected with 422.
+
+        Covers AC-4.5, AC-4.6 and AC-4.8. Unlike ``GET /prompts``, an empty
+        ``order`` is not ignored.
+
+        Args:
+            client: FastAPI test client fixture.
+            versioned_prompt: Id of a prompt with 5 versions.
+            query: The query string sent.
+            field: The parameter the error must name.
+            msg: The message the error must carry.
+        """
+        response = client.get(f"/prompts/{versioned_prompt}/versions?{query}")
+
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["query", field]
+        assert error["msg"] == msg

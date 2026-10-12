@@ -92,3 +92,22 @@ def tagged_prompts(client, ticking_clock):
         ).json()["id"]
         for name in ["P1", "P2", "P3"]
     }
+
+
+@pytest.fixture
+def versioned_prompt(client):
+    """Create a prompt with 5 versions, the history US-4's criteria start from.
+
+    The prompt is created with content ``"C1"`` and then patched to ``"C2"``
+    through ``"C5"``, so version n holds ``"Cn"``.
+
+    Args:
+        client: FastAPI test client fixture.
+
+    Returns:
+        The prompt's id.
+    """
+    prompt_id = client.post("/prompts", json={"title": "T", "content": "C1"}).json()["id"]
+    for n in range(2, 6):
+        client.patch(f"/prompts/{prompt_id}", json={"content": f"C{n}"})
+    return prompt_id

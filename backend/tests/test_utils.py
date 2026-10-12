@@ -20,6 +20,7 @@ from app.utils import (
     filter_prompts_by_tags,
     parse_cors_origins,
     search_prompts,
+    select_versions,
     sort_prompts_by_date,
     validate_prompt_content,
 )
@@ -558,3 +559,51 @@ class TestAddVersion:
 
         assert result is not history
         assert list(history) == [1]
+
+
+class TestSelectVersions:
+    """Tests for ``select_versions``."""
+
+    def make_history(self) -> Dict[int, PromptVersion]:
+        """Build a history of 3 versions, inserted out of order.
+
+        Returns:
+            A dict from version number to ``PromptVersion``, keys 3, 1, 2.
+        """
+        return {
+            n: PromptVersion(version=n, content=f"C{n}", created_at=datetime(2026, 1, n))
+            for n in [3, 1, 2]
+        }
+
+    # --- behaviour ---
+
+    @pytest.mark.parametrize(
+        "descending, limit, expected",
+        [
+            (False, None, [1, 2, 3]),
+            (True, None, [3, 2, 1]),
+            (False, 2, [1, 2]),
+            (True, 2, [3, 2]),
+            (False, 5, [1, 2, 3]),
+        ],
+        ids=["asc", "desc", "asc-limit", "desc-limit", "limit-over"],
+    )
+    def test_select_versions_orders_then_limits(self, descending, limit, expected):
+        """Verify the versions are sorted by number first, then cut to the limit.
+
+        Args:
+            descending: Whether the highest version comes first.
+            limit: How many versions to keep, or None for all.
+            expected: The version numbers expected, in order.
+        """
+        result = select_versions(self.make_history(), descending, limit)
+
+        assert [v.version for v in result] == expected
+
+    def test_select_versions_leaves_input_unchanged(self):
+        """Verify the helper does not modify the history it is given."""
+        history = self.make_history()
+
+        select_versions(history, True, 1)
+
+        assert list(history) == [3, 1, 2]
