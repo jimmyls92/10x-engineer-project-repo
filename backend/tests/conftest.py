@@ -95,19 +95,38 @@ def tagged_prompts(client, ticking_clock):
 
 
 @pytest.fixture
-def versioned_prompt(client):
-    """Create a prompt with 5 versions, the history US-4's criteria start from.
+def make_versioned_prompt(client):
+    """Provide a function that creates a prompt with a given number of versions.
 
-    The prompt is created with content ``"C1"`` and then patched to ``"C2"``
-    through ``"C5"``, so version n holds ``"Cn"``.
+    The prompt is created with content ``"C1"`` and then patched to ``"C2"``,
+    ``"C3"`` and so on, so version n holds ``"Cn"``. The spec's criteria start
+    from different history sizes, and each test asks for the one it names.
 
     Args:
         client: FastAPI test client fixture.
 
     Returns:
+        A function taking the number of versions and returning the prompt's id.
+    """
+    def make(versions: int) -> str:
+        prompt_id = client.post(
+            "/prompts", json={"title": "T", "content": "C1"}
+        ).json()["id"]
+        for n in range(2, versions + 1):
+            client.patch(f"/prompts/{prompt_id}", json={"content": f"C{n}"})
+        return prompt_id
+
+    return make
+
+
+@pytest.fixture
+def versioned_prompt(make_versioned_prompt):
+    """Create a prompt with 5 versions, the history US-4's criteria start from.
+
+    Args:
+        make_versioned_prompt: Factory fixture that builds a versioned prompt.
+
+    Returns:
         The prompt's id.
     """
-    prompt_id = client.post("/prompts", json={"title": "T", "content": "C1"}).json()["id"]
-    for n in range(2, 6):
-        client.patch(f"/prompts/{prompt_id}", json={"content": f"C{n}"})
-    return prompt_id
+    return make_versioned_prompt(5)

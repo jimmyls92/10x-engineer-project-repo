@@ -2496,3 +2496,185 @@ class TestPromptVersions:
         error = response.json()["detail"][0]
         assert error["loc"] == ["query", field]
         assert error["msg"] == msg
+
+    # --- history kept out of prompt responses, and deleted with the prompt ---
+
+    def test_get_prompt_hides_versions(self, client: TestClient, make_versioned_prompt):
+        """Verify ``GET /prompts/{id}`` has no ``versions`` key (AC-1.4).
+
+        Args:
+            client: FastAPI test client fixture.
+            make_versioned_prompt: Factory fixture that builds a versioned prompt.
+        """
+        prompt_id = make_versioned_prompt(3)
+
+        response = client.get(f"/prompts/{prompt_id}")
+
+        assert response.status_code == 200
+        assert "versions" not in response.json()
+
+    def test_list_prompts_hides_versions(self, client: TestClient, make_versioned_prompt):
+        """Verify no item of ``GET /prompts`` has a ``versions`` key (AC-1.5).
+
+        Args:
+            client: FastAPI test client fixture.
+            make_versioned_prompt: Factory fixture that builds a versioned prompt.
+        """
+        make_versioned_prompt(3)
+
+        response = client.get("/prompts")
+
+        assert response.status_code == 200
+        assert all("versions" not in p for p in response.json()["prompts"])
+
+    @pytest.mark.parametrize("path", ["/versions", "/versions/1"], ids=["list", "one"])
+    def test_delete_prompt_removes_versions(self, client: TestClient, make_versioned_prompt, path):
+        """Verify the history goes with a deleted prompt (AC-1.6).
+
+        Args:
+            client: FastAPI test client fixture.
+            make_versioned_prompt: Factory fixture that builds a versioned prompt.
+            path: The version endpoint read after the deletion.
+        """
+        prompt_id = make_versioned_prompt(2)
+
+        deleted = client.delete(f"/prompts/{prompt_id}")
+
+        response = client.get(f"/prompts/{prompt_id}{path}")
+
+        assert deleted.status_code == 204
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Prompt not found"}
+
+    # --- get_prompt_version: success cases ---
+
+    def test_get_prompt_version_success(self, client: TestClient, make_versioned_prompt):
+        """Verify one version equals the same item of the list response (AC-2.1).
+
+        Args:
+            client: FastAPI test client fixture.
+            make_versioned_prompt: Factory fixture that builds a versioned prompt.
+        """
+        prompt_id = make_versioned_prompt(3)
+
+        listed = client.get(f"/prompts/{prompt_id}/versions").json()
+
+        response = client.get(f"/prompts/{prompt_id}/versions/2")
+
+        assert response.status_code == 200
+        assert response.json() == listed["versions"][1]
+        assert response.json()["content"] == "C2"
+
+    def test_get_prompt_version_latest_is_current(self, client: TestClient, make_versioned_prompt):
+        """Verify the latest version holds the prompt's current content (AC-2.2, I-2).
+
+        Args:
+            client: FastAPI test client fixture.
+            make_versioned_prompt: Factory fixture that builds a versioned prompt.
+        """
+        prompt_id = make_versioned_prompt(3)
+
+        prompt = client.get(f"/prompts/{prompt_id}").json()
+
+        response = client.get(f"/prompts/{prompt_id}/versions/3")
+
+        assert response.status_code == 200
+        assert response.json()["content"] == prompt["content"]
+
+    def test_get_prompt_version_integer_decimal(self, client: TestClient, make_versioned_prompt):
+        """Verify ``1.0`` is read as version 1, as the spec promises (E-10).
+
+        This checks the spec's own claim about the path parameter, not FastAPI's
+        parsing as such.
+
+        Args:
+            client: FastAPI test client fixture.
+            make_versioned_prompt: Factory fixture that builds a versioned prompt.
+        """
+        prompt_id = make_versioned_prompt(1)
+
+        response = client.get(f"/prompts/{prompt_id}/versions/1.0")
+
+        assert response.status_code == 200
+        assert response.json()["version"] == 1
+
+    # --- get_prompt_version: error cases ---
+
+    def test_get_prompt_version_not_found(self, client: TestClient, make_versioned_prompt):
+        """Verify a number above the latest version gives 404 (AC-2.3).
+
+        Args:
+            client: FastAPI test client fixture.
+            make_versioned_prompt: Factory fixture that builds a versioned prompt.
+        """
+        prompt_id = make_versioned_prompt(3)
+
+        response = client.get(f"/prompts/{prompt_id}/versions/4")
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Version not found"}
+
+    @pytest.mark.parametrize(
+        "version, msg",
+        [
+            ("0", "Input should be greater than or equal to 1"),
+            ("-1", "Input should be greater than or equal to 1"),
+            ("abc", "Input should be a valid integer, unable to parse string as an integer"),
+        ],
+        ids=["AC-2.4-zero", "AC-2.4-negative", "AC-2.5-not-integer"],
+    )
+    def test_get_prompt_version_invalid(
+        self, client: TestClient, make_versioned_prompt, version, msg
+    ):
+        """Verify a version below 1 or not an integer is rejected with 422 (AC-2.4, AC-2.5).
+
+        Args:
+            client: FastAPI test client fixture.
+            make_versioned_prompt: Factory fixture that builds a versioned prompt.
+            version: The path value sent.
+            msg: The message the error must carry.
+        """
+        prompt_id = make_versioned_prompt(1)
+
+        response = client.get(f"/prompts/{prompt_id}/versions/{version}")
+
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["path", "version"]
+        assert error["msg"] == msg
+
+    def test_get_prompt_version_prompt_not_found(self, client: TestClient):
+        """Verify one version of an unknown prompt gives 404 (AC-2.6).
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.get("/prompts/nope/versions/1")
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Prompt not found"}
+
+    # --- restoring an earlier wording ---
+
+    def test_patch_prompt_restore_saves_new_version(self, client: TestClient, make_versioned_prompt):
+        """Verify restoring an old wording saves a new version, never rewinds (AC-5.1).
+
+        Args:
+            client: FastAPI test client fixture.
+            make_versioned_prompt: Factory fixture that builds a versioned prompt.
+        """
+        prompt_id = make_versioned_prompt(3)
+
+        before = client.get(f"/prompts/{prompt_id}/versions").json()
+        first = client.get(f"/prompts/{prompt_id}/versions/1").json()
+
+        response = client.patch(
+            f"/prompts/{prompt_id}", json={"content": first["content"]}
+        )
+
+        assert response.status_code == 200
+        assert response.json()["content"] == first["content"]
+        after = client.get(f"/prompts/{prompt_id}/versions").json()
+        assert after["total"] == 4
+        assert after["versions"][3]["content"] == first["content"]
+        assert after["versions"][:3] == before["versions"]
