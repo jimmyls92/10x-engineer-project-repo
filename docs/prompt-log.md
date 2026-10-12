@@ -3020,4 +3020,59 @@ commit.
 
 **Why the next prompt changed**
 
+The deployed suite was green in the working repository, so I approved the commit.
+
+### Entry 159
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `69dc5ba` "Ship main.py in the image for its test", not pushed, confirmed no
+app, test or frontend code changed since `3540325`, and re-cloned `Week-4` at `69dc5ba`: ruff
+clean, 418 passed with coverage 100%, the deployment up (`/health` healthy, 8080 answered 200),
+and the deployed-config suite, run exactly as `docs/deployment.md` writes it, **418 passed**.
+Containers stopped and the clone deleted. The `python main.py`, `npm install`, `npm run lint` and
+`npm run dev` results from `3540325` still apply, since that code is unchanged. It asked
+permission to write `docs/module-4-submission.md`.
+
+**Why the next prompt changed**
+
+The fresh clone was green, so the note could report real results.
+
+### Entry 160
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote `docs/module-4-submission.md` in the Module 3 format: repository, branch, summary,
+process evidence; a table mapping each *What You Submit* item to its evidence (commits, log
+entries, files), including the C3.5 clock (`63dc14c` 12:23:09 to `034b75d` 12:43:58, and why not
+the first green `d7f764e`); the `CLAUDE.md` substitution; the `python main.py` fix; the
+fresh-clone verification; and 14 known issues (the four new ones first, then Module 3's still
+true, with today's line numbers). Checking its own claims, it removed two it had not observed
+(a 201 for the create call, and "with reload" on the clone run). It proposed the commit.
+
+**Why the next prompt changed**
+
+The note's claims were checked against what had been run.
+
+### Entry 161
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the submission note with the state and log, not pushed, ran ruff and the suite
+once more, and asked permission for step 5: push `Week-4` and watch CI.
+
+**Why the next prompt changed**
+
 Pending.
