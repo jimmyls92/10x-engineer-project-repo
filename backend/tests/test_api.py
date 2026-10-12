@@ -2222,3 +2222,16 @@ class TestPromptVersions:
         assert datetime.fromisoformat(version["created_at"]) == datetime.fromisoformat(
             created["created_at"]
         )
+
+    # --- list_prompt_versions: error cases ---
+
+    def test_list_prompt_versions_prompt_not_found(self, client: TestClient):
+        """Verify listing the versions of an unknown prompt gives 404 (AC-4.7).
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        response = client.get("/prompts/nope/versions")
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Prompt not found"}
