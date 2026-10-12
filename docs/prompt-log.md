@@ -2540,4 +2540,75 @@ setting. Results: locally 417 passed, coverage 100%, ruff clean; in the deploy `
 
 **Why the next prompt changed**
 
+The suite passed in both configurations, so I approved the commit.
+
+### Entry 134
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `10cb457` "Read the allowed CORS origins in the tests", not pushed, and opened
+the step to record how to rerun the suite against the deployed configuration. It noted that the
+README's Docker "Tests" section says to run the tests locally only, which is now incomplete, and
+that `docs/deployment.md` (Task 4.8's guide) has no testing section. It asked where an assessor
+should find the command.
+
+**Why the next prompt changed**
+
+Claude asked where the deployed-suite command should live.
+
+### Entry 135
+
+**Prompt**
+
+> where do you think? I think it should be in readme in the test section and in the deployment.md in a new section
+
+**What came back**
+
+Claude agreed with both places and named one downside: two full copies of the command can drift
+apart. It proposed the full command and its explanation only in a new `docs/deployment.md`
+section, "Run the tests against the deployed configuration" (after Deploy), and in the README's
+Docker "Tests" section a short replacement of the "run them locally" text with a link to it. It
+also flagged a Git Bash detail found in step 6: the volume path needs `MSYS_NO_PATHCONV=1` and
+`$(pwd -W)` on Windows, so the section gives both forms. It asked permission to write them.
+
+**Why the next prompt changed**
+
+One full copy plus a link avoided two copies drifting apart.
+
+### Entry 136
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added the section "Run the tests against the deployed configuration" to
+`docs/deployment.md` (after Deploy: the plain and the Git Bash forms of the command, what each
+part does, and the expected `417 passed`) and replaced the README's Docker "Tests" text with a
+pointer to it. It ran the Git Bash form exactly as written: 417 passed. The plain form (Linux,
+macOS) differs only in the path and was not run on those systems. It proposed the commit.
+
+**Why the next prompt changed**
+
+The guide section was verified by running it as written.
+
+### Entry 137
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the deployment guide section, README pointer, state and log, not pushed, and
+opened step 7: ruff and the suite once more, then `git push origin Week-4`, which runs CI
+publicly. It asked permission to push.
+
+**Why the next prompt changed**
+
 Pending.

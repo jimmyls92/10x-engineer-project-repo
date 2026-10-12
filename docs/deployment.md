@@ -60,6 +60,41 @@ To run in the background instead, add `-d` (`... up --build -d`) and follow the 
 
 ---
 
+## Run the tests against the deployed configuration
+
+The backend's test suite can run inside the deployed API service itself, so it is checked with the
+same Python, the same pinned libraries and the same environment (`CORS_ORIGINS` included) as the
+deployment, not only on a development machine. From the repository root:
+
+```bash
+docker compose -f docker-compose.deploy.yml run --rm --build \
+  -v "$(pwd)/backend/tests:/app/tests:ro" backend pytest tests/ -v
+```
+
+In **Git Bash on Windows**, stop Git Bash from rewriting the paths and give Docker a Windows path:
+
+```bash
+MSYS_NO_PATHCONV=1 docker compose -f docker-compose.deploy.yml run --rm --build \
+  -v "$(pwd -W)/backend/tests:/app/tests:ro" backend pytest tests/ -v
+```
+
+What the command does:
+
+- **`run ... backend`** starts a one-off container of the `backend` service only, with the
+  environment `docker-compose.deploy.yml` gives it. `--rm` removes it afterwards, and `--build`
+  rebuilds the image first so it holds the current code.
+- **`-v ...:ro`** mounts `backend/tests/` read-only. The image holds only `app/` and
+  `requirements.txt`, and stays exactly as deployed; `pytest` is already in it, from
+  `requirements.txt`.
+- The tests call the app in-process, with FastAPI's test client. They check the container's code,
+  libraries and settings, not the running server over the network, so the deployment does not need
+  to be up.
+
+The run ends with `417 passed`. The CORS tests read the allowed origins from `CORS_ORIGINS`, so
+they check `http://localhost:8080` here and the default `http://localhost:5173` in a local run.
+
+---
+
 ## Environment variables
 
 Both values are set in `docker-compose.deploy.yml`; the defaults there work as they are on one
