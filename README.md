@@ -41,6 +41,14 @@ later module.
   without `tags` clears them, `PATCH` without `tags` keeps them, and `"tags": []` clears them on
   either. `GET /tags` lists every tag in use, sorted by name, with how many prompts carry it; it is
   computed from the stored prompts, so a tag no prompt carries any more disappears.
+- **Prompt versions.** Every prompt keeps the history of its `content`. Creating a prompt saves
+  version 1; a `PUT` or `PATCH` whose content differs from the latest version, even by one space,
+  saves the next one. Edits to the title, description, collection or tags save nothing, nor does a
+  request that fails. `GET /prompts/{id}/versions` lists the history, oldest first by default
+  (`?order=desc` for the latest first, `?limit=` to keep the first few); `GET
+  /prompts/{id}/versions/{version}` returns one version. To go back to an earlier wording, send it
+  as the new content with `PATCH`: that saves a new version, so nothing is lost. The history is
+  never shown in the prompt itself, and it is deleted with its prompt.
 - **Filtering and search.** `GET /prompts?collection_id=` returns only the prompts in that
   collection; an unknown id gives an empty list, not an error. `?search=` keeps the prompts whose
   title or description contains the text, ignoring case. The prompt body is not searched. `?tag=`
@@ -203,7 +211,9 @@ API=http://localhost:8000
 | `POST` | `/prompts` | Create a prompt; 201 with the created prompt | `curl -X POST $API/prompts -H "Content-Type: application/json" -d '{"title": "Review a diff", "content": "List bugs in: {{diff}}"}'` |
 | `PUT` | `/prompts/{id}` | **Full** replacement: an omitted field is reset | `curl -X PUT $API/prompts/<id> -H "Content-Type: application/json" -d '{"title": "Review a diff", "content": "List bugs in: {{diff}}"}'` (no `collection_id`, so the prompt is unfiled) |
 | `PATCH` | `/prompts/{id}` | **Partial** update: only the fields sent change | `curl -X PATCH $API/prompts/<id> -H "Content-Type: application/json" -d '{"description": "For small PRs"}'` |
-| `DELETE` | `/prompts/{id}` | Delete a prompt; 204 with no body | `curl -X DELETE $API/prompts/<id>` |
+| `DELETE` | `/prompts/{id}` | Delete a prompt and its version history; 204 with no body | `curl -X DELETE $API/prompts/<id>` |
+| `GET` | `/prompts/{id}/versions` | List a prompt's content versions, oldest first. Optional `?order=asc\|desc` and `?limit=` | `curl "$API/prompts/<id>/versions?order=desc&limit=2"` |
+| `GET` | `/prompts/{id}/versions/{version}` | Fetch one version; 404 if the prompt or the version does not exist | `curl $API/prompts/<id>/versions/1` |
 | `GET` | `/collections` | List all collections | `curl $API/collections` |
 | `GET` | `/collections/{id}` | Fetch one collection; 404 if it does not exist | `curl $API/collections/<id>` |
 | `POST` | `/collections` | Create a collection; 201 with the created collection | `curl -X POST $API/collections -H "Content-Type: application/json" -d '{"name": "Code review"}'` |
@@ -219,6 +229,9 @@ exist is `400`. A body that breaks a field constraint — an empty title, a titl
 a tag such as `"Python"`, 11 tags or a repeated tag — is `422`, produced by validation before the
 handler runs. `PATCH` also answers `422` to an explicit `null` title, content or tags, before it
 looks up the prompt. On `GET /prompts`, a `?tag=` value that is not a valid tag is `422` too.
+On the version endpoints, an `order` other than `asc` or `desc` (an empty `?order=` included), a
+`limit` below 1 and a `version` below 1 or not an integer are `422`; a version number above the
+latest is `404`.
 
 ---
 

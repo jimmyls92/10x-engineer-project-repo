@@ -2362,4 +2362,65 @@ proposed the commit and stopped.
 
 **Why the next prompt changed**
 
+The last endpoint was green, which completed the feature's code.
+
+### Entry 125
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `52a1764` "Read one version of a prompt", not pushed. It opened step 5 (docs)
+with the edits NFR-4 requires plus those that follow from it: README's Features list and endpoint
+summary; in `docs/API_REFERENCE.md`, the endpoint index, `PromptVersion` and `PromptVersionList`
+under Data models, a section per new endpoint (curl, sample response, errors, the 422 for an
+empty `order`), and notes on POST, PUT, PATCH, DELETE prompt and DELETE collection about what
+they do to the history. It noted the README's frontend gap is a separate Module 4 item, not part
+of this step, and asked permission to write.
+
+**Why the next prompt changed**
+
+The doc plan covered NFR-4 and the existing sections the feature changes, so I gave permission.
+
+### Entry 126
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude ran every new example with curl against a local uvicorn on the pinned venv (the API
+reference says each response shown is one that came back), then edited `README.md` (a Prompt
+versions feature bullet, two endpoint-summary rows, the version endpoints' 422/404 rules) and
+`docs/API_REFERENCE.md` (storage note, `PromptVersion` model, `PromptVersionList` and its
+`total`, two index rows, two endpoint sections with real responses, and notes on POST, PUT,
+PATCH, DELETE prompt and DELETE collection). Rule 2 checks found the Known issues table citing
+stale `api.py` lines (now `:184`, `:228`, `:283`, `:121`), fixed too. It also found that the
+spec's `api.py` citations, corrected in step 0, are stale again after the implementation, and so
+are the line numbers in CLAUDE.md's Known traps; left for a decision. Server stopped. It proposed
+the commit.
+
+**Why the next prompt changed**
+
+Fixing citations now would be wasted if the backend changes again, so I deferred them.
+**Added a constraint**: citations are fixed only once the backend is stable.
+
+### Entry 127
+
+**Prompt**
+
+> fixe the apy citations whenever we are not touching the backend anymore. And commit
+
+**What came back**
+
+Claude recorded the deferred citation fix as a Known trap in CURRENT STATE (fix `api.py` lines in
+the spec and in Known traps once the backend stops changing, before submitting) and committed the
+docs with the message shown in entry 126, not pushed. It opened step 6, the suite against the
+deployed configuration.
+
+**Why the next prompt changed**
+
 Pending.

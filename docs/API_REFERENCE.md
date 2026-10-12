@@ -10,7 +10,7 @@ with curl against a local server, and each response shown is the one that came b
 | **Base URL** | `http://localhost:8000` (start the server from `backend/` with `uvicorn app.api:app --reload`) |
 | **Format** | Request and response bodies are JSON. Send `Content-Type: application/json` with every body. |
 | **Interactive docs** | FastAPI serves Swagger UI at `/docs`, ReDoc at `/redoc` and the schema at `/openapi.json`. The schema lists only the 200/201/204/422 responses, not the 400 and 404 described below. It also shows `title`, `content` and `tags` on `PATCH` as nullable, although a `null` there is rejected with 422. |
-| **Storage** | In memory (`storage.py:26-27`). Every prompt and collection is lost when the server stops. |
+| **Storage** | In memory (`storage.py:26-27`). Every prompt, its version history and every collection are lost when the server stops. |
 | **Identifiers** | Server-assigned UUID4 strings, e.g. `"a1e56f1b-d59f-4ac7-ba1f-fab0321db73b"`. |
 | **Timestamps** | UTC, in ISO 8601 **without a timezone suffix**, e.g. `"2026-09-29T11:40:48.551871"` (`models.py:37`). Read them as UTC. The fraction is left out when the microseconds are 0 (`"2026-09-29T11:40:48"`), so the width is not fixed. |
 
@@ -130,16 +130,30 @@ One tag in use. Computed on each request from the stored prompts, never stored o
 | `name` | string | the tag |
 | `prompt_count` | integer | how many prompts carry it; always at least 1 |
 
+### PromptVersion
+
+One saved wording of a prompt's content. Built only by the server, never sent by a client: a
+`versions` key in a prompt body is dropped like any undeclared key. The history is not part of the
+[Prompt](#prompt) object either; only the two version endpoints return it.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `version` | integer | 1 for the content the prompt was created with, then one more for each content change |
+| `content` | string | the prompt's content at that moment |
+| `created_at` | timestamp | for version 1, the prompt's `created_at`; for a later one, the `updated_at` of the edit that saved it, exactly |
+
 ### List wrappers
 
 | Model | Shape | Returned by |
 |---|---|---|
 | `PromptList` | `{"prompts": [Prompt, …], "total": <int>}` | `GET /prompts` |
+| `PromptVersionList` | `{"versions": [PromptVersion, …], "total": <int>}` | `GET /prompts/{prompt_id}/versions` |
 | `CollectionList` | `{"collections": [Collection, …], "total": <int>}` | `GET /collections` |
 | `TagList` | `{"tags": [TagSummary, …], "total": <int>}` | `GET /tags` |
 
 `total` is the number of items in the list, counted after any filter. In a `TagList` it counts tags,
-not prompts.
+not prompts. In a `PromptVersionList` it is the number of versions the prompt has, counted **before**
+`limit` cuts the list, so it equals the latest version number.
 
 ## Endpoints
 
@@ -155,7 +169,9 @@ or call `curl.exe` in PowerShell (`curl` there is an alias for `Invoke-WebReques
 | `GET` | [`/prompts/{prompt_id}`](#get-promptsprompt_id) | Get one prompt | 200 |
 | `PUT` | [`/prompts/{prompt_id}`](#put-promptsprompt_id) | Replace a prompt in full | 200 |
 | `PATCH` | [`/prompts/{prompt_id}`](#patch-promptsprompt_id) | Update some fields of a prompt | 200 |
-| `DELETE` | [`/prompts/{prompt_id}`](#delete-promptsprompt_id) | Delete a prompt | 204 |
+| `DELETE` | [`/prompts/{prompt_id}`](#delete-promptsprompt_id) | Delete a prompt and its version history | 204 |
+| `GET` | [`/prompts/{prompt_id}/versions`](#get-promptsprompt_idversions) | List a prompt's content versions | 200 |
+| `GET` | [`/prompts/{prompt_id}/versions/{version}`](#get-promptsprompt_idversionsversion) | Get one version | 200 |
 | `GET` | [`/collections`](#get-collections) | List collections | 200 |
 | `POST` | [`/collections`](#post-collections) | Create a collection | 201 |
 | `GET` | [`/collections/{collection_id}`](#get-collectionscollection_id) | Get one collection | 200 |
@@ -236,7 +252,8 @@ curl "http://localhost:8000/prompts?tag=Marketing"
 ### POST /prompts
 
 Creates a prompt. Body: the five client fields of [Prompt](#prompt); `title` and `content` are
-required. The server assigns `id`, `created_at` and `updated_at`.
+required. The server assigns `id`, `created_at` and `updated_at`, and saves the content as
+[version](#promptversion) 1, dated with the prompt's `created_at`.
 
 ```bash
 curl -X POST http://localhost:8000/prompts \
@@ -311,6 +328,9 @@ curl http://localhost:8000/prompts/a1e56f1b-d59f-4ac7-ba1f-fab0321db73b
 Replaces a prompt in full. Body: the same as `POST /prompts`. **Every client field is taken from the
 body**: an optional field left out is reset to its default, so omitting `collection_id` unfiles the
 prompt and omitting `tags` clears them. `id` and `created_at` are kept; `updated_at` is set to now.
+If `content` differs from the latest [version](#promptversion), character for character, the next
+version is saved, dated with that same `updated_at`; resending the current content saves nothing.
+A request that fails saves nothing either.
 
 ```bash
 curl -X PUT http://localhost:8000/prompts/a1e56f1b-d59f-4ac7-ba1f-fab0321db73b \
@@ -361,7 +381,12 @@ counts, not its value**:
 | `"tags": null` | **422**, prompt left unchanged, with the same message as a `null` title: `"Value error, tags cannot be null; send a value or omit the field to keep the current one"` |
 | `{}` | nothing changes, **`updated_at` included** |
 
-A body with at least one field sets `updated_at` to now; `id` and `created_at` are kept.
+A body with at least one field sets `updated_at` to now; `id` and `created_at` are kept. A
+`content` that differs from the latest [version](#promptversion), even by whitespace or case, saves
+the next version, dated with that `updated_at`; one request saves at most one version, however many
+fields it changes. A body without `content`, or with the current content, saves nothing, and neither
+does a request that fails. To return to an earlier wording, send it as `content`: a new version is
+saved and the history is never rewound.
 
 ```bash
 curl -X PATCH http://localhost:8000/prompts/a1e56f1b-d59f-4ac7-ba1f-fab0321db73b \
@@ -408,7 +433,8 @@ curl -X PATCH http://localhost:8000/prompts/a1e56f1b-d59f-4ac7-ba1f-fab0321db73b
 
 ### DELETE /prompts/{prompt_id}
 
-Deletes a prompt permanently.
+Deletes a prompt permanently, with its version history. Afterwards both version endpoints answer
+404 `Prompt not found` for it.
 
 ```bash
 curl -X DELETE http://localhost:8000/prompts/a1e56f1b-d59f-4ac7-ba1f-fab0321db73b
@@ -419,6 +445,69 @@ curl -X DELETE http://localhost:8000/prompts/a1e56f1b-d59f-4ac7-ba1f-fab0321db73
 | Status | When |
 |---|---|
 | 404 | No prompt has that id: `{"detail": "Prompt not found"}` |
+
+### GET /prompts/{prompt_id}/versions
+
+Lists the saved versions of a prompt's content. Query parameters, both optional:
+
+| Name | Values | Default | Effect |
+|---|---|---|---|
+| `order` | `asc` or `desc`, lowercase | `asc` | `asc`: version 1 first. `desc`: the latest first |
+| `limit` | integer, at least 1 | none (all) | keep this many versions from the start of the ordered list; a limit above the count keeps them all |
+
+The list is ordered first and then cut, so `?order=desc&limit=2` gives the two latest versions. The
+examples below come from a separate run: prompt `b6b5838c-3c08-4b1c-aed5-145cbf8d6074`, created and then edited twice
+(one `PATCH` and one `PUT`, each changing the content).
+
+```bash
+curl "http://localhost:8000/prompts/b6b5838c-3c08-4b1c-aed5-145cbf8d6074/versions?order=desc&limit=2"
+```
+
+**200 OK**, a [`PromptVersionList`](#list-wrappers). `total` is 3: the prompt has three versions,
+although `limit` returned two.
+
+```json
+{
+  "versions": [
+    {"version": 3, "content": "Write a punchy tagline for {{product}} aimed at {{audience}}.",
+     "created_at": "2026-10-12T10:56:49.359147"},
+    {"version": 2, "content": "Write a punchy tagline for {{product}}.",
+     "created_at": "2026-10-12T10:56:49.075420"}
+  ],
+  "total": 3
+}
+```
+
+| Status | When |
+|---|---|
+| 404 | No prompt has that id: `{"detail": "Prompt not found"}` |
+| 422 | `order` is anything but `asc` or `desc`, **including an empty `?order=`**, which `GET /prompts` would ignore: `"loc": ["query", "order"], "msg": "Input should be 'asc' or 'desc'"` |
+| 422 | `limit` is below 1: `"loc": ["query", "limit"], "msg": "Input should be greater than or equal to 1"`; or not an integer (`abc`, `2.5`, empty): `"msg": "Input should be a valid integer, unable to parse string as an integer"` |
+
+The query is validated before the prompt is looked up, so `GET /prompts/nope/versions?order=up` is
+422, not 404.
+
+### GET /prompts/{prompt_id}/versions/{version}
+
+Returns one version: the same object as the item with that `version` in the list above.
+
+```bash
+curl http://localhost:8000/prompts/b6b5838c-3c08-4b1c-aed5-145cbf8d6074/versions/1
+```
+
+**200 OK**, a [`PromptVersion`](#promptversion)
+
+```json
+{"version": 1, "content": "Write a tagline for {{product}}.", "created_at": "2026-10-12T10:56:48.763005"}
+```
+
+| Status | When |
+|---|---|
+| 404 | No prompt has that id: `{"detail": "Prompt not found"}`. Checked before the version, so this holds for any version number. |
+| 404 | The prompt exists, but `version` is above its latest version: `{"detail": "Version not found"}` |
+| 422 | `version` is below 1: `"loc": ["path", "version"], "msg": "Input should be greater than or equal to 1"`; or not an integer (`abc`, `1.5`): `"msg": "Input should be a valid integer, unable to parse string as an integer"` |
+
+An integer written with a zero fraction, such as `1.0`, is read as that integer and returns version 1.
 
 ### GET /collections
 
@@ -490,7 +579,7 @@ curl http://localhost:8000/collections/c7682450-d542-4e56-b228-4bb3d6608a34
 ### DELETE /collections/{collection_id}
 
 Deletes a collection. **Its prompts are kept, not deleted**: each one that was filed in it has its
-`collection_id` set to `null`. Their `updated_at` is left alone.
+`collection_id` set to `null`. Their `updated_at` and their version histories are left alone.
 
 ```bash
 curl -X DELETE http://localhost:8000/collections/c7682450-d542-4e56-b228-4bb3d6608a34
@@ -535,5 +624,5 @@ Both are current behaviour, described as the code does it, and are **not fixed**
 
 | Issue | Where | Effect |
 |---|---|---|
-| **An empty `collection_id` is handled inconsistently** | `api.py:176`, `:213`, `:264` | `POST` and `PUT` test truthiness, so `""` is stored without a check. `PATCH` tests `is not None`, so `""` is looked up and rejected with 400. |
-| **A prompt with `collection_id: ""` cannot be listed by collection** | `api.py:115` | `GET /prompts?collection_id=` treats the empty value as absent and returns every prompt, so there is no way to select only the prompts stored with `""`. |
+| **An empty `collection_id` is handled inconsistently** | `api.py:184`, `:228`, `:283` | `POST` and `PUT` test truthiness, so `""` is stored without a check. `PATCH` tests `is not None`, so `""` is looked up and rejected with 400. |
+| **A prompt with `collection_id: ""` cannot be listed by collection** | `api.py:121` | `GET /prompts?collection_id=` treats the empty value as absent and returns every prompt, so there is no way to select only the prompts stored with `""`. |
