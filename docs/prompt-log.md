@@ -2250,4 +2250,116 @@ C3.5 clock and stopped.
 
 **Why the next prompt changed**
 
+The list endpoint was complete and green, so I approved the commit that stops the clock.
+
+### Entry 119
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `034b75d` "Order and limit a prompt's versions" at 12:43:58, not pushed:
+**the C3.5 clock stopped 20 min 49 s after the first red commit** (`63dc14c`, 12:23:09), with
+the list endpoint complete against its spec. It recorded this in CURRENT STATE. Opening the next
+group, it found group 3 (AC-1.4 to AC-1.6) almost all passes already; only AC-1.6's
+`/versions/1` path is red, and only the single-version endpoint (group 5) can turn it green. It
+proposed merging groups 3 and 5 into one red commit and asked for confirmation.
+
+**Why the next prompt changed**
+
+Merging groups 3 and 5 avoided a commit of tests that were already green, so I agreed.
+
+### Entry 120
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added 13 tests (AC-1.4 to AC-1.6, AC-2.1 to AC-2.6, E-10, AC-5.1) to
+`TestPromptVersions`, all on the `versioned_prompt` fixture (5 versions instead of the spec's 3,
+so AC-2.2 reads version 5, AC-2.3 asks for version 6 and AC-5.1 expects `total` 6; same meaning).
+Run: 10 fail, all because `/versions/{version}` does not exist (AC-5.1 reads version 1 first);
+AC-1.4, AC-1.5 and AC-1.6's list path pass as regression guards. 407 passed in total, ruff clean.
+It proposed the red commit. Nothing committed.
+
+**Why the next prompt changed**
+
+I did not see why the tests should differ from the ACs they cover.
+
+### Entry 121
+
+**Prompt**
+
+> why this deviation from the spec?
+
+**What came back**
+
+Claude admitted the reason was only convenience (reusing the 5-version fixture) and named its
+costs: the tests no longer read as their ACs, so tracing AC-2.2, AC-2.3 and AC-5.1 to a test
+needs a translation, in review and in the Module 5 defense. It proposed matching the spec with
+a small change: turn the fixture into a factory that builds a prompt with *n* versions, so US-2
+and US-5 tests use 3 and US-4 tests keep 5. It asked whether to keep the deviation or match the
+spec. Nothing changed yet.
+
+**Why the next prompt changed**
+
+Claude's deviation had no reason beyond convenience, so I chose to match the spec.
+**Added a constraint**: tests use each AC's own history size and numbers.
+
+### Entry 122
+
+**Prompt**
+
+> match the spec
+
+**What came back**
+
+Claude turned the fixture into a factory, `make_versioned_prompt(n)` in `conftest.py`, keeping
+`versioned_prompt` (5 versions) on top of it for US-4. The group 3 and 5 tests now build the size
+each AC names: 3 for AC-1.4, 1.5, 2.1-2.3 and 5.1; 2 for AC-1.6; 1 for E-10 and AC-2.4/2.5; and
+use the spec's numbers (version 3, version 4, `total` 4). Same result: 10 red, 407 passed, ruff
+clean. It proposed the red commit with a new message. Nothing committed.
+
+**Why the next prompt changed**
+
+The tests now read as their ACs, so I approved the red commit.
+
+### Entry 123
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the red tests for groups 3 and 5, not pushed, and set out the single-version
+endpoint's code-level choices for confirmation: `get_prompt_version` under the Prompt Endpoints
+banner, `response_model=PromptVersion`; `version: int = Path(ge=1)` so FastAPI gives AC-2.4's and
+AC-2.5's 422; the prompt lookup first (404 "Prompt not found"), then the version lookup (404
+"Version not found"), following FR-12's order of checks.
+
+**Why the next prompt changed**
+
+The choices followed the spec's order of checks, so I confirmed them.
+
+### Entry 124
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `get_prompt_version` (`GET /prompts/{prompt_id}/versions/{version}`, `version: int =
+Path(ge=1)`, prompt lookup then version lookup, docstring) to `backend/app/api.py`. In
+`backend/.venv`: 417 passed, coverage 100%, ruff clean. E-10 is now verified: the pinned FastAPI
+reads `1.0` as version 1. CURRENT STATE updated (next: docs, deployed-config suite, push). It
+proposed the commit and stopped.
+
+**Why the next prompt changed**
+
 Pending.

@@ -12,7 +12,7 @@ lists 422 under ``Raises``.
 
 import os
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Literal, Optional
 
@@ -351,6 +351,35 @@ def list_prompt_versions(
 
     versions = select_versions(prompt.versions, order == "desc", limit)
     return PromptVersionList(versions=versions, total=len(prompt.versions))
+
+
+@app.get("/prompts/{prompt_id}/versions/{version}", response_model=PromptVersion)
+def get_prompt_version(prompt_id: str, version: int = Path(ge=1)):
+    """Return one saved version of a prompt's content.
+
+    The prompt is looked up before the version, so an unknown prompt gives
+    "Prompt not found" whatever the version number.
+
+    Args:
+        prompt_id: Identifier of the prompt.
+        version: The version number, at least 1.
+
+    Returns:
+        The version, equal to the item with the same number in
+        ``GET /prompts/{prompt_id}/versions``.
+
+    Raises:
+        HTTPException: With status 404 if no prompt has that identifier, or
+            status 404 if the prompt has no version with that number.
+    """
+    prompt = storage.get_prompt(prompt_id)
+    if not prompt:
+        raise HTTPException(status_code=404, detail="Prompt not found")
+
+    found = prompt.versions.get(version)
+    if found is None:
+        raise HTTPException(status_code=404, detail="Version not found")
+    return found
 
 
 # ============== Collection Endpoints ==============
