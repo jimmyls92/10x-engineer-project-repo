@@ -1,6 +1,6 @@
 # PromptLab
 
-**A REST API for storing and organising AI prompts.**
+**A web app and REST API for storing and organising AI prompts.**
 
 ## Project overview and purpose
 
@@ -11,6 +11,12 @@ belongs to, and up to ten tags. Collections are flat named groups; a prompt belo
 Tags cut across collections: a prompt about reviewing Python code can be tagged both `code-review`
 and `python`. Template variables are stored as plain text: the service does not parse them or fill
 them in.
+
+PromptLab has two parts. The **web app** (`frontend/`, React with Vite) is what a user opens in a
+browser: a Prompts screen to list, search, filter, read, create, edit and delete prompts, and a
+Collections screen to list, create and delete collections. It holds no data of its own and calls
+the **API** (`backend/`) for everything. The API can also be used directly, with curl or from its
+interactive docs.
 
 The service is a FastAPI application with **in-memory storage** — everything lives in a dictionary in
 the server process and is lost when it stops. That is deliberate for now; swapping in a database is a
@@ -62,6 +68,13 @@ later module.
   A body that breaks a rule is rejected with `422` and a per-field error before it reaches storage;
   `PATCH` applies the same rules to the fields it carries. A `?tag=` value that is not a valid tag
   is also rejected with `422`.
+- **Web app.** Two screens. **Prompts** lists every prompt, newest first; a search box and a
+  collection filter take effect when **Apply** is pressed, and a status line says what is shown.
+  Selecting a prompt opens its detail under its row; prompts are created and edited in a form
+  window and deleted after a confirmation. **Collections** lists, creates and deletes collections.
+  Each screen shows a loading state, an error message when the API fails or cannot be reached, and
+  an empty state; forms check their fields before sending. Tags and versions are not shown in the
+  web app, and editing a prompt there keeps its tags. The scope is set by `specs/frontend.md`.
 - **Health check and interactive API docs.** `GET /health` returns `{"status": "healthy"}` and the
   service version. FastAPI generates Swagger UI (`/docs`) and ReDoc (`/redoc`) pages from the code,
   where every endpoint can be tried from the browser.
@@ -75,6 +88,8 @@ later module.
 - **Python 3.10–3.12** (`python --version`). **Not 3.13** — the pinned `pydantic==2.5.3` needs
   `pydantic-core`, which publishes no wheel for 3.13, and its source build needs a Rust toolchain. Tested on **3.12.13**.
 - **git**
+- **Node.js `^20.19.0` or `>=22.12.0`, with npm**, for the web app only (`node --version`). Vite 8
+  requires one of those. Tested on Node 24.
 
 Nothing else. No database, no message broker, no API keys — the service calls no external system.
 The `config.yaml` at the repository root configures an AI coding assistant; the service never reads
@@ -94,30 +109,41 @@ pip install -r requirements.txt
 
 `requirements.txt` lives in `backend/`, so install from there.
 
+Then the web app, from the repository root in a second terminal:
+
+```bash
+cd frontend
+npm install
+```
+
+`frontend/.env.example` documents the one setting, `VITE_API_BASE_URL`, the address of the API. In
+development it can be left unset: the dev server then calls `http://localhost:8000`. To set it,
+copy the file to `frontend/.env` and edit it.
+
 ---
 
 ## Quick start guide
 
-From installation to a stored, tagged, searchable prompt in five steps.
+Start the API and the web app, as the course's verification does, then optionally use the API
+directly: from installation to a stored, tagged, searchable prompt.
 
 > **The commands below are for a POSIX shell** (bash, zsh, Git Bash). In Windows PowerShell, `curl`
 > is an alias for `Invoke-WebRequest`, `\` does not continue a line, and the quotes inside the JSON
 > bodies are not passed through as written. On Windows, use Git Bash, or send the same requests from
 > the Swagger UI at http://localhost:8000/docs.
 
-### 1. Start the server
+### 1. Start the API
 
-From `backend/`, with the virtual environment active:
+Terminal 1, from `backend/`, with the virtual environment active:
 
 ```bash
-uvicorn app.api:app --reload
+cd backend && python main.py
 ```
 
-This must be run **from the `backend/` directory** — the application is imported as
-`app.api`, which only resolves when `backend/` is the working directory.
-
-`python main.py`, also from `backend/`, starts the same server with reload. It listens on every
-network interface (`0.0.0.0`), not only on `localhost`.
+This must be run **from the `backend/` directory**: the application is imported as `app.api`, which
+only resolves when `backend/` is the working directory. It starts the server with auto-reload,
+listening on every network interface (`0.0.0.0`). `uvicorn app.api:app --reload` is equivalent,
+but listens on `localhost` only.
 
 | What | Where |
 |---|---|
@@ -126,16 +152,34 @@ network interface (`0.0.0.0`), not only on `localhost`.
 | Alternative docs (ReDoc) | http://localhost:8000/redoc |
 | OpenAPI schema | http://localhost:8000/openapi.json |
 
-Leave it running and use a second terminal for the next steps. Stop it with `Ctrl+C`.
+Leave it running. Stop it with `Ctrl+C`.
 
-### 2. Check it is alive
+### 2. Start the web app
+
+Terminal 2, from the repository root:
+
+```bash
+cd frontend && npm run dev
+```
+
+Then open **http://localhost:5173**. The Prompts screen loads the prompts from the API, and the
+header switches to Collections. Stop it with `Ctrl+C`.
+
+The API allows browser requests only from `http://localhost:5173` unless `CORS_ORIGINS` says
+otherwise, so if Vite picks another port because 5173 is taken, every request fails with "Can't
+reach the server". Free the port, or start the API with that address in `CORS_ORIGINS` (see
+**Development setup**).
+
+### 3. Use the API directly: check it is alive
+
+The remaining steps are optional and use a third terminal.
 
 ```bash
 curl http://localhost:8000/health
 # {"status":"healthy","version":"0.1.0"}
 ```
 
-### 3. Create a collection
+### 4. Create a collection
 
 ```bash
 curl -X POST http://localhost:8000/collections \
@@ -149,9 +193,9 @@ The response is `201` with the new collection. Copy its `id`: the next step need
 {"name":"Code review","description":"Prompts for reviewing pull requests","id":"39bb6d01-c454-4f7a-9da7-bb1afc88f4e6","created_at":"2026-10-06T13:37:21.739605"}
 ```
 
-### 4. Save a tagged prompt in it
+### 5. Save a tagged prompt in it
 
-Replace `<collection-id>` with the id from step 3:
+Replace `<collection-id>` with the id from step 4:
 
 ```bash
 curl -X POST http://localhost:8000/prompts \
@@ -165,7 +209,7 @@ The response is `201` with the stored prompt. The server has added its `id` and 
 {"title":"Review a diff","content":"Review this diff and list any bugs: {{diff}}","description":null,"collection_id":"39bb6d01-c454-4f7a-9da7-bb1afc88f4e6","tags":["code-review","python"],"id":"6f037c0a-2822-40d3-ba78-a78a88fe72c1","created_at":"2026-10-06T13:37:22.617241","updated_at":"2026-10-06T13:37:22.617241"}
 ```
 
-### 5. Find it again
+### 6. Find it again
 
 Search matches titles and descriptions, ignoring case:
 
@@ -247,6 +291,27 @@ uvicorn app.api:app --reload
 
 `--reload` restarts the server whenever a `.py` file under `backend/` changes. Every restart empties the
 in-memory storage, so data created before an edit is gone after it.
+
+### Run the web app in development
+
+From `frontend/`, after `npm install`:
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Serves the app at http://localhost:5173 and reloads it on every change |
+| `npm run lint` | Checks the code with oxlint |
+| `npm run build` | Builds the static app into `frontend/dist/` |
+| `npm run preview` | Serves the built `dist/` locally |
+
+`VITE_API_BASE_URL` is read when the app is built. `npm run dev` falls back to
+`http://localhost:8000` without it; a build made without it still completes, but the app stops on
+load with "VITE_API_BASE_URL is not set". Set it for every build, for example
+`VITE_API_BASE_URL=http://localhost:8000 npm run build`.
+
+The API accepts browser requests only from the addresses in `CORS_ORIGINS`, a comma-separated list
+read when the API starts. Unset, it is `http://localhost:5173`, the dev server. To serve the app from
+anywhere else, start the API with that address, for example
+`CORS_ORIGINS=http://localhost:4173 python main.py` for `npm run preview`.
 
 ### Run the tests
 

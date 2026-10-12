@@ -2817,4 +2817,69 @@ proposed the commit.
 
 **Why the next prompt changed**
 
+The citation plan was consistent, so I approved the commit.
+
+### Entry 149
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `1c74e58` "Pin spec citations and renumber living docs", not pushed, and opened
+step 3 with the facts: the README calls PromptLab "A REST API", and its overview, prerequisites
+(Python only), installation, quick start and development setup are backend-only; the frontend
+needs Node `^20.19.0 || >=22.12.0` (Vite 8; the image uses Node 24), `npm install`, `npm run dev`
+on port 5173, and `frontend/.env.example` (`VITE_API_BASE_URL`, optional in dev). The brief's
+*Verification* runs the backend and `npm run dev` in two terminals. It asked whether the Quick
+start should lead with the web app in that two-terminal form or keep the API walkthrough first and
+add the web app after it.
+
+**Why the next prompt changed**
+
+Following the brief's verification makes the README match what the assessor runs first.
+
+### Entry 150
+
+**Prompt**
+
+> lead with the web app, following the brief's verification
+
+**What came back**
+
+Settled. Claude set out the README edits for confirmation: tagline and overview name the web app;
+a Features bullet for the web app (claims checked against `frontend/src/` before writing);
+Prerequisites add Node and npm; Installation adds `cd frontend && npm install` and the optional
+`.env`; Quick start becomes 1. start the API with `python main.py`, 2. start the web app with `npm
+run dev` and open http://localhost:5173, then the existing curl walkthrough as "use the API
+directly"; Development setup gains a Frontend subsection (`npm run dev`, `npm run build` needing
+`VITE_API_BASE_URL`, `npm run lint`, and `CORS_ORIGINS` for any address other than 5173). Each
+command is run before it is written down.
+
+**Why the next prompt changed**
+
+The edit plan covered every backend-only section, so I gave permission.
+
+### Entry 151
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude ran every command first: `npm install` (0 vulnerabilities), `npm run lint` (exit 0), `npm
+run build` with and without `VITE_API_BASE_URL` (both complete; without it the bundle holds the
+"VITE_API_BASE_URL is not set" error, thrown on load, so the README says a build without it
+completes but the app stops), and `npm run dev` (http://localhost:5173 answered 200, then
+stopped). It checked the web app claims in `frontend/src/` (status line "Showing ...", form
+checks, error message) and edited `README.md`: tagline, overview, a Web app feature, Node in
+Prerequisites, `npm install` and `.env` in Installation, Quick start steps 1 (API, `python
+main.py`) and 2 (web app, `npm run dev`) with a CORS note, the curl steps renumbered 3-6, and a
+"Run the web app in development" subsection. The README Known trap was removed from CURRENT
+STATE. It proposed the commit.
+
+**Why the next prompt changed**
+
 Pending.
