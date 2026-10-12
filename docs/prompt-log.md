@@ -1868,4 +1868,124 @@ the C3.5 clock has not started. It stopped before step 1.
 
 **Why the next prompt changed**
 
+Step 0 was committed; step 1 needed the first behaviour to test.
+
+### Entry 99
+
+**Prompt**
+
+> test_create_prompt_saves_version_one related to AC 1.1 but I have no idea if it will make us pass soonest, but I think is by logig, the first thing we should test, what do you think?
+
+**What came back**
+
+Claude agreed and showed why it also suits the clock: passing AC-1.1 needs exactly the minimum
+for a first passing endpoint (`PromptVersion`, `PromptVersionList`, the `versions` field, version
+1 saved in `create_prompt`, and `GET /prompts/{id}/versions`), and none of `add_version`,
+`order` or `limit`. Today it fails because the route does not exist (404 instead of 200), which
+is the feature missing, the right reason. One downside: it also needs POST changed, so step 3
+touches two endpoints before going green. It asked permission to write the test in a new
+`TestPromptVersions` class in `test_api.py`, run it to show it red, and propose the commit.
+
+**Why the next prompt changed**
+
+Before giving permission I wanted to know whether every test's order would be a separate question.
+**Restructured**: from one test at a time to the shape of the whole sequence.
+
+### Entry 100
+
+**Prompt**
+
+> but do you intend to start selecting the ordering of the test one by one? I will take some time...
+
+**What came back**
+
+Claude said no: test order has no functional effect, so under Rule 0b it is Claude's to decide
+and the user's to confirm once. It proposed five feature groups, each one commit of failing tests
+followed by the implementation (the brief asks for a failing test "feature by feature", not test
+by test): (1) AC-1.1, which ends the clock; (2) content edits save versions (AC-1.2, AC-1.3,
+US-3, E-15); (3) hiding and deleting (AC-1.4 to AC-1.6); (4) order and limit (US-4); (5) one
+version (US-2, E-10, US-5). It flagged that AC-1.4 and AC-1.5 already pass today, so they cannot
+show red. It asked for one yes on the grouping and on writing the first test.
+
+**Why the next prompt changed**
+
+The grouping meant one confirmation instead of one per test, so I agreed.
+
+### Entry 101
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Grouping settled. Claude added `TestPromptVersions` with `test_create_prompt_saves_version_one`
+(AC-1.1) at the end of `backend/tests/test_api.py` and ran it in `backend/.venv`: it fails with
+`assert 404 == 200`, because the route does not exist yet (the right reason). Ruff passes. It
+proposed committing the test file alone (the log follows later, so the red commit holds only the
+test), noted that this commit breaks "the suite must pass before any commit" on purpose, as the
+brief requires, and that it must not be pushed on its own, since CI would go red publicly.
+Nothing committed.
+
+**Why the next prompt changed**
+
+The test failed for the right reason and the commit held only the test.
+
+### Entry 102
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `backend/tests/test_api.py` alone as `63dc14c` "Add failing test for saving
+version 1", at 2026-10-12 12:23:09 +0200: **the C3.5 clock started**, so the first passing
+endpoint is due by 16:23. Not pushed. It recorded the clock start in CURRENT STATE and opened
+step 2 with the code-level choices for confirmation (Rule 0b): build only `PromptVersion`, the
+`versions` field and `PromptVersionList` as the spec gives them; defer `add_version` and
+`select_versions` to groups 2 and 4, whose tests drive them; add no model unit tests, since
+AC-1.1 reaches the models through HTTP and such tests would only exercise Pydantic.
+
+**Why the next prompt changed**
+
+The four code-level choices kept step 2 to what AC-1.1 needs, so I confirmed them.
+
+### Entry 103
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added to `backend/app/models.py`: `PromptVersion` under `Prompt Models`, the `versions`
+field on `Prompt` (`Field(default_factory=dict, exclude=True)`, with a comment on why), and
+`PromptVersionList` under `Response Models`, all with docstrings, plus `Dict` in the `typing`
+import. In `backend/.venv`: 373 passed and only the AC-1.1 test still fails (the route is still
+missing); ruff passes; a one-off check confirmed `versions` is absent from a POST response and
+from the `Prompt` schema in `/openapi.json` on the pinned versions. It proposed a commit holding
+the models plus the state and log updates since `63dc14c`. Nothing committed.
+
+**Why the next prompt changed**
+
+The models matched the spec and the checks passed.
+
+### Entry 104
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the models with the state and log as "Add the prompt version models", not
+pushed, and opened step 3 with its code-level choices for confirmation: version 1 set in
+`create_prompt` with `model_copy(update=...)`; `list_prompt_versions` under the Prompt Endpoints
+banner returning every version in ascending order, with `order` and `limit` left to group 4; and
+the 404 for an unknown prompt, needed so the endpoint never reaches a 500, preceded by its own
+red commit (AC-4.7's test) so no code comes before its test.
+
+**Why the next prompt changed**
+
 Pending.

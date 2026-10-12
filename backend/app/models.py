@@ -7,7 +7,7 @@ breaks one is rejected with status 422.
 """
 
 from datetime import datetime
-from typing import Annotated, Optional, List
+from typing import Annotated, Dict, Optional, List
 from pydantic import AfterValidator, BaseModel, Field, field_validator
 from uuid import uuid4
 
@@ -199,6 +199,27 @@ class PromptPatch(BaseModel):
         return value
 
 
+class PromptVersion(BaseModel):
+    """One saved wording of a prompt's content.
+
+    The entry repeats its own number although it is also its key in
+    ``Prompt.versions``, so it can be returned on its own without rebuilding
+    it. ``created_at`` is never read from the clock here: it is copied from
+    the prompt's ``created_at`` for version 1 and from the ``updated_at`` of
+    the edit that saved it otherwise.
+
+    Attributes:
+        version: The version number, 1 for the content the prompt was
+            created with, then one more for each content change.
+        content: The prompt's content at that moment, at least 1 character.
+        created_at: When this wording was saved, as naive UTC.
+    """
+
+    version: int = Field(..., ge=1)
+    content: str = Field(..., min_length=1)
+    created_at: datetime
+
+
 class Prompt(PromptBase):
     """A stored prompt, as kept in storage and returned by the API.
 
@@ -214,11 +235,18 @@ class Prompt(PromptBase):
             ``get_current_time()``.
         updated_at: When the prompt was last changed, as naive UTC.
             Defaults to ``get_current_time()``.
+        versions: The history of the prompt's content, keyed by version
+            number. Defaults to an empty dict. Left out of every response
+            body and of the schema, so the history is returned only by the
+            version endpoints; ``model_copy`` keeps it.
     """
 
     id: str = Field(default_factory=generate_id)
     created_at: datetime = Field(default_factory=get_current_time)
     updated_at: datetime = Field(default_factory=get_current_time)
+    # Excluded from serialisation so existing prompt responses keep their
+    # shape (spec FR-8); a client cannot send it, as no request model declares it.
+    versions: Dict[int, PromptVersion] = Field(default_factory=dict, exclude=True)
 
     class Config:
         """Pydantic settings for ``Prompt``.
@@ -320,6 +348,21 @@ class PromptList(BaseModel):
     """
 
     prompts: List[Prompt]
+    total: int
+
+
+class PromptVersionList(BaseModel):
+    """Response body for ``GET /prompts/{prompt_id}/versions``.
+
+    Attributes:
+        versions: The prompt's versions, in the requested order, cut to the
+            requested limit.
+        total: Number of versions the prompt has, counted before the limit is
+            applied, so it equals the latest version number. The limit cuts
+            the result rather than filtering it.
+    """
+
+    versions: List[PromptVersion]
     total: int
 
 
