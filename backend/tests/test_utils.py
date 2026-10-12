@@ -7,12 +7,13 @@ the Module 3 brief's "all utility functions and error conditions".
 
 from datetime import datetime
 from types import SimpleNamespace
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import pytest
 
-from app.models import Prompt, TagSummary
+from app.models import Prompt, PromptVersion, TagSummary
 from app.utils import (
+    add_version,
     count_tags,
     extract_variables,
     filter_prompts_by_collection,
@@ -509,3 +510,51 @@ class TestParseCorsOrigins:
         parse_cors_origins(None).append("https://other.example.com")
 
         assert parse_cors_origins(None) == ["http://localhost:5173"]
+
+
+class TestAddVersion:
+    """Tests for ``add_version``."""
+
+    def make_history(self) -> Dict[int, PromptVersion]:
+        """Build a history holding version 1, content ``"C1"``.
+
+        Returns:
+            A dict from version number to ``PromptVersion``.
+        """
+        return {1: PromptVersion(version=1, content="C1", created_at=datetime(2026, 1, 1))}
+
+    # --- behaviour ---
+
+    def test_add_version_appends_next_number(self):
+        """Verify a changed content is added as the next version, dated as given."""
+        history = self.make_history()
+
+        result = add_version(history, "C2", datetime(2026, 1, 2))
+
+        assert sorted(result) == [1, 2]
+        assert result[2] == PromptVersion(
+            version=2, content="C2", created_at=datetime(2026, 1, 2)
+        )
+        assert result[1] == history[1]
+
+    def test_add_version_unchanged_content_adds_nothing(self):
+        """Verify content equal to the latest version leaves the history as it was."""
+        history = self.make_history()
+
+        result = add_version(history, "C1", datetime(2026, 1, 2))
+
+        assert result == history
+
+    @pytest.mark.parametrize("content", ["C2", "C1"], ids=["changed", "unchanged"])
+    def test_add_version_returns_new_dict(self, content):
+        """Verify the helper never modifies its input and never returns it.
+
+        Args:
+            content: The content passed, changed or equal to the latest.
+        """
+        history = self.make_history()
+
+        result = add_version(history, content, datetime(2026, 1, 2))
+
+        assert result is not history
+        assert list(history) == [1]

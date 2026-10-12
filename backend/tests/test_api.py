@@ -2235,3 +2235,200 @@ class TestPromptVersions:
 
         assert response.status_code == 404
         assert response.json() == {"detail": "Prompt not found"}
+
+    # --- versions saved by edits: success cases ---
+
+    def test_patch_prompt_content_saves_version(self, client: TestClient):
+        """Verify a PATCH that changes the content saves version 2 (AC-1.2).
+
+        The version's ``created_at`` must equal the ``updated_at`` the same
+        request stored on the prompt (FR-2).
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        created = client.post(
+            "/prompts", json={"title": "Summary", "content": "Summarise the text."}
+        ).json()
+
+        patched = client.patch(
+            f"/prompts/{created['id']}",
+            json={"content": "Summarise the text in 3 bullets."},
+        ).json()
+        response = client.get(f"/prompts/{created['id']}/versions")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        second = data["versions"][1]
+        assert second["version"] == 2
+        assert second["content"] == "Summarise the text in 3 bullets."
+        assert datetime.fromisoformat(second["created_at"]) == datetime.fromisoformat(
+            patched["updated_at"]
+        )
+
+    def test_update_prompt_content_saves_version(self, client: TestClient):
+        """Verify a PUT that changes the content saves the next version (AC-1.3).
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        created = client.post(
+            "/prompts", json={"title": "Summary", "content": "Summarise the text."}
+        ).json()
+        client.patch(
+            f"/prompts/{created['id']}",
+            json={"content": "Summarise the text in 3 bullets."},
+        )
+
+        put = client.put(
+            f"/prompts/{created['id']}",
+            json={"title": "Summary", "content": "Summarise in 5 bullets."},
+        )
+        response = client.get(f"/prompts/{created['id']}/versions")
+
+        assert put.status_code == 200
+        data = response.json()
+        assert data["total"] == 3
+        assert [v["version"] for v in data["versions"]] == [1, 2, 3]
+        assert data["versions"][2]["content"] == "Summarise in 5 bullets."
+
+    def test_patch_prompt_many_fields_saves_one_version(self, client: TestClient):
+        """Verify one PATCH changing several fields saves a single version (AC-3.4).
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        created = client.post("/prompts", json={"title": "T1", "content": "C1"}).json()
+
+        response = client.patch(
+            f"/prompts/{created['id']}",
+            json={"title": "T2", "description": "D2", "content": "C2"},
+        )
+
+        assert response.status_code == 200
+        data = client.get(f"/prompts/{created['id']}/versions").json()
+        assert data["total"] == 2
+        assert data["versions"][1]["content"] == "C2"
+
+    def test_patch_prompt_whitespace_is_content_change(self, client: TestClient):
+        """Verify content differing only by a trailing space is a change (AC-3.7).
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        created = client.post("/prompts", json={"title": "T", "content": "Hello"}).json()
+
+        response = client.patch(f"/prompts/{created['id']}", json={"content": "Hello "})
+
+        assert response.status_code == 200
+        data = client.get(f"/prompts/{created['id']}/versions").json()
+        assert data["total"] == 2
+        assert data["versions"][1]["content"] == "Hello "
+
+    # --- versions left alone by edits ---
+
+    @pytest.mark.parametrize(
+        "body",
+        [{"title": "New title"}, {"content": "Hello"}, {}],
+        ids=["title-only", "same-content", "empty-body"],
+    )
+    def test_patch_prompt_without_content_change_saves_nothing(
+        self, client: TestClient, ticking_clock, body
+    ):
+        """Verify a PATCH that does not change the content saves no version.
+
+        Covers AC-3.1, AC-3.3 and AC-3.8. A body with any field still refreshes
+        ``updated_at``; an empty body leaves it as it was.
+
+        Args:
+            client: FastAPI test client fixture.
+            ticking_clock: Clock fixture that makes every timestamp distinct.
+            body: The PATCH body sent.
+        """
+        created = client.post("/prompts", json={"title": "T", "content": "Hello"}).json()
+
+        response = client.patch(f"/prompts/{created['id']}", json=body)
+
+        assert response.status_code == 200
+        patched = response.json()
+        assert patched["title"] == body.get("title", "T")
+        before = datetime.fromisoformat(created["updated_at"])
+        after = datetime.fromisoformat(patched["updated_at"])
+        if body:
+            assert after > before
+        else:
+            assert after == before
+        assert client.get(f"/prompts/{created['id']}/versions").json()["total"] == 1
+
+    def test_update_prompt_same_content_saves_nothing(self, client: TestClient):
+        """Verify a PUT that resends the current content saves no version (AC-3.2).
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        created = client.post("/prompts", json={"title": "T", "content": "Hello"}).json()
+
+        response = client.put(
+            f"/prompts/{created['id']}", json={"title": "New title", "content": "Hello"}
+        )
+
+        assert response.status_code == 200
+        assert client.get(f"/prompts/{created['id']}/versions").json()["total"] == 1
+
+    def test_patch_prompt_rejected_saves_nothing(self, client: TestClient):
+        """Verify a PATCH rejected with 400 leaves the history unchanged (AC-3.5).
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        created = client.post("/prompts", json={"title": "T", "content": "C1"}).json()
+        before = client.get(f"/prompts/{created['id']}/versions").json()
+
+        response = client.patch(
+            f"/prompts/{created['id']}",
+            json={"content": "C2", "collection_id": "missing"},
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "Collection not found"}
+        assert client.get(f"/prompts/{created['id']}/versions").json() == before
+
+    def test_delete_collection_keeps_versions(
+        self, client: TestClient, sample_collection_data
+    ):
+        """Verify deleting a prompt's collection leaves its versions as they were (AC-3.6).
+
+        Args:
+            client: FastAPI test client fixture.
+            sample_collection_data: Valid collection payload fixture.
+        """
+        collection = client.post("/collections", json=sample_collection_data).json()
+        created = client.post(
+            "/prompts",
+            json={"title": "T", "content": "C1", "collection_id": collection["id"]},
+        ).json()
+        client.patch(f"/prompts/{created['id']}", json={"content": "C2"})
+        before = client.get(f"/prompts/{created['id']}/versions").json()
+
+        response = client.delete(f"/collections/{collection['id']}")
+
+        assert response.status_code == 204
+        assert client.get(f"/prompts/{created['id']}/versions").json() == before
+
+    def test_patch_prompt_tags_saves_no_version(self, client: TestClient, ticking_clock):
+        """Verify a tag-only PATCH saves no version but refreshes ``updated_at`` (E-15).
+
+        Args:
+            client: FastAPI test client fixture.
+            ticking_clock: Clock fixture that makes every timestamp distinct.
+        """
+        created = client.post("/prompts", json={"title": "T", "content": "C1"}).json()
+
+        response = client.patch(f"/prompts/{created['id']}", json={"tags": ["ai"]})
+
+        assert response.status_code == 200
+        assert datetime.fromisoformat(
+            response.json()["updated_at"]
+        ) > datetime.fromisoformat(created["updated_at"])
+        assert client.get(f"/prompts/{created['id']}/versions").json()["total"] == 1
