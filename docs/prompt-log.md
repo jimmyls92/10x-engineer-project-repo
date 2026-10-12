@@ -1988,4 +1988,95 @@ red commit (AC-4.7's test) so no code comes before its test.
 
 **Why the next prompt changed**
 
+The three choices kept every line of code behind a failing test, so I confirmed them.
+
+### Entry 105
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `test_list_prompt_versions_prompt_not_found` (AC-4.7) to `TestPromptVersions` and
+ran it: it fails because the status is right by accident (404 from the missing route) but the
+body is FastAPI's `{"detail": "Not Found"}`, not `{"detail": "Prompt not found"}`. Ruff passes.
+It proposed committing the test file alone as a red commit. Nothing committed.
+
+**Why the next prompt changed**
+
+The test failed on the body, which only our endpoint can fix, so it was valid red.
+
+### Entry 106
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed the test file alone as "Add failing test for listing an unknown prompt", not
+pushed, and asked permission for the implementation that should turn both tests green and stop
+the clock.
+
+**Why the next prompt changed**
+
+Being five minutes into a four-hour budget and about to stop the clock seemed wrong to me.
+
+### Entry 107
+
+**Prompt**
+
+> how is even possible that we are about to stop the clock, we have just begun?
+
+**What came back**
+
+Claude explained why it is fast: C3.5 times "scaffolding to first passing endpoint"
+(`brief.txt:45`, `:204`), not the whole feature; step 0 moved the discussion before the clock;
+and deferring the helpers cut step 2 (entry 102), so the 1 h 45 min - 2 h 20 min estimate no
+longer applies. It then named a risk it had not raised before: C3.5's common mistakes include
+"committing unfinished work to hit the time and finishing later" (`brief.txt:211`), and a list
+endpoint without `order` and `limit` is unfinished against its spec. It asked where the clock
+should be considered stopped.
+
+**Why the next prompt changed**
+
+I could not judge the grading risk myself, so I asked for Claude's reading of the brief.
+
+### Entry 108
+
+**Prompt**
+
+> I really dont know, what you think makes more sense by reading brefing.txt
+
+**What came back**
+
+Claude's reading of C3.5 (`brief.txt:199-213`): the clock ends at "first passing endpoint", and
+the common mistake targets work committed early and finished later. So it recommended counting
+the clock as stopped only when `GET /prompts/{id}/versions` is complete against its spec, i.e.
+AC-1.1 plus US-4 (`order`, `limit`, AC-4.1 to AC-4.8), moving group 4 up to second. The minimal
+green is still committed (commit as you go), with a message saying `order` and `limit` follow.
+Estimated 45-60 more minutes, well inside the 4 hours. It asked whether to follow this.
+
+**Why the next prompt changed**
+
+Claude's reading of C3.5 made sense to me, so I accepted it and the reordered groups.
+
+### Entry 109
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude recorded the clock-stop point and the new group order in CURRENT STATE, then implemented:
+`create_prompt` attaches version 1 with `model_copy(update=...)`, copying the prompt's `content`
+and `created_at`; `list_prompt_versions` (`GET /prompts/{prompt_id}/versions`) returns 404
+"Prompt not found" or every version in ascending order with its `total`. Docstrings updated. In
+`backend/.venv`: 375 passed, ruff clean. It proposed a commit whose message says `order` and
+`limit` are still to come, and stopped. Nothing committed.
+
+**Why the next prompt changed**
+
 Pending.

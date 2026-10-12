@@ -19,6 +19,7 @@ from typing import List, Optional
 from app.models import (
     Prompt, PromptCreate, PromptUpdate, PromptPatch,
     Collection, CollectionCreate,
+    PromptVersion, PromptVersionList,
     PromptList, CollectionList, HealthResponse, TagQuery, TagList,
     get_current_time
 )
@@ -161,7 +162,9 @@ def get_prompt(prompt_id: str):
 def create_prompt(prompt_data: PromptCreate):
     """Create a prompt from the request body and store it.
 
-    The server assigns the id and both timestamps. A non-empty
+    The server assigns the id and both timestamps, and saves the content as
+    version 1 of the prompt's history, dated with the prompt's own
+    created_at. A non-empty
     collection_id must name an existing collection. An empty string is not
     checked and is stored as is, although PATCH rejects the same value with
     status 400.
@@ -182,6 +185,12 @@ def create_prompt(prompt_data: PromptCreate):
         ensure_collection_exists(prompt_data.collection_id)
 
     prompt = Prompt(**prompt_data.model_dump())
+    # Version 1 copies the prompt's created_at rather than reading the clock
+    # again, so the two are equal exactly (spec FR-1).
+    first = PromptVersion(
+        version=1, content=prompt.content, created_at=prompt.created_at
+    )
+    prompt = prompt.model_copy(update={"versions": {1: first}})
     return storage.create_prompt(prompt)
 
 
@@ -299,6 +308,28 @@ def delete_prompt(prompt_id: str):
     if not storage.delete_prompt(prompt_id):
         raise HTTPException(status_code=404, detail="Prompt not found")
     return None
+
+
+@app.get("/prompts/{prompt_id}/versions", response_model=PromptVersionList)
+def list_prompt_versions(prompt_id: str):
+    """List every saved version of a prompt's content, oldest first.
+
+    Args:
+        prompt_id: Identifier of the prompt whose history to list.
+
+    Returns:
+        A ``PromptVersionList`` holding the versions in ascending order of
+        version number, and their count.
+
+    Raises:
+        HTTPException: With status 404 if no prompt has that identifier.
+    """
+    prompt = storage.get_prompt(prompt_id)
+    if not prompt:
+        raise HTTPException(status_code=404, detail="Prompt not found")
+
+    versions = [prompt.versions[n] for n in sorted(prompt.versions)]
+    return PromptVersionList(versions=versions, total=len(versions))
 
 
 # ============== Collection Endpoints ==============
