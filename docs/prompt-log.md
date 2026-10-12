@@ -3138,4 +3138,52 @@ counter) and waited before committing and pushing.
 
 **Why the next prompt changed**
 
+The message was fine; I also needed the branch address for the submission form.
+
+### Entry 166
+
+**Prompt**
+
+> yes, and give me the github address for branch 4 when ready to submit
+
+**What came back**
+
+Claude committed and pushed entries 164-165 with the approved message, watched CI, and gave the
+`Week-4` branch address. This entry was written after that commit, so it stays local until the
+next one.
+
+**Why the next prompt changed**
+
+Entry 166 was still local, and I wanted the log on GitHub complete.
+
+### Entry 167
+
+**Prompt**
+
+> commit and push the log entry
+
+**What came back**
+
+Claude pointed out that each request to push the log adds a new entry, so the log can trail by
+one. To break the loop, it proposed a message that does not count entries and, on approval, to
+write the entry for the approving prompt first so that one commit holds every entry up to then.
+It waited for approval (Rule 5).
+
+**Why the next prompt changed**
+
+Claude's way out of the loop made sense, so I approved it.
+
+### Entry 168
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude wrote this entry first, then committed entries 166-168 with the approved message, pushed
+`Week-4` and watched CI. The log on GitHub is complete up to this prompt.
+
+**Why the next prompt changed**
+
 Pending.
