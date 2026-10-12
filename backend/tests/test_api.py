@@ -2190,3 +2190,35 @@ class TestTags:
 
         assert response.status_code == 200
         assert [t["name"] for t in response.json()["tags"]] == ["a-b", "a1", "ab"]
+
+
+class TestPromptVersions:
+    """Tests for the prompt version endpoints and the versions edits save."""
+
+    # --- list_prompt_versions: success cases ---
+
+    def test_create_prompt_saves_version_one(self, client: TestClient):
+        """Verify ``POST /prompts`` saves version 1 with the prompt's content (AC-1.1).
+
+        The version's ``created_at`` must equal the prompt's exactly, since it is
+        copied from the prompt rather than read from the clock again (FR-1).
+
+        Args:
+            client: FastAPI test client fixture.
+        """
+        created = client.post(
+            "/prompts", json={"title": "Summary", "content": "Summarise the text."}
+        ).json()
+
+        response = client.get(f"/prompts/{created['id']}/versions")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert len(data["versions"]) == 1
+        version = data["versions"][0]
+        assert version["version"] == 1
+        assert version["content"] == "Summarise the text."
+        assert datetime.fromisoformat(version["created_at"]) == datetime.fromisoformat(
+            created["created_at"]
+        )
