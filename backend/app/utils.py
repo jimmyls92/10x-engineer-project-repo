@@ -2,15 +2,17 @@
 
 The list helpers sort, filter and search prompts for ``GET /prompts``, and
 ``count_tags`` counts the tags in use for ``GET /tags``. None of them
-modifies the list it is given. The two text helpers,
+modifies the list it is given. ``add_version`` returns a prompt's history with
+a new version added when its content changed, as a new dict. The two text helpers,
 ``validate_prompt_content`` and ``extract_variables``, are not called by
 the API; only ``tests/test_utils.py`` uses them. ``parse_cors_origins`` turns
 the ``CORS_ORIGINS`` environment variable into the list of page addresses the
 API accepts browser requests from.
 """
 
-from typing import List, Optional
-from app.models import Prompt, TagSummary
+from datetime import datetime
+from typing import Dict, List, Optional
+from app.models import Prompt, PromptVersion, TagSummary
 
 
 # The Vite dev server's address, so a local frontend works with no setting.
@@ -109,6 +111,33 @@ def search_prompts(prompts: List[Prompt], query: str) -> List[Prompt]:
         if query_lower in p.title.lower() or
            (p.description and query_lower in p.description.lower())
     ]
+
+
+def add_version(
+    versions: Dict[int, PromptVersion], content: str, created_at: datetime
+) -> Dict[int, PromptVersion]:
+    """Return a prompt's history with a new version added if the content changed.
+
+    The content is compared with the latest version character for character,
+    so a change of case or whitespace counts. An empty history is treated as
+    holding version 0, so its first entry becomes version 1.
+
+    Args:
+        versions: The history, keyed by version number. It is not modified.
+        content: The prompt's content after the edit.
+        created_at: When the edit was made; the new version is dated with it.
+
+    Returns:
+        A new dict. It holds every existing version plus version n + 1 when
+        ``content`` differs from version n's, and the same versions otherwise.
+    """
+    result = dict(versions)
+    latest = max(versions, default=0)
+    if latest == 0 or versions[latest].content != content:
+        result[latest + 1] = PromptVersion(
+            version=latest + 1, content=content, created_at=created_at
+        )
+    return result
 
 
 def validate_prompt_content(content: str) -> bool:

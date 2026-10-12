@@ -25,7 +25,7 @@ from app.models import (
 )
 from app.storage import storage
 from app.utils import (
-    sort_prompts_by_date, filter_prompts_by_collection, filter_prompts_by_tags,
+    add_version, sort_prompts_by_date, filter_prompts_by_collection, filter_prompts_by_tags,
     search_prompts, count_tags, parse_cors_origins,
 )
 from app import __version__
@@ -202,7 +202,8 @@ def update_prompt(prompt_id: str, prompt_data: PromptUpdate):
     body leaves out is reset to its default rather than kept -- omitting
     collection_id unfiles the prompt, and omitting tags clears them. The
     creation timestamp is carried over from the stored prompt and the update
-    timestamp is set to the current time.
+    timestamp is set to the current time. A content that differs from the
+    latest version is saved as the next version, dated with that same time.
     A non-empty collection_id must name an existing collection; an empty string
     is not checked and is stored as is, although PATCH rejects it with 400.
 
@@ -227,6 +228,8 @@ def update_prompt(prompt_id: str, prompt_data: PromptUpdate):
     if prompt_data.collection_id:
         ensure_collection_exists(prompt_data.collection_id)
 
+    # One clock read, so the new version's created_at equals updated_at (FR-2).
+    now = get_current_time()
     updated_prompt = Prompt(
         id=existing.id,
         title=prompt_data.title,
@@ -235,7 +238,8 @@ def update_prompt(prompt_id: str, prompt_data: PromptUpdate):
         collection_id=prompt_data.collection_id,
         tags=prompt_data.tags,
         created_at=existing.created_at,
-        updated_at=get_current_time()
+        updated_at=now,
+        versions=add_version(existing.versions, prompt_data.content, now),
     )
     
     return storage.update_prompt(prompt_id, updated_prompt)
@@ -250,7 +254,8 @@ def patch_prompt(prompt_id: str, prompt_data: PromptPatch):
     leaving the key out keeps the prompt in its collection. Likewise, leaving
     tags out keeps the stored tags, while an empty list clears them. The update
     timestamp is refreshed only when the body carries at least one field; an
-    empty body is not an edit.
+    empty body is not an edit. A content that differs from the latest version
+    is saved as the next version, dated with the new update timestamp.
 
     Args:
         prompt_id: Identifier of the prompt to update.
@@ -278,15 +283,19 @@ def patch_prompt(prompt_id: str, prompt_data: PromptPatch):
     if changes.get("collection_id") is not None:
         ensure_collection_exists(changes["collection_id"])
 
+    # One timestamp for the prompt and any new version, so they match (FR-2).
+    updated_at = get_current_time() if changes else existing.updated_at
+    content = changes.get("content", existing.content)
     updated_prompt = Prompt(
         id=existing.id,
         title=changes.get("title", existing.title),
-        content=changes.get("content", existing.content),
+        content=content,
         description=changes.get("description", existing.description),
         collection_id=changes.get("collection_id", existing.collection_id),
         tags=changes.get("tags", existing.tags),
         created_at=existing.created_at,
-        updated_at=get_current_time() if changes else existing.updated_at
+        updated_at=updated_at,
+        versions=add_version(existing.versions, content, updated_at),
     )
 
     return storage.update_prompt(prompt_id, updated_prompt)

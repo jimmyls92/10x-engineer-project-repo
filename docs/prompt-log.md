@@ -2079,4 +2079,99 @@ and `created_at`; `list_prompt_versions` (`GET /prompts/{prompt_id}/versions`) r
 
 **Why the next prompt changed**
 
+The suite was green and the message did not claim the endpoint was finished.
+
+### Entry 110
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `d7f764e` "Save version 1 and list a prompt's versions" at 12:33:31, not pushed.
+Opening group 4, it found a dependency it had missed when reordering (entry 108): every US-4 AC
+needs "a prompt with 5 versions", which over HTTP can only be built by edits that save versions,
+i.e. group 2. So the list endpoint cannot be tested complete before group 2 is done. It asked
+whether the clock-stop point should now include group 2.
+
+**Why the next prompt changed**
+
+US-4 cannot be tested without edits that save versions, so group 2 had to come inside the clock.
+
+### Entry 111
+
+**Prompt**
+
+> yes, include group 2
+
+**What came back**
+
+Claude updated CURRENT STATE (group 2, then group 4, clock stops when group 4 is green) and set
+out group 2's red commit for confirmation: the spec's HTTP tests for AC-1.2, AC-1.3, AC-3.1 to
+AC-3.8 and E-15, using `ticking_clock` wherever a timestamp must be later; plus unit tests in
+`test_utils.py` for `add_version` (a new dict is returned, the input is untouched, unchanged
+content adds nothing), since that logic is ours, not FastAPI's. It warned that only AC-1.2,
+AC-1.3, AC-3.4, AC-3.7 and the `add_version` tests can fail today; the "no new version" tests
+already pass and guard against regressions. It asked permission to write them.
+
+**Why the next prompt changed**
+
+The tests and the add_version unit tests were what group 2 needed, so I gave permission.
+
+### Entry 112
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added nine group 2 tests to `TestPromptVersions` (AC-1.2, AC-1.3, AC-3.1 to AC-3.8, E-15)
+and `TestAddVersion` (three tests) to `test_utils.py`. Its prediction in entry 111 was wrong: 9
+API tests fail, not 4. Every edit today builds a new `Prompt` without `versions`, so the history
+is wiped (`total` 0), which is the trap the spec describes (`specs/prompt-versions.md:244-247`);
+the "no new version" tests therefore fail for a real reason too. AC-3.5 and AC-3.6 pass (no new
+`Prompt` is built there). `test_utils.py` fails to import `add_version`, which hides its other
+tests until the helper exists. Ruff passes. It proposed the red commit. Nothing committed.
+
+**Why the next prompt changed**
+
+The red tests failed for real reasons, including the history-wiping trap.
+
+### Entry 113
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `c24cc36` "Add failing tests for versions saved by edits" at 12:38:22, not
+pushed, and set out the implementation's code-level choices for confirmation: `add_version` in
+`utils.py` after `search_prompts`, treating an empty history as version 0 rather than crashing;
+PUT and PATCH read the clock once into one value used for both `updated_at` and the new version's
+`created_at` (FR-2's exact equality); PATCH passes the `updated_at` it already chooses, so an
+empty body adds nothing; the `utils.py` module docstring mentions the new helper.
+
+**Why the next prompt changed**
+
+The choices kept FR-2's exact timestamp equality and the no-mutation rule, so I confirmed them.
+
+### Entry 114
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude added `add_version` to `backend/app/utils.py` (after `search_prompts`, new dict, empty
+history treated as version 0, module docstring updated) and used it in `update_prompt` and
+`patch_prompt`, each reading the clock once so `updated_at` and the new version's `created_at`
+are the same value; docstrings mention the versions saved. In `backend/.venv`: 390 passed (the
+`test_utils.py` tests are back), ruff clean. It proposed the commit and stopped.
+
+**Why the next prompt changed**
+
 Pending.
