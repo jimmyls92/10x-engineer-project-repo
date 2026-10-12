@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Feature** | Track the version history of a prompt's content |
-| **Status** | Specified in Module 2 (Task 2.5); **not implemented yet**, planned for Module 4. No route or test exists. Line numbers cited below are from the end of Module 2 (`1c9cc88`); the tagging feature has since moved them |
+| **Status** | Specified in Module 2 (Task 2.5); **implemented in Module 4** (Task 4.2), test-first, from `63dc14c` to `52a1764`. Line numbers cited below describe the code before the feature was built, at `40ee479`; `backend/app/` has the current ones |
 | **Decisions** | Worked through one at a time in Module 2's `docs/prompt-log.md` (branch `Week-2`), entries 97-128 |
 | **Code it touches** | `backend/app/models.py`, `backend/app/api.py`, `backend/app/utils.py`, `backend/tests/test_api.py` |
 

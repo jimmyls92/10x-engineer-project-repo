@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Feature** | React frontend for PromptLab (Module 4, Task 4.1) |
-| **Status** | Specified; not yet built. Tasks 4.3-4.7 implement it in `frontend/` |
+| **Status** | Specified in Module 4 (Task 4.1); **built** in `frontend/` by Tasks 4.3-4.7. Line numbers cited below describe the backend at `58a31bf`; `backend/app/` has the current ones |
 | **Decisions** | Worked through one at a time in Module 4's `docs/prompt-log.md` (branch `Week-4`), entries 11-37 |
 | **Stack** | React with Vite, React Router, CSS Modules; the existing FastAPI backend in `backend/` |
 

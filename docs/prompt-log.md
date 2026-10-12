@@ -2755,4 +2755,66 @@ http://0.0.0.0:8000 ... Started reloader process" and `/health` answered
 
 **Why the next prompt changed**
 
+The real run showed the brief's command now starts the server.
+
+### Entry 146
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `d5468c7` "Start the server with python main.py", not pushed: the backend is
+now final for Module 4, so the deferred citation fix (entry 127) can start. Scanning every current
+doc, it found line citations in `CLAUDE.md` (7), `specs/prompt-versions.md` (17),
+`specs/tagging-system.md` (11), `specs/frontend.md` (7) and `docs/API_REFERENCE.md` (8), plus
+historical ones in the refactor note and tagging TDD plan. It noted a precedent:
+`specs/tagging-system.md`'s status line says its citations describe the code before the feature
+was built. It also found `specs/frontend.md`'s status still says "not yet built" and the versions
+spec's says "not implemented yet". It asked whether to renumber the versions spec's citations or
+pin them to the pre-feature commit like the tagging spec.
+
+**Why the next prompt changed**
+
+Pinning follows the tagging spec's precedent and keeps the spec a record of the plan.
+**Restructured**: from renumbering the versions spec to pinning it.
+
+### Entry 147
+
+**Prompt**
+
+> pin them like the tagging spec
+
+**What came back**
+
+Settled for `specs/prompt-versions.md`. Claude checked that `specs/frontend.md`'s 7 citations are
+right at `58a31bf` (its last commit) and proposed the whole step for one confirmation: versions
+spec status "implemented in Module 4 (Task 4.2), test-first, `63dc14c` to `52a1764`", citations
+pinned to `40ee479`; frontend spec status "built in Tasks 4.3-4.7", citations pinned to
+`58a31bf`; CLAUDE.md's Known traps renumbered to today's code (living instructions); every
+`API_REFERENCE.md` citation rechecked; the tagging spec, refactor note and TDD plan left alone.
+
+**Why the next prompt changed**
+
+One rule for all specs (pin to a named commit) and current numbers for living docs.
+
+### Entry 148
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude updated both spec status lines: `specs/prompt-versions.md` is implemented in Module 4
+(`63dc14c` to `52a1764`) with citations pinned to `40ee479` (six spot-checked there);
+`specs/frontend.md` is built by Tasks 4.3-4.7 with citations pinned to `58a31bf`. It renumbered
+CLAUDE.md's Known traps (`models.py:251`, `:300`; `api.py:234`, `:290`, `:184`, `:228`, `:283`,
+`:121`) and replaced the deferred-fix trap with a standing rule, and fixed three
+`docs/API_REFERENCE.md` citations (`utils.py:223`; `api.py:223`, `:275`; `:228`, `:283`). It
+proposed the commit.
+
+**Why the next prompt changed**
+
 Pending.

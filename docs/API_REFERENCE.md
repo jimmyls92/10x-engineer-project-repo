@@ -21,7 +21,7 @@ with curl against a local server, and each response shown is the one that came b
 CORS is limited to the frontend's addresses (`api.py:39-50`). The allowed origins come from the
 `CORS_ORIGINS` environment variable, a comma-separated list such as
 `https://promptlab.example.com,http://localhost:5173`; when it is unset or empty, only
-`http://localhost:5173` (the Vite dev server) is allowed (`utils.py:172`). Every
+`http://localhost:5173` (the Vite dev server) is allowed (`utils.py:223`). Every
 method and header is allowed; credentials are not, since nothing uses cookies. A browser page on
 any other origin gets no `Access-Control-Allow-Origin` header, so the browser withholds the
 response, and its preflight is refused with 400. CORS only binds browsers: `curl` or a script can
@@ -82,8 +82,8 @@ When a request has more than one problem, only the first check that fails is rep
    `PATCH /prompts/nope` with `{"title": null}` returns 422, not 404, and
    `{"title": null, "collection_id": "nope"}` returns 422, not 400. The same holds for tags:
    `PATCH /prompts/nope` with `{"tags": ["Marketing"]}` returns 422, not 404.
-2. **404**: the prompt in the path is looked up next (`api.py:208`, `:256`).
-3. **400**: the `collection_id` is checked next (`api.py:213`, `:264`). `PUT /prompts/nope` with a
+2. **404**: the prompt in the path is looked up next (`api.py:223`, `:275`).
+3. **400**: the `collection_id` is checked next (`api.py:228`, `:283`). `PUT /prompts/nope` with a
    valid body and an unknown `collection_id` returns 404, not 400.
 
 ## Data models
