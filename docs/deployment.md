@@ -83,14 +83,15 @@ What the command does:
 - **`run ... backend`** starts a one-off container of the `backend` service only, with the
   environment `docker-compose.deploy.yml` gives it. `--rm` removes it afterwards, and `--build`
   rebuilds the image first so it holds the current code.
-- **`-v ...:ro`** mounts `backend/tests/` read-only. The image holds only `app/` and
-  `requirements.txt`, and stays exactly as deployed; `pytest` is already in it, from
-  `requirements.txt`.
+- **`-v ...:ro`** mounts `backend/tests/` read-only. The image holds `app/`, `main.py` and
+  `requirements.txt` but not `tests/`, and stays exactly as deployed; `pytest` is already in it,
+  from `requirements.txt`. `main.py` is not used to start the container, which runs uvicorn
+  without reload; it is there so its test checks the deployed file.
 - The tests call the app in-process, with FastAPI's test client. They check the container's code,
   libraries and settings, not the running server over the network, so the deployment does not need
   to be up.
 
-The run ends with `417 passed`. The CORS tests read the allowed origins from `CORS_ORIGINS`, so
+The run ends with `418 passed`. The CORS tests read the allowed origins from `CORS_ORIGINS`, so
 they check `http://localhost:8080` here and the default `http://localhost:5173` in a local run.
 
 ---

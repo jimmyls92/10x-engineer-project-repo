@@ -420,7 +420,7 @@ directly rather than through `python main.py`, which turns reload on.
 
 ### Tests
 
-The image holds only `app/` and `requirements.txt`, not `tests/`. Run the tests locally, as
+The image holds `app/`, `main.py` and `requirements.txt`, not `tests/`. Run the tests locally, as
 in **Development setup**, or inside the deployed API service, with the deployment's own Python,
 libraries and environment, by mounting `tests/` read-only: see
 [Run the tests against the deployed configuration](docs/deployment.md#run-the-tests-against-the-deployed-configuration).

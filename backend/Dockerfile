@@ -7,6 +7,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ app/
+# Not started here (see CMD); copied so tests/test_main.py checks the deployed file.
+COPY main.py .
 
 EXPOSE 8000
 

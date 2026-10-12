@@ -2882,4 +2882,142 @@ STATE. It proposed the commit.
 
 **Why the next prompt changed**
 
+Every command in the README had been run, so I approved the commit.
+
+### Entry 152
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude committed `3540325` "Describe the web app in the README", not pushed, and opened step 4,
+`docs/module-4-submission.md`, in the Module 3 note's format (repository, branch, summary,
+process evidence, a table mapping each *What You Submit* item to where it is, verification on a
+fresh clone, known issues). It listed the candidate known issues: Module 3's that still hold,
+two that no longer do (`python main.py`, fixed in `d5468c7`; the spec findings, settled in Task
+4.2's step 0), and new ones from Module 4. It asked which to declare.
+
+**Why the next prompt changed**
+
+The fixed issues would mislead an assessor; the still-true and new ones are what they need.
+
+### Entry 153
+
+**Prompt**
+
+> include the still-true and new ones, drop the fixed ones
+
+**What came back**
+
+Settled: the note declares Module 3's still-true issues and Module 4's new ones. Claude set out
+the fresh-clone verification for confirmation, to run before writing the note so its results are
+real: clone the local repository at `3540325` into the scratchpad (GitHub lacks the last six
+commits until step 5's push); in it, a Python 3.12 venv from `requirements.txt`, `ruff check .`,
+the suite with coverage, `python main.py` plus `/health`; `npm install`, `npm run lint`, `npm run
+dev` on 5173; `docker compose -f docker-compose.deploy.yml up --build` plus the guide's checks;
+and the deployed-config suite. The clone is deleted afterwards.
+
+**Why the next prompt changed**
+
+The verification plan covered both terminals of the brief and the deployed app.
+
+### Entry 154
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+The fresh clone failed three ways, all on path length: a local clone ("Filename too long" on
+loose objects, even with `core.longpaths`), a `--no-local` clone and a clone from a `git bundle`
+(both "fatal: '$GIT_DIR' too big"). The session scratchpad's path is about 200 characters, and git
+expands its 8.3 short form back to the long one. Nothing was verified yet; the bundle was deleted.
+Claude asked for a short directory outside the scratchpad to clone into.
+
+**Why the next prompt changed**
+
+The scratchpad path was too long, so I allowed a short folder outside it.
+
+### Entry 155
+
+**Prompt**
+
+> do it
+
+**What came back**
+
+Claude cloned `Week-4` at `3540325` into `C:/Users/JaimeLopezSahuquillo/m4-check` and checked:
+Python 3.12.13 venv with the pins (FastAPI 0.109.0, Pydantic 2.5.3, uvicorn 0.27.0); ruff clean;
+418 passed, coverage 100%; `python main.py` answered `/health`; `npm install` (0
+vulnerabilities), `npm run lint` exit 0; `npm run dev` served 200 on 5173 (rerun after finding
+that the first 200 came from a dev server left over from step 3, which `TaskStop` had not killed;
+the process was confirmed by its command line this time, and leftovers stopped); API CRUD with
+the web app's `Origin` got `access-control-allow-origin: http://localhost:5173`, and a content
+`PATCH` gave 2 versions. Deployed: `/health` healthy, 8080 answered 200, CORS allowed 8080.
+**The deployed-config suite failed: 417 passed, 1 failed**, `test_main.py` with
+`FileNotFoundError: '/app/main.py'`, since the image holds only `app/`. The test added in step 1
+broke C3.2's deployed run, and `docs/deployment.md` still says "417 passed". Claude asked how
+`test_main.py` should behave in the deployed configuration.
+
+**Why the next prompt changed**
+
+I wanted to compare the ways out, as with the CORS tests.
+**Restructured**: from answering the question to asking for options.
+
+### Entry 156
+
+**Prompt**
+
+> can you propose alternatives with pros and cons?
+
+**What came back**
+
+Four options with pros and cons and no recommendation until I choose (Rule 0b point 6): (A) copy
+`main.py` into the image in `backend/Dockerfile`; (B) also mount `main.py` read-only in the test
+command; (C) skip the test when `main.py` is absent; (D) mount all of `backend/` over `/app`,
+which replaces the deployed code with the local one.
+
+**Why the next prompt changed**
+
+Only A keeps the test honest about what is deployed.
+
+### Entry 157
+
+**Prompt**
+
+> A, the test should check a file that's really deployed
+
+**What came back**
+
+Claude's recommendation, given now that I had chosen, was also A. It set out the code-level
+choices for confirmation: `COPY main.py .` after `COPY app/ app/` in `backend/Dockerfile`, with
+`CMD` unchanged (uvicorn, no reload) and the comment saying why the file is there; the image
+contents corrected in `docs/deployment.md:86` and `README.md:423`, and the expected count in
+`docs/deployment.md:93` from 417 to 418; then rebuild and rerun the deployed suite in the working
+repository, and, once committed, repeat the fresh-clone deployment checks at the new commit.
+
+**Why the next prompt changed**
+
+The choices kept the start command unchanged while making the test check the deployed file.
+
+### Entry 158
+
+**Prompt**
+
+> yese
+
+**What came back**
+
+Claude added `COPY main.py .` (with a comment that it is not the start command) to
+`backend/Dockerfile`, corrected the image contents in `docs/deployment.md` and `README.md`, and
+the expected count to `418 passed`. In the working repository, the deployed-config suite gave
+**418 passed**, and the redeployed API answered `/health` healthy; containers stopped. It
+proposed the commit, after which the fresh-clone deployment checks are repeated at the new
+commit.
+
+**Why the next prompt changed**
+
 Pending.
