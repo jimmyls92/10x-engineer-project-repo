@@ -1590,4 +1590,282 @@ stopped, as Rule 0 asks at the end of a task.
 
 **Why the next prompt changed**
 
+Task 4.8 was finished; before opening Task 4.2 I wanted a time estimate and a risk map.
+
+### Entry 84
+
+**Prompt**
+
+> before starting task 4.2, how much do you think it will take us? Could you do a summary of the steps and the things that could go wrong in each step and the principal decisions? Make a table with: step_name, stimated_time, principal decisions, Risks (things that could mess up the stimation)
+
+**What came back**
+
+Claude read Task 4.2 and C3.2/C3.5 in `brief.txt` and `specs/prompt-versions.md` (28 ACs, about
+20 tests listed), and gave a table of seven steps with estimated time, principal decisions and
+risks: about 4.5-5.5 hours in total, of which roughly 2-2.5 hours fall inside the C3.5 clock (first
+failing test to first passing endpoint). No file other than this log was touched.
+
+**Why the next prompt changed**
+
+I wanted the clock steps and the total stated plainly, apart from the table.
+
+### Entry 85
+
+**Prompt**
+
+> which steps are inside the clock and how much is the estimated total?
+
+**What came back**
+
+Claude named steps 1-3 as inside the C3.5 clock (first failing test to first passing endpoint),
+1 h 45 min to 2 h 20 min, and summed every row for a total of 3 h 55 min to 5 h 35 min. It
+corrected its own earlier figures (entry 84 said 2-2.5 h and 4.5-5.5 h), which were not the sum
+of the table's rows.
+
+**Why the next prompt changed**
+
+With the clock figures clear, I chose to settle the spec before the first failing test, so the
+discussion stays outside the C3.5 clock.
+
+### Entry 86
+
+**Prompt**
+
+> lets go with step 0 before the first commit
+
+**What came back**
+
+Task 4.2 started with step 0. Claude set the order (findings 3, 4, 5, 6, 10 from the Module 2
+review, one per step) and opened finding 3: FR-7 and E-6 (`specs/prompt-versions.md:80`, `:396`)
+promise that deleting a prompt removes its history, but no AC or test checks it. It asked whether
+that promise should get an AC and a test or stay unchecked.
+
+**Why the next prompt changed**
+
+Claude asked for a choice on finding 3 in Given/When/Then form, so I drafted the AC.
+
+### Entry 87
+
+**Prompt**
+
+> Given a prompt with a history when deleting the prompt then GET returns a 404 prompt not found... do you think is ok like this?
+
+**What came back**
+
+Claude did not accept it as it stood and named two gaps without writing the AC: "GET" does not
+say which endpoint (`GET /prompts/{id}` already returns 404 after a delete in an existing test,
+so it adds nothing; the spec has two version endpoints), and "a history" gives no size. It also
+pointed out that over HTTP the test can only see the 404, not whether the history left storage.
+It asked for the AC again with the endpoint(s) and the history size named.
+
+**Why the next prompt changed**
+
+Claude listed the gaps in my AC; rather than rewrite it myself I asked for a proposal.
+**Restructured**: I asked Claude to draft the AC instead of narrowing my own.
+
+### Entry 88
+
+**Prompt**
+
+> I see all your problems, propose me one better AC
+
+**What came back**
+
+Claude said once what this skips (my writing the AC myself, Rule 0b) and proposed AC-1.6 under
+US-1 (adding FR-7 to its "Implements" line): given a prompt with 2 versions, `DELETE
+/prompts/{id}` gives 204, then `GET /prompts/{id}/versions` and `GET /prompts/{id}/versions/1`
+both give 404 `{"detail": "Prompt not found"}`. Test: `test_delete_prompt_removes_versions`,
+parametrised over the two paths. It accepted the HTTP-only limit, since the history lives on the
+`Prompt` record. It asked permission to edit the spec; nothing was edited.
+
+**Why the next prompt changed**
+
+The proposed AC-1.6 covered both gaps, so I accepted it and moved on.
+
+### Entry 89
+
+**Prompt**
+
+> yes, go to finding 4
+
+**What came back**
+
+AC-1.6 settled (to be written into the spec with the other findings at the end of step 0).
+Claude opened finding 4: I-1 (`specs/prompt-versions.md:84-85`) says each entry's `version` equals
+its key in the `versions` dict and that "tests may assert" it at any point, but the dict is never
+serialised (`:200`) and endpoint tests go only through HTTP, so no endpoint test can see a key.
+It asked where, if anywhere, the key half of I-1 should be checked.
+
+**Why the next prompt changed**
+
+I doubted finding 4 was worth acting on and wanted Claude's view first.
+**Added a constraint**: change the spec and the test plan as little as possible.
+
+### Entry 90
+
+**Prompt**
+
+> do you think this is really required? I prefer to change the spec and the test plan the least as possible
+
+**What came back**
+
+Claude's view: no new test is required. A key that differs from its `version` field would show
+over HTTP anyway, since `GET /prompts/{id}/versions/2` would return an item whose `version` is
+not 2, which AC-2.1 already checks. It named the one downside of changing nothing: I-1 still says
+tests "may assert" the key, so the review finding stays open as a spec/test-plan mismatch an
+assessor could raise. It asked whether to accept finding 4 unfixed (recorded, as finding 7 was)
+or reword I-1 only, with no test change.
+
+**Why the next prompt changed**
+
+Claude's view matched mine that no test was needed; I chose to leave I-1 untouched.
+
+### Entry 91
+
+**Prompt**
+
+> may does not imply obligation, therefore I dont think we need to change anything
+
+**What came back**
+
+Finding 4 settled as accepted, not fixed (to be recorded in CURRENT STATE like finding 7); no
+further downside beyond the one already named. Claude opened finding 5: the error table and E-10
+(`specs/prompt-versions.md:368-372`, `:400`) list `version` `1.5` and `1.0` and `limit` `abc`,
+`2.5` and empty, but *Tests to write* covers none of them. It reminded me that C3.2 lists "tests
+that exercise FastAPI rather than your own logic" as a common mistake, noted that `1.0` is a
+promise of acceptance rather than an error, and asked which of the missing cases, if any, should
+get a test.
+
+**Why the next prompt changed**
+
+The C3.2 reminder made me think these were FastAPI's cases, already covered in spirit elsewhere.
+
+### Entry 92
+
+**Prompt**
+
+> but we test the logic in other places right? In that case I dont think we need to touch anything, what do you think?
+
+**What came back**
+
+Claude agreed for the four 422 rows: our part is declaring the type and `>= 1`, which AC-2.4,
+AC-2.5 and AC-4.5 already reach; more rows would only test FastAPI's parser (C3.2). It disagreed
+for `1.0` (E-10): that row is a promise of acceptance, and nothing shows it was checked on the
+pinned FastAPI 0.109, so leaving it untested and unchecked keeps a possibly false claim in the
+spec (Rule 2). It suggested a one-off check rather than a test, and asked for permission to run
+it in `backend/.venv`.
+
+**Why the next prompt changed**
+
+I preferred a lasting test over a one-off check for the one claim Claude doubted.
+**Restructured**: E-10 moves from "check once" to the test plan.
+
+### Entry 93
+
+**Prompt**
+
+> no, lets test it, change the test plan for this E-10
+
+**What came back**
+
+Claude named two downsides: the test partly exercises FastAPI's parser (C3.2), so it should be
+framed as checking the spec's promise; and its outcome is unknown until step 4, where a 422 would
+mean fixing E-10 and the test then. It proposed one row for *Tests to write*:
+`test_get_prompt_version_integer_decimal` (E-10): a prompt with 1 version, `GET
+/prompts/{id}/versions/1.0` gives 200 and `version` 1. Nothing edited yet; it asked for agreement.
+
+**Why the next prompt changed**
+
+The proposed E-10 row matched what I asked for.
+
+### Entry 94
+
+**Prompt**
+
+> yes, go to finding 6
+
+**What came back**
+
+The E-10 test row settled. Claude opened finding 6 (AC-4.8 cites `api.py:70-71`) and, checking
+the current `api.py`, found the problem is wider: every `api.py:` citation in
+`specs/prompt-versions.md` (lines 21, 79, 155, 218, 226-228, 392-393, 395) is stale, because
+Module 3's tagging moved the code; for example `create_prompt` is cited at `:145` but is at
+`:161`, `PromptList`'s `total` at `:97` but is at `:138`, PUT's `updated_at` at `:190` but is
+at `:229`. It asked whether to fix only AC-4.8 or every stale citation.
+
+**Why the next prompt changed**
+
+Fixing only AC-4.8 would have left the other stale citations to mislead step 3.
+
+### Entry 95
+
+**Prompt**
+
+> yes, fix everything
+
+**What came back**
+
+Finding 6 settled: every stale `api.py` citation in the spec is to be corrected in the step 0
+commit. Claude opened finding 10 (`order` as a `Literal` or an `Enum`) and judged it a code-level
+choice with no functional effect, so per Rule 0b it decided rather than asked: `Literal["asc",
+"desc"]` from `typing`, since both give the same 422 and message (`specs/prompt-versions.md:368`),
+`Literal` follows the `typing` convention and adds no class, while an `Enum` adds a class and a
+named schema in `/openapi.json` for no visible gain. It asked for a yes on that choice.
+
+**Why the next prompt changed**
+
+The `Literal` choice had no functional effect, so a yes was enough.
+
+### Entry 96
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Finding 10 settled (`Literal["asc", "desc"]`), closing the five findings. Before asking to edit,
+Claude mapped every citation in `specs/prompt-versions.md` against today's code and found stale
+ones outside `api.py` too: `models.py:154` (now `:219`), `models.py:220` (`PromptList`, now
+`:312`), `utils.py:13` (`sort_prompts_by_date`, now `:20`), `utils.py:60-64` (search, now
+`:106-111`); `storage.py:26` is still right. It listed the full set of edits (spec, plus CURRENT
+STATE for findings 4 and 7 and the task start) and asked permission to make them, and whether
+"fix everything" covered the non-`api.py` citations. Nothing edited yet.
+
+**Why the next prompt changed**
+
+The edit list covered everything we had settled, so I gave permission.
+
+### Entry 97
+
+**Prompt**
+
+> go ahead
+
+**What came back**
+
+Claude edited `specs/prompt-versions.md` (AC-1.6 and FR-7 on US-1, two new test rows, the
+`Literal` line for `order`, 14 citations corrected in `api.py`, `models.py` and `utils.py`) and
+CURRENT STATE in `CLAUDE.md` (Task 4.2 in progress with its plan, step 0 done, Open decisions
+rewritten with every finding's outcome). It showed the diff summary, proposed one commit message
+for the spec, state and log, and stopped for approval. Nothing committed.
+
+**Why the next prompt changed**
+
+The diff and the message matched what we had agreed.
+
+### Entry 98
+
+**Prompt**
+
+> yes
+
+**What came back**
+
+Claude ran the suite in `backend/.venv` (373 passed), then committed the spec, CURRENT STATE and
+this log as "Settle the versioning spec's review findings", without pushing. Step 0 is closed;
+the C3.5 clock has not started. It stopped before step 1.
+
+**Why the next prompt changed**
+
 Pending.

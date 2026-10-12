@@ -18,7 +18,7 @@ and the exact response it gets, so each AC can be turned into a test without int
 ### Overview
 
 Today a prompt keeps only its latest state. `PUT` and `PATCH /prompts/{prompt_id}` build a new
-`Prompt` and replace the stored one (`api.py:183-193`, `:234-244`), so the earlier wording is lost
+`Prompt` and replace the stored one (`api.py:221-232`, `:272-283`), so the earlier wording is lost
 after every edit.
 
 This feature keeps a numbered history of **a prompt's `content`**. Creating a prompt records its
@@ -76,7 +76,7 @@ endpoints: the whole history, or one version.
 | **FR-3** | An edit that is not a content change saves no version, even when it changes other fields. This covers a `PATCH` without `content`, a `PATCH` or `PUT` that resends the current content, and an empty `PATCH` body. |
 | **FR-4** | One request saves at most one version, however many fields it changes. |
 | **FR-5** | A request that fails (any 4xx) saves no version and leaves the history unchanged. |
-| **FR-6** | Nothing else changes the history. Deleting a collection unfiles its prompts (`api.py:353-356`) but leaves their versions and `updated_at` unchanged. |
+| **FR-6** | Nothing else changes the history. Deleting a collection unfiles its prompts (`api.py:392-395`) but leaves their versions and `updated_at` unchanged. |
 | **FR-7** | Versions are never modified or removed while their prompt exists. Deleting the prompt removes its history with it. |
 | **FR-8** | Existing prompt responses (`GET`, `POST`, `PUT`, `PATCH` on `/prompts/{prompt_id}`, and each item of `GET /prompts`) do not include the history. It is returned only by the endpoints in *API endpoints*. |
 
@@ -92,7 +92,7 @@ Invariants that hold after every request, and that tests may assert at any point
 > As a prompt author, I want to see every version of a prompt's content, oldest first, so that I can
 > understand how its wording changed and when.
 
-Implements BR-1, FR-1, FR-2, FR-9, FR-10.
+Implements BR-1, FR-1, FR-2, FR-7, FR-9, FR-10.
 
 | AC | Given | When | Then |
 |---|---|---|---|
@@ -101,6 +101,7 @@ Implements BR-1, FR-1, FR-2, FR-9, FR-10.
 | **AC-1.3** | The prompt from AC-1.2 | `PUT /prompts/{id}` with `{"title": "Summary", "content": "Summarise in 5 bullets."}`, then list the versions | 200, `total` is 3, and the `version` values in `versions` are `[1, 2, 3]` in that order |
 | **AC-1.4** | A prompt with 3 versions | `GET /prompts/{id}` | 200, and the body has no `versions` key (FR-8) |
 | **AC-1.5** | A prompt with 3 versions | `GET /prompts` | 200, and no item of `prompts` has a `versions` key |
+| **AC-1.6** | A prompt with 2 versions | `DELETE /prompts/{id}`, then `GET /prompts/{id}/versions` and `GET /prompts/{id}/versions/1` | `DELETE` gives 204; both `GET`s give 404, body `{"detail": "Prompt not found"}` (FR-7, E-6) |
 
 ### US-2: read one version
 
@@ -152,7 +153,7 @@ Implements FR-9, FR-10.
 | **AC-4.5** | Any prompt | `GET /prompts/{id}/versions?limit=0` | 422, `detail[0].loc` is `["query", "limit"]`, `detail[0].msg` is "Input should be greater than or equal to 1" |
 | **AC-4.6** | Any prompt | `GET /prompts/{id}/versions?order=up` | 422, `detail[0].loc` is `["query", "order"]`, `detail[0].msg` is "Input should be 'asc' or 'desc'" |
 | **AC-4.7** | No prompt has id `nope` | `GET /prompts/nope/versions` | 404, body `{"detail": "Prompt not found"}` |
-| **AC-4.8** | Any prompt | `GET /prompts/{id}/versions?order=` (empty value) | 422, `detail[0].loc` is `["query", "order"]`, `detail[0].msg` is "Input should be 'asc' or 'desc'". Unlike `GET /prompts`, which ignores an empty query value (`api.py:70-71`) |
+| **AC-4.8** | Any prompt | `GET /prompts/{id}/versions?order=` (empty value) | 422, `detail[0].loc` is `["query", "order"]`, `detail[0].msg` is "Input should be 'asc' or 'desc'". Unlike `GET /prompts`, which ignores an empty query value (`api.py:120-129`) |
 
 ### US-5: go back to an earlier wording
 
@@ -187,7 +188,7 @@ One entry of the history. Goes under the `Prompt Models` banner.
 
 **Note:** the entry repeats its own number, although it is also the dict key. This follows the
 existing storage pattern: `self._prompts` is keyed by id, and each `Prompt` still carries its `id`
-(`storage.py:26`, `models.py:154`). It means an entry can be returned on its own without rebuilding
+(`storage.py:26`, `models.py:219`). It means an entry can be returned on its own without rebuilding
 it.
 
 ### New field on `Prompt`: `versions`
@@ -208,14 +209,14 @@ it.
 ### New model: `PromptVersionList`
 
 Response body of `GET /prompts/{prompt_id}/versions`. Goes under the `Response Models` banner, next to
-`PromptList` (`models.py:220`).
+`PromptList` (`models.py:312`).
 
 | Field | Type | Meaning |
 |---|---|---|
 | `versions` | `List[PromptVersion]` | The selected versions, in the requested order, after `limit` |
 | `total` | `int` | Number of versions the prompt has, **before** `limit` is applied, so it equals the latest version number |
 
-`total` differs from `PromptList.total`, which counts the items returned (`api.py:97`). `CLAUDE.md`
+`total` differs from `PromptList.total`, which counts the items returned (`api.py:138`). `CLAUDE.md`
 says list totals are "counted after filtering". `limit` is a cut of the result, not a filter, so the
 rule still holds, and the docstring must say so.
 
@@ -223,9 +224,9 @@ rule still holds, and the docstring must say so.
 
 | Where | Change |
 |---|---|
-| `create_prompt` (`api.py:145`) | After building the `Prompt`, set `versions` to `{1: PromptVersion(version=1, content=prompt.content, created_at=prompt.created_at)}` before storing it. |
-| `update_prompt` (`api.py:183-191`) | Pass `versions=add_version(existing.versions, prompt_data.content, <updated_at>)` to the new `Prompt`, where `<updated_at>` is the same value given to its `updated_at`. |
-| `patch_prompt` (`api.py:234-242`) | Same, using the merged `content`. |
+| `create_prompt` (`api.py:184`) | After building the `Prompt`, set `versions` to `{1: PromptVersion(version=1, content=prompt.content, created_at=prompt.created_at)}` before storing it. |
+| `update_prompt` (`api.py:221-230`) | Pass `versions=add_version(existing.versions, prompt_data.content, <updated_at>)` to the new `Prompt`, where `<updated_at>` is the same value given to its `updated_at`. |
+| `patch_prompt` (`api.py:272-281`) | Same, using the merged `content`. |
 | `list_prompt_versions` (new) | Builds its `versions` list with `select_versions`. |
 | `utils.py` | Two new pure helpers, below. |
 
@@ -234,7 +235,7 @@ rule still holds, and the docstring must say so.
 | Function | Returns |
 |---|---|
 | `add_version(versions: Dict[int, PromptVersion], content: str, created_at: datetime) -> Dict[int, PromptVersion]` | A **new dict**. When `content` differs, character for character, from the content of the latest entry (key *n*), it holds the old entries plus entry *n* + 1, `PromptVersion(version=n + 1, content=content, created_at=created_at)` (FR-2). Otherwise it is an unchanged copy of `versions` (FR-3). |
-| `select_versions(versions: Dict[int, PromptVersion], descending: bool, limit: Optional[int]) -> List[PromptVersion]` | The entries as a list sorted by `version`, highest first when `descending` is true (FR-9), then cut to the first `limit` items when `limit` is not `None` (FR-10). Mirrors `sort_prompts_by_date(prompts, descending)` (`utils.py:13`). |
+| `select_versions(versions: Dict[int, PromptVersion], descending: bool, limit: Optional[int]) -> List[PromptVersion]` | The entries as a list sorted by `version`, highest first when `descending` is true (FR-9), then cut to the first `limit` items when `limit` is not `None` (FR-10). Mirrors `sort_prompts_by_date(prompts, descending)` (`utils.py:20`). |
 
 `add_version` returns a dict, not a list. It is the one exception to the coding standard "helpers
 in `utils.py` never modify their input; they return a new list" (`CLAUDE.md`): the history is a
@@ -257,7 +258,7 @@ project's naming: `list_prompt_versions` and `get_prompt_version`.
 
 No new endpoint is needed. `POST /prompts` returns the new prompt's `id` (201). `GET /prompts` lists
 every prompt with its `id`. `GET /prompts?search=<text>` keeps the prompts whose title or
-description contains the text, ignoring case (`utils.py:60-64`). Because it matches contained text,
+description contains the text, ignoring case (`utils.py:106-111`). Because it matches contained text,
 it can return several prompts, and the client picks one.
 
 ### `GET /prompts/{prompt_id}/versions`
@@ -274,7 +275,7 @@ Returns the history of one prompt.
 
 | Name | Type | Default | Constraint | Meaning |
 |---|---|---|---|---|
-| `order` | `"asc"` or `"desc"` | `"asc"` | exactly one of the two values, lowercase | `asc`: version 1 first. `desc`: the latest version first |
+| `order` | `"asc"` or `"desc"`, declared as `Literal["asc", "desc"]` from `typing` | `"asc"` | exactly one of the two values, lowercase | `asc`: version 1 first. `desc`: the latest version first |
 | `limit` | integer | none (all versions) | `>= 1` | Keep at most this many items, counted from the start of the ordered list |
 
 - **FR-9**: the list is ordered by `version` as `order` says. Order is applied **before** `limit`.
@@ -389,10 +390,10 @@ No new endpoint returns 400: neither takes a body.
 | ID | Case | Specified behaviour |
 |---|---|---|
 | **E-1** | A prompt that was never edited | Its history has exactly one version. A prompt never has an empty history. |
-| **E-2** | `PUT` resends the current content with other fields changed | No version (FR-3). `updated_at` is still refreshed, as today (`api.py:190`), so the prompt's `updated_at` is later than version *n*'s `created_at`. |
-| **E-3** | `PATCH` without `content`, or with the current content | No version (FR-3). `updated_at` is refreshed whenever the body carries a field (`api.py:241`). |
+| **E-2** | `PUT` resends the current content with other fields changed | No version (FR-3). `updated_at` is still refreshed, as today (`api.py:229`), so the prompt's `updated_at` is later than version *n*'s `created_at`. |
+| **E-3** | `PATCH` without `content`, or with the current content | No version (FR-3). `updated_at` is refreshed whenever the body carries a field (`api.py:280`). |
 | **E-4** | Content that differs only in case or whitespace | A content change: a new version is saved (AC-3.7). |
-| **E-5** | An edit rejected with 404, 400 or 422 | No version, history unchanged (FR-5). The existing endpoints raise before storing (`api.py:175`, `:181`, `:223`, `:232`). |
+| **E-5** | An edit rejected with 404, 400 or 422 | No version, history unchanged (FR-5). The existing endpoints raise before storing (`api.py:182`, `:215`, `:219`, `:263`, `:270`). |
 | **E-6** | Deleting the prompt | Its history goes with it. Afterwards, both endpoints return 404 `Prompt not found`. |
 | **E-7** | Deleting the collection a prompt is filed in | Versions and `updated_at` unchanged (FR-6, AC-3.6). |
 | **E-8** | Restoring an old wording with `PATCH` | Saves a new version whose content equals the old one. History is never rewound (AC-5.1). |
@@ -425,9 +426,11 @@ In `backend/tests/test_api.py`, in a new class `TestPromptVersions`, named
 | `test_create_prompt_saves_version_one` | AC-1.1 |
 | `test_patch_prompt_content_saves_version` / `test_update_prompt_content_saves_version` | AC-1.2, AC-1.3 |
 | `test_get_prompt_hides_versions` / `test_list_prompts_hides_versions` | AC-1.4, AC-1.5 |
+| `test_delete_prompt_removes_versions` (parametrised over the two version paths) | AC-1.6 |
 | `test_get_prompt_version_success` / `test_get_prompt_version_latest_is_current` | AC-2.1, AC-2.2 |
 | `test_get_prompt_version_not_found` | AC-2.3 |
 | `test_get_prompt_version_invalid` (parametrised: `0`, `-1`, `abc`) | AC-2.4, AC-2.5 |
+| `test_get_prompt_version_integer_decimal`: a prompt with 1 version; `GET /prompts/{id}/versions/1.0` gives 200 and `version` 1. It checks the spec's own promise (E-10), not FastAPI | E-10 |
 | `test_get_prompt_version_prompt_not_found` / `test_list_prompt_versions_prompt_not_found` | AC-2.6, AC-4.7 |
 | `test_patch_prompt_without_content_change_saves_nothing` (parametrised over the bodies of AC-3.1, AC-3.3, AC-3.8) | AC-3.1, AC-3.3, AC-3.8 |
 | `test_update_prompt_same_content_saves_nothing` | AC-3.2 |
